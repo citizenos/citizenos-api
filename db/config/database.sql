@@ -2,8 +2,8 @@
 -- PostgreSQL database dump
 --
 
--- Dumped from database version 14.12 (Ubuntu 14.12-0ubuntu0.22.04.1)
--- Dumped by pg_dump version 14.12 (Ubuntu 14.12-0ubuntu0.22.04.1)
+-- Dumped from database version 14.13 (Ubuntu 14.13-0ubuntu0.22.04.1)
+-- Dumped by pg_dump version 14.13 (Ubuntu 14.13-0ubuntu0.22.04.1)
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -39,6 +39,16 @@ CREATE TYPE public."enum_Attachments_source" AS ENUM (
     'dropbox',
     'onedrive',
     'googledrive'
+);
+
+
+--
+-- Name: enum_CommentAttachments_type; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public."enum_CommentAttachments_type" AS ENUM (
+    'image',
+    'file'
 );
 
 
@@ -105,6 +115,16 @@ CREATE TYPE public."enum_GroupMemberUsers_level" AS ENUM (
 CREATE TYPE public."enum_Groups_visibility" AS ENUM (
     'public',
     'private'
+);
+
+
+--
+-- Name: enum_IdeaAttachments_type; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public."enum_IdeaAttachments_type" AS ENUM (
+    'image',
+    'file'
 );
 
 
@@ -419,6 +439,38 @@ COMMENT ON COLUMN public."Attachments".link IS 'files location';
 --
 
 COMMENT ON COLUMN public."Attachments"."creatorId" IS 'User ID of the reporter.';
+
+
+--
+-- Name: CommentAttachments; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public."CommentAttachments" (
+    "commentId" uuid NOT NULL,
+    "attachmentId" uuid NOT NULL,
+    type public."enum_CommentAttachments_type" DEFAULT 'file'::public."enum_CommentAttachments_type"
+);
+
+
+--
+-- Name: COLUMN "CommentAttachments"."commentId"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."CommentAttachments"."commentId" IS 'To what Comment this Attachment belongs to.';
+
+
+--
+-- Name: COLUMN "CommentAttachments"."attachmentId"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."CommentAttachments"."attachmentId" IS 'Which Attachment belongs to this Comment.';
+
+
+--
+-- Name: COLUMN "CommentAttachments".type; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."CommentAttachments".type IS 'Type of the attachment image or file';
 
 
 --
@@ -924,6 +976,38 @@ COMMENT ON COLUMN public."Groups".contact IS 'Group contact info';
 --
 
 COMMENT ON COLUMN public."Groups".description IS 'Short description of what the Group is about.';
+
+
+--
+-- Name: IdeaAttachments; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public."IdeaAttachments" (
+    "ideaId" uuid NOT NULL,
+    "attachmentId" uuid NOT NULL,
+    type public."enum_IdeaAttachments_type" DEFAULT 'file'::public."enum_IdeaAttachments_type"
+);
+
+
+--
+-- Name: COLUMN "IdeaAttachments"."ideaId"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."IdeaAttachments"."ideaId" IS 'To what Idea this Attachment belongs to.';
+
+
+--
+-- Name: COLUMN "IdeaAttachments"."attachmentId"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."IdeaAttachments"."attachmentId" IS 'Which Attachment belongs to this Idea.';
+
+
+--
+-- Name: COLUMN "IdeaAttachments".type; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."IdeaAttachments".type IS 'Type of the attachment image or file';
 
 
 --
@@ -2660,6 +2744,14 @@ ALTER TABLE ONLY public."Attachments"
 
 
 --
+-- Name: CommentAttachments CommentAttachments_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public."CommentAttachments"
+    ADD CONSTRAINT "CommentAttachments_pkey" PRIMARY KEY ("commentId", "attachmentId");
+
+
+--
 -- Name: CommentReports CommentReports_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -2761,6 +2853,14 @@ ALTER TABLE ONLY public."GroupMemberUsers"
 
 ALTER TABLE ONLY public."Groups"
     ADD CONSTRAINT "Groups_pkey" PRIMARY KEY (id);
+
+
+--
+-- Name: IdeaAttachments IdeaAttachments_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public."IdeaAttachments"
+    ADD CONSTRAINT "IdeaAttachments_pkey" PRIMARY KEY ("ideaId", "attachmentId");
 
 
 --
@@ -3228,6 +3328,22 @@ ALTER TABLE ONLY public."Attachments"
 
 
 --
+-- Name: CommentAttachments CommentAttachments_attachmentId_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public."CommentAttachments"
+    ADD CONSTRAINT "CommentAttachments_attachmentId_fkey" FOREIGN KEY ("attachmentId") REFERENCES public."Attachments"(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: CommentAttachments CommentAttachments_commentId_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public."CommentAttachments"
+    ADD CONSTRAINT "CommentAttachments_commentId_fkey" FOREIGN KEY ("commentId") REFERENCES public."Comments"(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
 -- Name: CommentReports CommentReports_commentId_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -3425,6 +3541,22 @@ ALTER TABLE ONLY public."Groups"
 
 ALTER TABLE ONLY public."Groups"
     ADD CONSTRAINT "Groups_sourcePartnerId_fkey" FOREIGN KEY ("sourcePartnerId") REFERENCES public."Partners"(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: IdeaAttachments IdeaAttachments_attachmentId_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public."IdeaAttachments"
+    ADD CONSTRAINT "IdeaAttachments_attachmentId_fkey" FOREIGN KEY ("attachmentId") REFERENCES public."Attachments"(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: IdeaAttachments IdeaAttachments_ideaId_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public."IdeaAttachments"
+    ADD CONSTRAINT "IdeaAttachments_ideaId_fkey" FOREIGN KEY ("ideaId") REFERENCES public."Ideas"(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -3986,4 +4118,5 @@ COPY public."SequelizeMeta" (name) FROM stdin;
 20240405170424-create-ideation.js
 20240618064610-create-discussion.js
 20240702054643-alter-vote-container-files.js
+20240829073146-argument-idea-attachments.js
 \.

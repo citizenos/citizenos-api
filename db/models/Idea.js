@@ -176,6 +176,12 @@ module.exports = function (sequelize, DataTypes) {
             foreignKey: 'ideaId'
         });
 
+        Idea.belongsToMany(models.Attachment, {
+            through: models.IdeaAttachment,
+            foreignKey: 'ideaId',
+            constraints: true
+        });
+
         Idea.belongsToMany(models.Report, {
             through: models.IdeaReport,
             foreignKey: 'ideaId',

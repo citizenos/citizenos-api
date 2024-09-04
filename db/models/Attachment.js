@@ -85,6 +85,18 @@ module.exports = function (sequelize, DataTypes) {
             foreignKey: 'attachmentId',
             constraints: true
         });
+
+        Attachment.belongsToMany(models.Idea, {
+            through: models.IdeaAttachment,
+            foreignKey: 'attachmentId',
+            constraints: true
+        });
+
+        Attachment.belongsToMany(models.Comment, {
+            through: models.CommentAttachment,
+            foreignKey: 'attachmentId',
+            constraints: true
+        });
     };
 
     Attachment.SOURCES = SOURCES;

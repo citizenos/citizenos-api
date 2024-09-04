@@ -156,6 +156,12 @@ module.exports = function (sequelize, DataTypes) {
             constraints: true
         });
 
+        Comment.belongsToMany(models.Attachment, {
+            through: models.CommentAttachment,
+            foreignKey: 'commentId',
+            constraints: true
+        });
+
         // TODO: funky association for cascade delete and right commentId reference
         Comment.belongsToMany(models.Discussion, {
             through: models.DiscussionComment,

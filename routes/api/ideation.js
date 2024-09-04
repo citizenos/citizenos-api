@@ -3,6 +3,7 @@
 
 
 module.exports = function (app) {
+    const config = app.get('config');
     const logger = app.get('logger');
     const loginCheck = app.get('middleware.loginCheck');
     const models = app.get('models');
@@ -14,6 +15,9 @@ module.exports = function (app) {
     const { injectReplacements } = require('sequelize/lib/utils/sql');
     const QueryStream = app.get('QueryStream');
     const fastCsv = app.get('fastCsv');
+    const cosUpload = app.get('cosUpload');
+    const https = require('https');
+    const path = require('path');
 
     const Ideation = models.Ideation;
     const TopicMemberUser = models.TopicMemberUser;
@@ -31,7 +35,8 @@ module.exports = function (app) {
     const CommentReport = models.CommentReport;
     const CommentVote = models.CommentVote;
     const IdeaReport = models.IdeaReport;
-
+    const IdeaAttachment = models.IdeaAttachment;
+    const Attachment = models.Attachment;
     const topicLib = require('./topic')(app);
     const discussionLib = require('./discussion')(app);
     /**
@@ -3540,5 +3545,361 @@ module.exports = function (app) {
             next(err);
         }
     });
+
+    /**
+   * Add Idea Attachment
+   */
+    const addIdeaAttachment = async (req, res, next, type) => {
+        const attachmentLimit = config.attachments.limit || 5;
+        const topicId = req.params.topicId;
+        const ideaId = req.params.ideaId;
+        try {
+
+            const idea = await Idea.findOne({
+                where: {
+                    id: ideaId
+                },
+                include: [Attachment]
+            });
+
+            if (!idea) {
+                return res.badRequest('Matching idea not found', 3);
+            }
+            if (idea.Attachments && idea.Attachments.length >= attachmentLimit) {
+                return res.badRequest('Idea attachment limit reached', 2);
+            }
+
+            let data = await cosUpload.upload(req, `${topicId}_${ideaId}`);
+            data.creatorId = req.user.id;
+            data.source = Attachment.SOURCES.upload;
+            let attachment = Attachment.build(data);
+            await db.transaction(async function (t) {
+                attachment = await attachment.save({ transaction: t });
+                await IdeaAttachment.create(
+                    {
+                        ideaId: req.params.ideaId,
+                        attachmentId: attachment.id,
+                        type: type || IdeaAttachment.ATTACHMENT_TYPES.file
+                    },
+                    {
+                        transaction: t
+                    }
+                );
+                await cosActivities.addActivity(
+                    attachment,
+                    {
+                        type: 'User',
+                        id: req.user.id,
+                        ip: req.ip
+                    },
+                    null,
+                    idea,
+                    req.method + ' ' + req.path,
+                    t
+                );
+
+                t.afterCommit(() => {
+                    return res.created(attachment.toJSON());
+                });
+            });
+        } catch (err) {
+            if (err.type && (err.type === 'fileSize' || err.type === 'fileType')) {
+                return res.forbidden(err.message)
+            }
+            next(err);
+        }
+    }
+    app.post('/api/users/:userId/topics/:topicId/ideations/:ideationId/ideas/:ideaId/attachments/upload', loginCheck(['partner']), topicLib.hasPermission(TopicMemberUser.LEVELS.read, null, [Topic.STATUSES.ideation]), async function (req, res, next) {
+        return addIdeaAttachment(req, res, next);
+    });
+
+    /**
+   * Add image to idea
+   */
+
+    app.post('/api/users/:userId/topics/:topicId/ideations/:ideationId/ideas/:ideaId/image/upload', loginCheck(['partner']), topicLib.hasPermission(TopicMemberUser.LEVELS.read, null, [Topic.STATUSES.ideation]), async function (req, res, next) {
+        return addIdeaAttachment(req, res, next, IdeaAttachment.ATTACHMENT_TYPES.image);
+    });
+
+
+    app.post('/api/users/:userId/topics/:topicId/ideations/:ideationId/ideas/:ideaId/attachments', loginCheck(['partner']), topicLib.hasPermission(TopicMemberUser.LEVELS.read, null, [Topic.STATUSES.ideation]), async function (req, res, next) {
+        const ideaId = req.params.ideaId;
+        const name = req.body.name;
+        const type = req.body.type;
+        const source = req.body.source;
+        const size = req.body.size;
+        let link = req.body.link;
+        const attachmentLimit = config.attachments.limit || 5;
+        if (source !== Attachment.SOURCES.upload && !link) {
+            return res.badRequest('Missing attachment link');
+        }
+        if (!name) {
+            return res.badRequest('Missing attachment name');
+        }
+
+        try {
+            const idea = await Idea.findOne({
+                where: {
+                    id: ideaId
+                },
+                include: [Attachment]
+            });
+
+            if (!idea) {
+                return res.badRequest('Matching idea not found', 3);
+            }
+            if (idea.Attachments && idea.Attachments.length >= attachmentLimit) {
+                return res.badRequest('Idea attachment limit reached', 2);
+            }
+            let urlObject;
+            if (link) {
+                urlObject = new URL(link);
+            }
+
+            let invalidLink = false;
+            switch (source) {
+                case Attachment.SOURCES.dropbox:
+                    if (['www.dropbox.com', 'dropbox.com'].indexOf(urlObject.hostname) === -1) {
+                        invalidLink = true;
+                    }
+                    break;
+                case Attachment.SOURCES.googledrive:
+                    if (urlObject.hostname.split('.').splice(-2).join('.') !== 'google.com') {
+                        invalidLink = true;
+                    }
+                    break;
+                case Attachment.SOURCES.onedrive:
+                    if (urlObject.hostname !== '1drv.ms') {
+                        invalidLink = true;
+                    }
+                    break;
+                default:
+                    return res.badRequest('Invalid link source');
+            }
+
+            if (invalidLink) {
+                return res.badRequest('Invalid link source');
+            }
+
+            let attachment = Attachment.build({
+                name: name,
+                type: type,
+                size: size,
+                source: source,
+                creatorId: req.user.userId,
+                link: link
+            });
+
+            await db.transaction(async function (t) {
+                attachment = await attachment.save({ transaction: t });
+                await IdeaAttachment.create(
+                    {
+                        ideaId: ideaId,
+                        attachmentId: attachment.id,
+                        type: IdeaAttachment.ATTACHMENT_TYPES.file
+                    },
+                    {
+                        transaction: t
+                    }
+                );
+                await cosActivities.addActivity(
+                    attachment,
+                    {
+                        type: 'User',
+                        id: req.user.userId,
+                        ip: req.ip
+                    },
+                    null,
+                    idea,
+                    req.method + ' ' + req.path,
+                    t
+                );
+
+                t.afterCommit(() => {
+                    return res.ok(attachment.toJSON());
+                });
+            });
+        } catch (err) {
+            next(err);
+        }
+    });
+
+    app.put('/api/users/:userId/topics/:topicId/ideations/:ideationId/ideas/:ideaId/attachments/:attachmentId', loginCheck(['partner']), topicLib.hasPermission(TopicMemberUser.LEVELS.read, null, [Topic.STATUSES.ideation]), async function (req, res, next) {
+        const newName = req.body.name;
+
+        if (!newName) {
+            return res.badRequest('Missing attachment name');
+        }
+
+        try {
+            const attachment = await Attachment
+                .findOne({
+                    where: {
+                        id: req.params.attachmentId
+                    },
+                    include: [Idea]
+                });
+
+            attachment.name = newName;
+
+            await db
+                .transaction(async function (t) {
+                    const idea = attachment.Ideas[0];
+                    delete attachment.Ideas;
+
+                    await cosActivities.updateActivity(
+                        attachment,
+                        idea,
+                        {
+                            type: 'User',
+                            id: req.user.userId,
+                            ip: req.ip
+                        },
+                        req.method + ' ' + req.path,
+                        t
+                    );
+
+                    await attachment.save({
+                        transaction: t
+                    });
+
+                    t.afterCommit(() => {
+                        return res.ok(attachment.toJSON());
+                    });
+                });
+        } catch (err) {
+            return next(err);
+        }
+    });
+
+    /**
+     * Delete Idea Attachment
+     */
+    app.delete('/api/users/:userId/topics/:topicId/ideations/:ideationId/ideas/:ideaId/attachments/:attachmentId', loginCheck(['partner']), topicLib.hasPermission(TopicMemberUser.LEVELS.read, null, [Topic.STATUSES.ideation]), async function (req, res, next) {
+        try {
+            const attachment = await Attachment.findOne({
+                where: {
+                    id: req.params.attachmentId
+                },
+                include: [Idea]
+            });
+
+            await db
+                .transaction(async function (t) {
+                    const link = new URL(attachment.link);
+                    if (attachment.source === Attachment.SOURCES.upload) {
+                        await cosUpload.delete(link.pathname);
+                    }
+                    await cosActivities.deleteActivity(attachment, attachment.Ideas[0], {
+                        type: 'User',
+                        id: req.user.userId,
+                        ip: req.ip
+                    }, req.method + ' ' + req.path, t);
+
+                    await attachment.destroy({ transaction: t });
+
+                    t.afterCommit(() => {
+                        return res.ok();
+                    });
+                })
+        } catch (err) {
+            return next(err);
+        }
+    });
+
+    const getIdeaAttachments = async (ideaId, type) => {
+        return await db
+            .query(
+                `
+                SELECT
+                    a.id,
+                    a.name,
+                    a.size,
+                    a.source,
+                    a.type,
+                    a.link,
+                    a."createdAt",
+                    c.id as "creator.id",
+                    c.name as "creator.name"
+                FROM "IdeaAttachments" ia
+                JOIN "Attachments" a ON a.id = ia."attachmentId"
+                JOIN "Users" c ON c.id = a."creatorId"
+                WHERE ia."ideaId" = :ideaId AND ia.type=:type
+                AND a."deletedAt" IS NULL
+                ;
+                `,
+                {
+                    replacements: {
+                        ideaId: ideaId,
+                        type: type || IdeaAttachment.ATTACHMENT_TYPES.file
+                    },
+                    type: db.QueryTypes.SELECT,
+                    raw: true,
+                    nest: true
+                }
+            );
+    }
+    const ideaAttachmentsList = async function (req, res, next) {
+        try {
+            const attachments = await getIdeaAttachments(req.params.ideaId, req.query?.type);
+
+            return res.ok({
+                count: attachments.length,
+                rows: attachments
+            });
+        } catch (err) {
+            return next(err);
+        }
+    };
+
+    app.get('/api/users/:userId/topics/:topicId/ideations/:ideationId/ideas/:ideaId/attachments', loginCheck(['partner']), topicLib.hasPermission(TopicMemberUser.LEVELS.read, true), ideaAttachmentsList);
+    app.get('/api/topics/:topicId/ideations/:ideationId/ideas/:ideaId/attachments', topicLib.hasVisibility(Topic.VISIBILITY.public), ideaAttachmentsList);
+
+    const readAttachment = async function (req, res, next) {
+        try {
+            const attachment = await Attachment
+                .findOne({
+                    where: {
+                        id: req.params.attachmentId
+                    }
+                });
+
+            if (attachment && attachment.source === Attachment.SOURCES.upload && req.query.download) {
+                const fileUrl = new URL(attachment.link);
+                let filename = attachment.name;
+
+                if (filename.split('.').length <= 1 || path.extname(filename) !== `.${attachment.type}`) {
+                    filename += '.' + attachment.type;
+                }
+
+                const options = {
+                    hostname: fileUrl.hostname,
+                    path: fileUrl.pathname,
+                    port: fileUrl.port
+                };
+
+                if (app.get('env') === 'development' || app.get('env') === 'test') {
+                    options.rejectUnauthorized = false;
+                }
+
+                https
+                    .get(options, function (externalRes) {
+                        res.setHeader('content-disposition', 'attachment; filename=' + encodeURIComponent(filename));
+                        externalRes.pipe(res);
+                    })
+                    .on('error', function (err) {
+                        return next(err);
+                    })
+                    .end();
+            } else {
+                return res.ok(attachment.toJSON());
+            }
+        } catch (err) {
+            return next(err);
+        }
+    };
+
+    app.get('/api/users/:userId/topics/:topicId/ideations/:ideationId/ideas/:ideaId/attachments/:attachmentId', loginCheck(['partner']), topicLib.hasPermission(TopicMemberUser.LEVELS.read, true), readAttachment);
+    app.get('/api/topics/:topicId/ideations/:ideationId/ideas/:ideaId/attachments/:attachmentId', topicLib.hasVisibility(Topic.VISIBILITY.public), readAttachment);
 
 }

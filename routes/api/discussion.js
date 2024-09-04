@@ -5,6 +5,7 @@
  */
 
 module.exports = function (app) {
+    const config = app.get('config');
     const models = app.get('models');
     const db = models.sequelize;
     const { injectReplacements } = require('sequelize/lib/utils/sql');
@@ -15,15 +16,21 @@ module.exports = function (app) {
     const loginCheck = app.get('middleware.loginCheck');
     const asyncMiddleware = app.get('middleware.asyncMiddleware');
     const authTokenRestrictedUse = app.get('middleware.authTokenRestrictedUse');
+    const cosUpload = app.get('cosUpload');
+    const https = require('https');
+    const path = require('path');
+
     const Topic = models.Topic;
     const TopicMemberUser = models.TopicMemberUser;
 
     const TopicDiscussion = models.TopicDiscussion;
     const Report = models.Report;
 
+    const Attachment = models.Attachment;
     const Comment = models.Comment;
     const CommentVote = models.CommentVote;
     const CommentReport = models.CommentReport;
+    const CommentAttachment = models.CommentAttachment;
 
     const DiscussionComment = models.DiscussionComment;
     const Discussion = models.Discussion;
@@ -45,7 +52,7 @@ module.exports = function (app) {
                 });
 
                 if (comment) {
-                    return next('route');
+                    return next();
                 } else {
                     return res.forbidden('Insufficient permissions');
                 }
@@ -1496,6 +1503,363 @@ module.exports = function (app) {
             return next(err);
         }
     });
+
+
+    /**
+   * Add Discussion Attachment
+   */
+    const addCommentAttachment = async (req, res, next, type) => {
+        const attachmentLimit = config.attachments.limit || 5;
+        const topicId = req.params.topicId;
+        const commentId = req.params.commentId;
+        try {
+
+            const comment = await Comment.findOne({
+                where: {
+                    id: commentId
+                },
+                include: [Attachment]
+            });
+
+            if (!comment) {
+                return res.badRequest('Matching Argument not found', 3);
+            }
+            if (comment.Attachments && comment.Attachments.length >= attachmentLimit) {
+                return res.badRequest('Argument attachment limit reached', 2);
+            }
+
+            let data = await cosUpload.upload(req, `${topicId}_${commentId}`);
+            data.creatorId = req.user.id;
+            let attachment = Attachment.build(data);
+
+            await db.transaction(async function (t) {
+                attachment = await attachment.save({ transaction: t });
+                await CommentAttachment.create(
+                    {
+                        commentId: req.params.commentId,
+                        attachmentId: attachment.id,
+                        type: type || CommentAttachment.ATTACHMENT_TYPES.file
+                    },
+                    {
+                        transaction: t
+                    }
+                );
+                await cosActivities.addActivity(
+                    attachment,
+                    {
+                        type: 'User',
+                        id: req.user.id,
+                        ip: req.ip
+                    },
+                    null,
+                    comment,
+                    req.method + ' ' + req.path,
+                    t
+                );
+
+                t.afterCommit(() => {
+                    return res.created(attachment.toJSON());
+                });
+            });
+        } catch (err) {
+            if (err.type && (err.type === 'fileSize' || err.type === 'fileType')) {
+                return res.forbidden(err.message)
+            }
+            next(err);
+        }
+    }
+    app.post('/api/users/:userId/topics/:topicId/discussions/:discussionId/comments/:commentId/attachments/upload', loginCheck(['partner']), isCommentCreator(), topicLib.hasPermission(TopicMemberUser.LEVELS.admin, false, null, true), async function (req, res, next) {
+        return addCommentAttachment(req, res, next);
+    });
+
+    /**
+   * Add image to comment
+   */
+
+    app.post('/api/users/:userId/topics/:topicId/discussions/:discussionId/comments/:commentId/image/upload', loginCheck(['partner']), topicLib.hasPermission(TopicMemberUser.LEVELS.read, true, [Topic.STATUSES.inProgress, Topic.STATUSES.voting, Topic.STATUSES.followUp]), async function (req, res, next) {
+        return addCommentAttachment(req, res, next, CommentAttachment.ATTACHMENT_TYPES.image);
+    });
+
+    app.post('/api/users/:userId/topics/:topicId/discussions/:discussionId/comments/:commentId/attachments', loginCheck(['partner']), topicLib.hasPermission(TopicMemberUser.LEVELS.read, true, [Topic.STATUSES.inProgress, Topic.STATUSES.voting, Topic.STATUSES.followUp]), async function (req, res, next) {
+        const commentId = req.params.commentId;
+        const name = req.body.name;
+        const type = req.body.type;
+        const source = req.body.source;
+        const size = req.body.size;
+        let link = req.body.link;
+        const attachmentLimit = config.attachments.limit || 5;
+        if (source !== Attachment.SOURCES.upload && !link) {
+            return res.badRequest('Missing attachment link');
+        }
+        if (!name) {
+            return res.badRequest('Missing attachment name');
+        }
+
+        try {
+            const comment = await Comment.findOne({
+                where: {
+                    id: commentId
+                },
+                include: [Attachment]
+            });
+
+            if (!comment) {
+                return res.badRequest('Matching argument not found', 3);
+            }
+            if (comment.Attachments && comment.Attachments.length >= attachmentLimit) {
+                return res.badRequest('Argument attachment limit reached', 2);
+            }
+            let urlObject;
+            if (link) {
+                urlObject = new URL(link);
+            }
+
+            let invalidLink = false;
+            switch (source) {
+                case Attachment.SOURCES.dropbox:
+                    if (['www.dropbox.com', 'dropbox.com'].indexOf(urlObject.hostname) === -1) {
+                        invalidLink = true;
+                    }
+                    break;
+                case Attachment.SOURCES.googledrive:
+                    if (urlObject.hostname.split('.').splice(-2).join('.') !== 'google.com') {
+                        invalidLink = true;
+                    }
+                    break;
+                case Attachment.SOURCES.onedrive:
+                    if (urlObject.hostname !== '1drv.ms') {
+                        invalidLink = true;
+                    }
+                    break;
+                default:
+                    return res.badRequest('Invalid link source');
+            }
+
+            if (invalidLink) {
+                return res.badRequest('Invalid link source');
+            }
+
+            let attachment = Attachment.build({
+                name: name,
+                type: type,
+                size: size,
+                source: source,
+                creatorId: req.user.userId,
+                link: link
+            });
+
+            await db.transaction(async function (t) {
+                attachment = await attachment.save({ transaction: t });
+                await CommentAttachment.create(
+                    {
+                        commentId: commentId,
+                        attachmentId: attachment.id,
+                        type: CommentAttachment.ATTACHMENT_TYPES.file
+                    },
+                    {
+                        transaction: t
+                    }
+                );
+                await cosActivities.addActivity(
+                    attachment,
+                    {
+                        type: 'User',
+                        id: req.user.userId,
+                        ip: req.ip
+                    },
+                    null,
+                    comment,
+                    req.method + ' ' + req.path,
+                    t
+                );
+
+                t.afterCommit(() => {
+                    return res.ok(attachment.toJSON());
+                });
+            });
+        } catch (err) {
+            next(err);
+        }
+    });
+
+    app.put('/api/users/:userId/topics/:topicId/discussions/:discussionId/comments/:commentId/attachments/:attachmentId', loginCheck(['partner']), isCommentCreator(), topicLib.hasPermission(TopicMemberUser.LEVELS.read, true, [Topic.STATUSES.inProgress, Topic.STATUSES.voting, Topic.STATUSES.followUp]), async function (req, res, next) {
+        const newName = req.body.name;
+
+        if (!newName) {
+            return res.badRequest('Missing attachment name');
+        }
+
+        try {
+            const attachment = await Attachment
+                .findOne({
+                    where: {
+                        id: req.params.attachmentId
+                    },
+                    include: [Comment]
+                });
+
+            attachment.name = newName;
+
+            await db
+                .transaction(async function (t) {
+                    const comment = attachment.Comments[0];
+                    delete attachment.Comments;
+
+                    await cosActivities.updateActivity(
+                        attachment,
+                        comment,
+                        {
+                            type: 'User',
+                            id: req.user.userId,
+                            ip: req.ip
+                        },
+                        req.method + ' ' + req.path,
+                        t
+                    );
+
+                    await attachment.save({
+                        transaction: t
+                    });
+
+                    t.afterCommit(() => {
+                        return res.ok(attachment.toJSON());
+                    });
+                });
+        } catch (err) {
+            return next(err);
+        }
+    });
+
+    /**
+     * Delete Comment Attachment
+     */
+    app.delete('/api/users/:userId/topics/:topicId/discussions/:discussionId/comments/:commentId/attachments/:attachmentId', loginCheck(['partner']), isCommentCreator(), topicLib.hasPermission(TopicMemberUser.LEVELS.read, true, [Topic.STATUSES.inProgress, Topic.STATUSES.voting, Topic.STATUSES.followUp]), async function (req, res, next) {
+        try {
+            const attachment = await Attachment.findOne({
+                where: {
+                    id: req.params.attachmentId
+                },
+                include: [Comment]
+            });
+
+            await db
+                .transaction(async function (t) {
+                    const link = new URL(attachment.link);
+                    if (attachment.source === Attachment.SOURCES.upload) {
+                        await cosUpload.delete(link.pathname);
+                    }
+                    await cosActivities.deleteActivity(attachment, attachment.Comments[0], {
+                        type: 'User',
+                        id: req.user.userId,
+                        ip: req.ip
+                    }, req.method + ' ' + req.path, t);
+
+                    await attachment.destroy({ transaction: t });
+
+                    t.afterCommit(() => {
+                        return res.ok();
+                    });
+                })
+        } catch (err) {
+            return next(err);
+        }
+    });
+
+    const getCommentAttachments = async (commentId, type) => {
+        return await db
+            .query(
+                `
+                SELECT
+                    a.id,
+                    a.name,
+                    a.size,
+                    a.source,
+                    a.type,
+                    a.link,
+                    a."createdAt",
+                    c.id as "creator.id",
+                    c.name as "creator.name"
+                FROM "CommentAttachments" ca
+                JOIN "Attachments" a ON a.id = ca."attachmentId"
+                JOIN "Users" c ON c.id = a."creatorId"
+                WHERE ca."commentId" = :commentId AND ca.type=:type
+                AND a."deletedAt" IS NULL
+                ;
+                `,
+                {
+                    replacements: {
+                        commentId: commentId,
+                        type: type || CommentAttachment.ATTACHMENT_TYPES.file
+                    },
+                    type: db.QueryTypes.SELECT,
+                    raw: true,
+                    nest: true
+                }
+            );
+    }
+    const commentAttachmentsList = async function (req, res, next) {
+        try {
+            const attachments = await getCommentAttachments(req.params.commentId, req.query?.type);
+
+            return res.ok({
+                count: attachments.length,
+                rows: attachments
+            });
+        } catch (err) {
+            return next(err);
+        }
+    };
+
+    app.get('/api/users/:userId/topics/:topicId/discussions/:discussionId/comments/:commentId/attachments', loginCheck(['partner']), topicLib.hasPermission(TopicMemberUser.LEVELS.read, true), topicLib.isModerator(), commentAttachmentsList);
+    app.get('/api/topics/:topicId/discussions/:discussionId/comments/:commentId/attachments', loginCheck(['partner']), topicLib.hasPermission(TopicMemberUser.LEVELS.read, true), topicLib.isModerator(), commentAttachmentsList);
+
+    const readAttachment = async function (req, res, next) {
+        try {
+            const attachment = await Attachment
+                .findOne({
+                    where: {
+                        id: req.params.attachmentId
+                    }
+                });
+
+            if (attachment && attachment.source === Attachment.SOURCES.upload && req.query.download) {
+                const fileUrl = new URL(attachment.link);
+                let filename = attachment.name;
+
+                if (filename.split('.').length <= 1 || path.extname(filename) !== `.${attachment.type}`) {
+                    filename += '.' + attachment.type;
+                }
+
+                const options = {
+                    hostname: fileUrl.hostname,
+                    path: fileUrl.pathname,
+                    port: fileUrl.port
+                };
+
+                if (app.get('env') === 'development' || app.get('env') === 'test') {
+                    options.rejectUnauthorized = false;
+                }
+
+                https
+                    .get(options, function (externalRes) {
+                        res.setHeader('content-disposition', 'attachment; filename=' + encodeURIComponent(filename));
+                        externalRes.pipe(res);
+                    })
+                    .on('error', function (err) {
+                        return next(err);
+                    })
+                    .end();
+            } else {
+                return res.ok(attachment.toJSON());
+            }
+        } catch (err) {
+            return next(err);
+        }
+    };
+
+    app.get('/api/users/:userId/topics/:topicId/discussions/:discussionId/comments/:commentId/attachments/:attachmentId', loginCheck(['partner']), topicLib.hasPermission(TopicMemberUser.LEVELS.read, true), topicLib.isModerator(), readAttachment);
+    app.get('/api/topics/:topicId/discussions/:discussionId/comments/:commentId/attachments/:attachmentId', loginCheck(['partner']), topicLib.hasPermission(TopicMemberUser.LEVELS.read, true), topicLib.isModerator(), readAttachment);
+
 
     return {
         isCommentCreator

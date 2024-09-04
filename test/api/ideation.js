@@ -793,6 +793,183 @@ const ideationIdeaCommentVotesList = async function (agent, userId, topicId, ide
     return _ideationIdeaCommentVotesList(agent, userId, topicId, ideationId, ideaId, commentId, 200);
 };
 
+
+const _ideaAttachmentAdd = async function (agent, userId, topicId, ideationId, ideaId, name, link, source, type, size, expectedHttpCode) {
+    const path = '/api/users/:userId/topics/:topicId/ideations/:ideationId/ideas/:ideaId/attachments'
+        .replace(':userId', userId)
+        .replace(':topicId', topicId)
+        .replace(':ideationId', ideationId)
+        .replace(':ideaId', ideaId);
+
+    return agent
+        .post(path)
+        .set('Content-Type', 'application/json')
+        .send({
+            name: name,
+            link: link,
+            source: source,
+            type: type,
+            size: size
+        })
+        .expect(expectedHttpCode)
+        .expect('Content-Type', /json/);
+};
+
+const ideaAttachmentAdd = async function (agent, userId, topicId, ideationId, ideaId, name, link, source, type, size) {
+    return _ideaAttachmentAdd(agent, userId, topicId, ideationId, ideaId, name, link, source, type, size, 200);
+};
+
+const _ideaAttachmentUpdate = async function (agent, userId, topicId, ideationId, ideaId, attachmentId, name, expectedHttpCode) {
+    const path = '/api/users/:userId/topics/:topicId/ideations/:ideationId/ideas/:ideaId/attachments/:attachmentId'
+        .replace(':userId', userId)
+        .replace(':topicId', topicId)
+        .replace(':ideationId', ideationId)
+        .replace(':ideaId', ideaId)
+        .replace(':attachmentId', attachmentId);
+
+    return agent
+        .put(path)
+        .set('Content-Type', 'application/json')
+        .send({ name: name })
+        .expect(expectedHttpCode)
+        .expect('Content-Type', /json/);
+};
+
+const ideaAttachmentUpdate = async function (agent, userId, topicId, ideationId, ideaId, attachmentId, name) {
+    return _ideaAttachmentUpdate(agent, userId, topicId, ideationId, ideaId, attachmentId, name, 200);
+};
+
+const _ideaAttachmentRead = async function (agent, userId, topicId, ideationId, ideaId, attachmentId, expectedHttpCode) {
+    const path = '/api/users/:userId/topics/:topicId/ideations/:ideationId/ideas/:ideaId/attachments/:attachmentId'
+        .replace(':userId', userId)
+        .replace(':topicId', topicId)
+        .replace(':ideationId', ideationId)
+        .replace(':ideaId', ideaId)
+        .replace(':attachmentId', attachmentId);
+
+    return agent
+        .get(path)
+        .expect(expectedHttpCode)
+        .expect('Content-Type', /json/);
+
+};
+
+const ideaAttachmentRead = async function (agent, userId, topicId, ideationId, ideaId, attachmentId) {
+    return _ideaAttachmentRead(agent, userId, topicId, ideationId, ideaId, attachmentId, 200);
+};
+
+const _ideaAttachmentReadUnauth = async function (agent, topicId, ideationId, ideaId, attachmentId, expectedHttpCode) {
+    const path = '/api/topics/:topicId/ideations/:ideationId/ideas/:ideaId/attachments/:attachmentId'
+        .replace(':topicId', topicId)
+        .replace(':ideationId', ideationId)
+        .replace(':ideaId', ideaId)
+        .replace(':attachmentId', attachmentId);
+
+    return agent
+        .get(path)
+        .expect(expectedHttpCode)
+        .expect('Content-Type', /json/);
+};
+
+const ideaAttachmentReadUnauth = async function (agent, topicId, ideationId, ideaId, attachmentId) {
+    return _ideaAttachmentReadUnauth(agent, topicId, ideationId, ideaId, attachmentId, 200);
+};
+
+const _ideaAttachmentDownload = async function (agent, userId, topicId, ideationId, ideaId, attachmentId, expectedHttpCode) {
+    const path = '/api/users/:userId/topics/:topicId/ideations/:ideationId/ideas/:ideaId/attachments/:attachmentId'
+        .replace(':userId', userId)
+        .replace(':topicId', topicId)
+        .replace(':ideationId', ideationId)
+        .replace(':ideaId', ideaId)
+        .replace(':attachmentId', attachmentId);
+
+    return agent
+        .get(path)
+        .query({ download: true })
+        .expect(expectedHttpCode);
+
+};
+//TODO: Missing test to use it?
+const ideaAttachmentDownload = async function (agent, userId, topicId, ideationId, ideaId, attachmentId) { //eslint-disable-line
+    return _ideaAttachmentDownload(agent, userId, topicId, ideationId, ideaId, attachmentId, 200);
+};
+
+const _ideaAttachmentDelete = async function (agent, userId, topicId, ideationId, ideaId, attachmentId, expectedHttpCode) {
+    const path = '/api/users/:userId/topics/:topicId/ideations/:ideationId/ideas/:ideaId/attachments/:attachmentId'
+        .replace(':userId', userId)
+        .replace(':topicId', topicId)
+        .replace(':ideationId', ideationId)
+        .replace(':ideaId', ideaId)
+        .replace(':attachmentId', attachmentId);
+
+    return agent
+        .delete(path)
+        .expect(expectedHttpCode)
+        .expect('Content-Type', /json/);
+};
+
+const ideaAttachmentDelete = async function (agent, userId, topicId, ideationId, ideaId, attachmentId) {
+    return _ideaAttachmentDelete(agent, userId, topicId, ideationId, ideaId, attachmentId, 200);
+};
+
+const _ideaAttachmentList = async function (agent, userId, topicId, ideationId, ideaId, type, expectedHttpCode) {
+    const path = '/api/users/:userId/topics/:topicId/ideations/:ideationId/ideas/:ideaId/attachments'
+        .replace(':userId', userId)
+        .replace(':topicId', topicId)
+        .replace(':ideationId', ideationId)
+        .replace(':ideaId', ideaId);
+
+    return agent
+        .get(path)
+        .query({ type })
+        .expect(expectedHttpCode)
+        .expect('Content-Type', /json/);
+};
+
+const ideaAttachmentList = async function (agent, userId, topicId, ideationId, ideaId, type) {
+    return _ideaAttachmentList(agent, userId, topicId, ideationId, ideaId, type, 200);
+};
+
+const _ideaAttachmentListUnauth = async function (agent, topicId, ideationId, ideaId, expectedHttpCode) {
+    const path = '/api/topics/:topicId/ideations/:ideationId/ideas/:ideaId/attachments'
+        .replace(':topicId', topicId)
+        .replace(':ideationId', ideationId)
+        .replace(':ideaId', ideaId);
+
+    return agent
+        .get(path)
+        .expect(expectedHttpCode)
+        .expect('Content-Type', /json/);
+};
+
+const ideaAttachmentListUnauth = async function (agent, topicId, ideationId, ideaId) {
+    return _ideaAttachmentListUnauth(agent, topicId, ideationId, ideaId, 200);
+};
+
+const _uploadAttachmentFile = async function (agent, userId, topicId, ideationId, ideaId, attachment, expectedHttpCode) {
+    const path = '/api/users/:userId/topics/:topicId/ideations/:ideationId/ideas/:ideaId/attachments/upload'
+        .replace(':userId', userId)
+        .replace(':topicId', topicId)
+        .replace(':ideationId', ideationId)
+        .replace(':ideaId', ideaId);
+
+    const request = agent
+        .post(path);
+
+    Object.keys(attachment).forEach(function (key) {
+        request.field(key, attachment[key])
+    });
+
+    return request
+        .attach('file', attachment.file)
+        .set('Content-Type', 'multipart/form-data')
+        .expect(expectedHttpCode);
+};
+
+const uploadAttachmentFile = async function (agent, userId, topicId, ideationId, ideaId, attachment) {
+    return _uploadAttachmentFile(agent, userId, topicId, ideationId, ideaId, attachment, 201);
+};
+
 module.exports.ideationCreate = ideationCreate;
 
 const chai = require('chai');
@@ -801,6 +978,7 @@ chai.use(require('chai-shallow-deep-equal'));
 chai.use(require('chai-uuid'));
 const assert = chai.assert;
 const request = require('supertest');
+const path = require('path');
 const app = require('../../app');
 const config = app.get('config');
 
@@ -3596,6 +3774,362 @@ suite('Users', function () {
 
                     });
                 })
+            });
+
+            // API - /api/users/:userId/topics/:topicId/discussions/:discussionId/comments/:commentId/attachments
+            suite('Attachments', function () {
+                const creatorAgent = request.agent(app);
+                const agent = request.agent(app);
+                let creator;
+                let user;
+                let topic;
+                let topic2;
+
+                let ideation;
+                let ideation2;
+
+                let idea;
+                let idea2;
+                setup(async function () {
+                    creator = await userLib.createUserAndLogin(creatorAgent, null, null, null);
+                    user = await userLib.createUserAndLogin(agent);
+                    topic = (await topicLib.topicCreate(creatorAgent, creator.id, null, Topic.STATUSES.draft, null, Topic.VISIBILITY.public)).body.data;
+                    ideation = (await ideationCreate(creatorAgent, creator.id, topic.id, 'TEST ideation')).body.data;
+                    await topicLib.topicUpdate(creatorAgent, creator.id, topic.id, Topic.STATUSES.ideation);
+                    idea = (await ideationIdeaCreate(creatorAgent, creator.id, topic.id, ideation.id, 'TEST', 'TEST')).body.data;
+                    topic2 = (await topicLib.topicCreate(creatorAgent, creator.id, null, Topic.STATUSES.draft, null, Topic.VISIBILITY.private)).body.data;
+                    ideation2 = (await ideationCreate(creatorAgent, creator.id, topic2.id, 'TEST ideation')).body.data;
+                    await topicLib.topicUpdate(creatorAgent, creator.id, topic2.id, Topic.STATUSES.ideation);
+                    idea2 = (await ideationIdeaCreate(creatorAgent, creator.id, topic2.id, ideation2.id, 'TEST', 'TEST')).body.data;
+                });
+
+                suite('Create', function () {
+                    test('Success', async function () {
+                        const expectedAttachment = {
+                            name: 'testfilename.pdf',
+                            source: 'dropbox',
+                            link: `https://www.dropbox.com/s/6schppqdg5qfofe/Getting%20Started.pdf?dl=0`,
+                            type: '.pdf',
+                            size: 1000,
+                            creatorId: creator.id
+                        };
+
+                        const attachment = (await ideaAttachmentAdd(creatorAgent, creator.id, topic.id, ideation.id, idea.id, expectedAttachment.name, expectedAttachment.link, expectedAttachment.source, expectedAttachment.type, expectedAttachment.size)).body.data;
+                        assert.property(attachment, 'id');
+                        assert.property(attachment, 'createdAt');
+                        assert.equal(attachment.name, expectedAttachment.name);
+                        assert.equal(attachment.link, expectedAttachment.link);
+                        assert.equal(attachment.source, expectedAttachment.source);
+                        assert.equal(attachment.type, expectedAttachment.type);
+                        assert.equal(attachment.size, expectedAttachment.size);
+                        assert.equal(attachment.creatorId, creator.id);
+                    });
+
+                    test('Fail, no link', async function () {
+                        const expectedAttachment = {
+                            name: 'testfilename.pdf',
+                            source: 'dropbox',
+                            link: '',
+                            type: '.pdf',
+                            size: 1000,
+                            creatorId: creator.id
+                        };
+
+                        const resBody = (await _ideaAttachmentAdd(creatorAgent, creator.id, topic.id, ideation.id, idea.id, expectedAttachment.name, expectedAttachment.link, expectedAttachment.source, expectedAttachment.type, expectedAttachment.size, 400)).body;
+                        const expectedBody = {
+                            status: {
+                                code: 40000,
+                                message: "Missing attachment link"
+                            }
+                        };
+                        assert.deepEqual(resBody, expectedBody);
+                    });
+                });
+
+                suite('Read', function () {
+                    let attachment;
+
+                    suiteSetup(async function () {
+                        const expectedAttachment = {
+                            name: 'testfilename.pdf',
+                            source: 'dropbox',
+                            link: `https://www.dropbox.com/s/6schppqdg5qfofe/Getting%20Started.pdf?dl=0`,
+                            type: '.pdf',
+                            creatorId: creator.id
+                        };
+                        attachment = (await ideaAttachmentAdd(creatorAgent, creator.id, topic.id, ideation.id, idea.id, expectedAttachment.name, expectedAttachment.link, expectedAttachment.source, expectedAttachment.type, expectedAttachment.size)).body.data;
+                    });
+
+                    test('Success', async function () {
+                        const readAttachment = (await ideaAttachmentRead(creatorAgent, creator.id, topic.id, ideation.id, idea.id, attachment.id)).body.data;
+
+                        assert.equal(readAttachment.id, attachment.id);
+                        assert.equal(readAttachment.createdAt, attachment.createdAt);
+                        assert.equal(readAttachment.name, attachment.name);
+                        assert.equal(readAttachment.link, attachment.link);
+                        assert.equal(readAttachment.source, attachment.source);
+                        assert.equal(readAttachment.type, attachment.type);
+                        assert.equal(readAttachment.size, attachment.size);
+                        assert.equal(readAttachment.creatorId, attachment.creatorId);
+                    });
+
+                    test('Unauth - Success', async function () {
+                        const readAttachment = (await ideaAttachmentReadUnauth(agent, topic.id, ideation.id, idea.id, attachment.id)).body.data;
+
+                        assert.equal(readAttachment.id, attachment.id);
+                        assert.equal(readAttachment.createdAt, attachment.createdAt);
+                        assert.equal(readAttachment.name, attachment.name);
+                        assert.equal(readAttachment.link, attachment.link);
+                        assert.equal(readAttachment.source, attachment.source);
+                        assert.equal(readAttachment.type, attachment.type);
+                        assert.equal(readAttachment.size, attachment.size);
+                        assert.equal(readAttachment.creatorId, attachment.creatorId);
+                    });
+
+                    test('Unauth- Fail', async function () {
+                        const result = (await _ideaAttachmentReadUnauth(agent, topic2.id, ideation2.id, idea2.id, attachment.id, 404)).body;
+                        const expectedResponse = {
+                            status: {
+                                code: 40400,
+                                message: 'Not Found'
+                            }
+                        };
+
+                        assert.deepEqual(result, expectedResponse);
+                    });
+                });
+
+                suite('Update', function () {
+                    let attachment;
+
+                    setup(async function () {
+                        const expectedAttachment = {
+                            name: 'testfilename.pdf',
+                            source: 'dropbox',
+                            link: `https://www.dropbox.com/s/6schppqdg5qfofe/Getting%20Started.pdf?dl=0`,
+                            type: '.pdf',
+                            creatorId: creator.id
+                        };
+                        attachment = (await ideaAttachmentAdd(creatorAgent, creator.id, topic.id, ideation.id, idea.id, expectedAttachment.name, expectedAttachment.link, expectedAttachment.source, expectedAttachment.type, expectedAttachment.size)).body.data;
+                    });
+
+                    test('Success', async function () {
+                        const updateAttachment = (await ideaAttachmentUpdate(creatorAgent, creator.id, topic.id, ideation.id, idea.id, attachment.id, 'newTestFilename')).body.data;
+                        assert.property(updateAttachment, 'id');
+                        assert.property(updateAttachment, 'createdAt');
+                        assert.equal(updateAttachment.name, 'newTestFilename');
+                        assert.equal(updateAttachment.link, attachment.link);
+                        assert.equal(updateAttachment.type, attachment.type);
+                        assert.equal(updateAttachment.source, attachment.source);
+                        assert.equal(updateAttachment.size, attachment.size);
+                        assert.equal(updateAttachment.creatorId, creator.id);
+                    });
+
+                    test('Update attachment - Fail - Missing attachment name', async function () {
+                        const resBody = (await _ideaAttachmentUpdate(creatorAgent, creator.id, topic.id, ideation.id, idea.id, attachment.id, '', 400)).body;
+                        const expectedBody = {
+                            status: {
+                                code: 40000,
+                                message: "Missing attachment name"
+                            }
+                        };
+                        assert.deepEqual(resBody, expectedBody);
+                    });
+                });
+
+                suite('Delete', function () {
+                    let attachment;
+
+                    setup(async function () {
+                        const expectedAttachment = {
+                            name: 'testfilename.pdf',
+                            source: 'dropbox',
+                            link: `https://www.dropbox.com/s/6schppqdg5qfofe/Getting%20Started.pdf?dl=0`,
+                            type: '.pdf',
+                            creatorId: creator.id
+                        };
+                        attachment = (await ideaAttachmentAdd(creatorAgent, creator.id, topic.id, ideation.id, idea.id, expectedAttachment.name, expectedAttachment.link, expectedAttachment.source, expectedAttachment.type, expectedAttachment.size)).body.data;
+                    });
+
+                    test('Success', async function () {
+                        const resBody = (await ideaAttachmentDelete(creatorAgent, creator.id, topic.id, ideation.id, idea.id, attachment.id)).body;
+                        const expectedBody = {
+                            status: {
+                                code: 20000
+                            }
+                        };
+                        assert.deepEqual(resBody, expectedBody);
+                        const list = (await ideaAttachmentList(creatorAgent, creator.id, topic.id, ideation.id, idea.id)).body.data;
+
+                        assert.equal(list.count, 0);
+                        assert.equal(list.rows.length, 0);
+                    });
+
+                    test('Fail - unauthorized', async function () {
+                        const resBody = (await _ideaAttachmentDelete(agent, user.id, topic.id, ideation.id, idea.id, attachment.id, 403)).body;
+                        const expectedBody = {
+                            status: {
+                                code: 40300,
+                                message: "Insufficient permissions"
+                            }
+                        };
+                        assert.deepEqual(resBody, expectedBody);
+                    });
+
+                });
+
+                suite('Upload', function () {
+                    test('Success', async function () {
+                        const expectedAttachment = {
+                            name: 'test.txt',
+                            source: 'upload',
+                            type: '.txt',
+                            size: 1000,
+                            creatorId: creator.id,
+                            file: path.join(__dirname, '/uploads/test.txt')
+                        };
+
+                        const attachment = (await uploadAttachmentFile(creatorAgent, creator.id, topic.id, ideation.id, idea.id, expectedAttachment)).body.data;
+                        assert.equal(attachment.name, expectedAttachment.name);
+                        assert.equal(attachment.creatorId, expectedAttachment.creatorId);
+                        assert.equal(attachment.name, expectedAttachment.name);
+                        assert.equal(attachment.name, expectedAttachment.name);
+                    });
+
+                    test('Fail - invalid format', async function () {
+                        const expectedAttachment = {
+                            name: 'test.txt',
+                            source: 'upload',
+                            type: '.txt',
+                            size: 1000,
+                            creatorId: creator.id,
+                            file: path.join(__dirname, '/uploads/test.exe')
+                        };
+
+                        const resBody = (await _uploadAttachmentFile(creatorAgent, creator.id, topic.id, ideation.id, idea.id, expectedAttachment, 403)).body;
+                        assert.deepEqual(resBody, {
+                            "status": {
+                                "code": 40300,
+                                "message": "File type application/x-msdos-program is invalid"
+                            }
+                        })
+                    });
+
+                    test('Fail - invalid format .exe with text/plain header', async function () {
+                        const attachment = {
+                            name: 'test.txt',
+                            source: 'upload',
+                            type: '.txt',
+                            size: 1000,
+                            creatorId: creator.id,
+                            file: path.join(__dirname, '/uploads/test.exe')
+                        };
+
+                        const request = creatorAgent
+                            .post('/api/users/:userId/topics/:topicId/attachments/upload'
+                                .replace(':userId', creator.id)
+                                .replace(':topicId', topic.id));
+
+                        Object.keys(attachment).forEach(function (key) {
+                            request.field(key, attachment[key])
+                        });
+
+                        const res = await request
+                            .attach("name", attachment.file, { contentType: 'text/plain' })
+                            .set('Content-Type', 'multipart/form-data')
+                            .expect(403);
+
+                        assert.deepEqual(res.body, {
+                            "status": {
+                                "code": 40300,
+                                "message": "File type text/plain is invalid"
+                            }
+                        });
+                    });
+
+                    test('Fail - invalid format .exe with .txt filename', async function () {
+                        const file = path.join(__dirname, '/uploads/test.exe');
+
+                        const request = creatorAgent
+                            .post('/api/users/:userId/topics/:topicId/attachments/upload'
+                                .replace(':userId', creator.id)
+                                .replace(':topicId', topic.id));
+
+                        request.field('folder', 'test');
+
+                        const res = await request
+                            .attach("name", file, { contentType: 'text/plain' })
+                            .set('Content-Type', 'multipart/form-data')
+                            .expect(403);
+
+                        assert.deepEqual(res.body, {
+                            "status": {
+                                "code": 40300,
+                                "message": "File type text/plain is invalid"
+                            }
+                        });
+                    });
+
+                    test('Fail - invalid format file without extension', async function () {
+                        const file = path.join(__dirname, '/uploads/test');
+
+                        const request = creatorAgent
+                            .post('/api/users/:userId/topics/:topicId/attachments/upload'
+                                .replace(':userId', creator.id)
+                                .replace(':topicId', topic.id));
+
+                        request.field('folder', 'test');
+
+                        return request
+                            .attach("name", file, { contentType: 'text/plain' })
+                            .set('Content-Type', 'multipart/form-data')
+                            .expect(403);
+                    });
+
+                });
+
+                suite('List', function () {
+                    let attachment;
+
+                    setup(async function () {
+                        const expectedAttachment = {
+                            name: 'testfilename.pdf',
+                            source: 'dropbox',
+                            link: `https://www.dropbox.com/s/6schppqdg5qfofe/Getting%20Started.pdf?dl=0`,
+                            type: '.pdf',
+                            creatorId: creator.id
+                        };
+                        attachment = (await ideaAttachmentAdd(creatorAgent, creator.id, topic.id, ideation.id, idea.id, expectedAttachment.name, expectedAttachment.link, expectedAttachment.source, expectedAttachment.type, expectedAttachment.size)).body.data;
+                    });
+
+                    test('Success', async function () {
+                        const list = (await ideaAttachmentList(creatorAgent, creator.id, topic.id, ideation.id, idea.id)).body.data;
+                        const listAttachment = list.rows[0];
+
+                        assert.equal(list.count, 1);
+                        assert.property(listAttachment, 'id');
+                        assert.property(listAttachment, 'createdAt');
+                        assert.equal(listAttachment.name, attachment.name);
+                        assert.equal(listAttachment.link, attachment.link);
+                        assert.equal(listAttachment.type, attachment.type);
+                        assert.equal(listAttachment.size, attachment.size);
+                        assert.equal(listAttachment.creator.id, creator.id);
+                    });
+
+                    test('Success unauth', async function () {
+                        const list = (await ideaAttachmentListUnauth(creatorAgent, topic.id, ideation.id, idea.id)).body.data;
+                        assert.equal(list.count, 1);
+                        const listAttachment = list.rows[0];
+                        assert.property(listAttachment, 'id');
+                        assert.property(listAttachment, 'createdAt');
+                        assert.equal(listAttachment.name, attachment.name);
+                        assert.equal(listAttachment.link, attachment.link);
+                        assert.equal(listAttachment.type, attachment.type);
+                        assert.equal(listAttachment.source, attachment.source);
+                        assert.equal(listAttachment.size, attachment.size);
+                        assert.equal(listAttachment.creator.id, creator.id);
+                    });
+                });
             });
         });
 
