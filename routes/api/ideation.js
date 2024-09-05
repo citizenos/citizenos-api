@@ -302,13 +302,13 @@ module.exports = function (app) {
             const query = new QueryStream(
                 `
                 SELECT
-                    u.name,
-                    i."createdAt"::date as date,
-                    i."createdAt"::time as time,
-                    i.statement,
-                    i.description,
-                    iv."count" as likes,
-                    f.folders
+                    u.name as "User",
+                    i."createdAt"::date as "Date",
+                    i."createdAt"::time as "Time",
+                    i.statement as "Idea heading",
+                    i.description as "Idea",
+                    iv."count" as "Likes",
+                    f.folders as "Folders"
                 FROM "Ideas" i
                 JOIN "Users" u ON u.id = i."authorId"
                 LEFT JOIN (
@@ -326,12 +326,13 @@ module.exports = function (app) {
                         ) ii
                 ) iv ON iv."ideaId" = i.id
                 LEFT JOIN (
-                    SELECT f."ideationId",
-                    array_agg(f.name) as folders
-                    FROM "Folders" f WHERE f."ideationId" = $1
-                    GROUP BY f."ideationId"
-                ) f ON f."ideationId" = i."ideationId"
-
+					SELECT
+						fi."ideaId",
+						array_agg(f.name) as folders
+					FROM  "FolderIdeas" fi
+					JOIN "Folders" f ON f.id = fi."folderId"
+					GROUP BY fi."ideaId"
+				) f ON f."ideaId" = i.id
                 WHERE i."ideationId" = $1
                 ;`,
                 [ideationId]
@@ -361,7 +362,7 @@ module.exports = function (app) {
                 connectionManager.releaseConnection(connection);
             });
 
-            res.set('Content-disposition', `attachment; filename=${ideationId}.csv`);
+            res.set('Content-disposition', `attachment; filename=Ideas export.csv`);
             res.set('Content-Type', 'text/csv');
 
             csvStream.pipe(res);
