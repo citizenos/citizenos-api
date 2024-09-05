@@ -16,6 +16,10 @@ module.exports = {
             primaryKey: true,
             comment: 'To what Idea this Attachment belongs to.',
             allowNull: false,
+            references: {
+              model: 'Ideas',
+              key: 'id'
+            },
             defaultValue: Sequelize.UUIDV4
           },
           attachmentId: {
@@ -24,7 +28,7 @@ module.exports = {
             primaryKey: true,
             comment: 'Which Attachment belongs to this Idea.',
             references: {
-              model: 'Users',
+              model: 'Attachments',
               key: 'id'
             },
             onUpdate: 'CASCADE',
@@ -46,6 +50,10 @@ module.exports = {
             type: Sequelize.UUID,
             primaryKey: true,
             comment: 'To what Comment this Attachment belongs to.',
+            references: {
+              model: 'Comments',
+              key: 'id'
+            },
             allowNull: false,
             defaultValue: Sequelize.UUIDV4
           },
@@ -55,7 +63,7 @@ module.exports = {
             primaryKey: true,
             comment: 'Which Attachment belongs to this Comment.',
             references: {
-              model: 'Users',
+              model: 'Attachments',
               key: 'id'
             },
             onUpdate: 'CASCADE',
