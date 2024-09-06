@@ -304,7 +304,7 @@ module.exports = function (app) {
                 SELECT
                     u.name as "User",
                     i."createdAt"::date as "Date",
-                    i."createdAt"::time as "Time",
+                    to_char(i."createdAt", 'HH24:MI') as "Time",
                     i.statement as "Idea heading",
                     i.description as "Idea",
                     iv."count" as "Likes",
