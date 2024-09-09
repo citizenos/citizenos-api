@@ -26,6 +26,7 @@ module.exports = function (app) {
     const TopicDiscussion = models.TopicDiscussion;
     const Report = models.Report;
 
+    const User = models.User;
     const Attachment = models.Attachment;
     const Comment = models.Comment;
     const CommentVote = models.CommentVote;
@@ -589,9 +590,18 @@ module.exports = function (app) {
                 });
 
                 const resComment = await Comment.build(c[0][0]);
+                const creator = await User.findOne({
+                    where: {
+                        id: req.user.userId
+                    },
+                    attributes: ['id', 'imageUrl', 'name']
+                })
                 t.afterCommit(() => {
                     const resObj = resComment.toJSON();
+                    resObj.creator = creator.toJSON();
                     resObj.discussionId = discussionId;
+                    resObj.replies = {rows: [], count: 0};
+                    resObj.votes = {up: {count: 0, selected: false}, down: {count: 0, selected: false}, count: 0};
                     return res.created(resObj);
                 });
             });
