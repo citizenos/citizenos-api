@@ -2219,10 +2219,6 @@ module.exports = function (app) {
                         {
                             name: 'dashboard.png',
                             file: path.join(templateRoot, 'images/newsletter/dashboard.png')
-                        },
-                        {
-                            name: 'topic.png',
-                            file: path.join(templateRoot, 'images/newsletter/topic.png')
                         }].concat(EMAIL_OPTIONS_DEFAULT.images);
                     const emailOptions = {
                         // from: from, - comes from emailClient.js configuration
