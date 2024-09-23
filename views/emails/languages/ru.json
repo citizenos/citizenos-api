@@ -159,7 +159,7 @@
     "NOTIFICATION_USER_DELETE_IDEAVOTE_IDEA": "Пользователь <em>{{userName}}</em> удалил свой голос за идею в теме: <em>{{topicTitle}}</em>",
     "NOTIFICATION_USER_ADD_REPORT_IDEA": "Пользователь <em>{{userName}}</em> сообщил о неуместной идее",
     "NOTIFICATION_USER_UPDATE_IDEA": "Пользователь <em>{{userName}}</em> обновил свою идею по теме <em>{{topicTitle}}</em>",
-    "NOTIFICATION_USER_CREATE_COMMENT_IDEA": "User <em>{{userName}}</em> has replied to an idea in topic: <em>{{topicTitle}}</em>",
+    "NOTIFICATION_USER_CREATE_COMMENT_IDEA": "Пользователь <em>{{userName}}</em> оставил ответ на идею в теме: <em>{{topicTitle}}</em>",
     "NOTIFICATION_USER_DELETE_COMMENT_IDEA": "Пользователь <em>{{userName}}</em> удалил свой ответ на идею в теме: <em>{{topicTitle}}</em>",
     "NOTIFICATION_USER_UPDATE_COMMENT_IDEA": "Пользователь <em>{{userName}}</em> обновил свой ответ на идею в теме: <em>{{topicTitle}}</em>",
     "NOTIFICATION_MODERATOR_UPDATE_IDEA": "Пользователь <em>{{userName}}</em> (модератор) обновил поле идеи <em>{{fieldName}}</em> в теме <em>{{topicTitle}}</em>",
