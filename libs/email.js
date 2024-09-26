@@ -2217,8 +2217,8 @@ module.exports = function (app) {
                     linkedData.translations = template.translations;
                     const images = [
                         {
-                            name: 'dashboard.png',
-                            file: path.join(templateRoot, 'images/newsletter/dashboard.png')
+                            name: 'ideation.jpg',
+                            file: path.join(templateRoot, 'images/newsletter/ideation.jpg')
                         }].concat(EMAIL_OPTIONS_DEFAULT.images);
                     const emailOptions = {
                         // from: from, - comes from emailClient.js configuration
