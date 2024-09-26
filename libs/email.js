@@ -2159,7 +2159,7 @@ module.exports = function (app) {
             const linkToApplication = urlLib.getFe();
             let customStyles = EMAIL_OPTIONS_DEFAULT.styles;
 
-            const usersCount = (await db.query(`
+           /* const usersCount = (await db.query(`
             SELECT COUNT(u.id)
             FROM "Users" u
             WHERE u.id NOT IN (SELECT "userId" FROM "UserNewsletters" WHERE "newsletterName" = :templateName)
@@ -2172,8 +2172,8 @@ module.exports = function (app) {
                 type: db.QueryTypes.SELECT,
                 raw: true,
                 nested: true
-            }))[0].count
-
+            }))[0].count*/
+            const usersCount = 5000; //Google limit
             const loops = Math.ceil(usersCount / 50);
             let loop = 0;
 
