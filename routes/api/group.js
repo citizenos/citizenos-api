@@ -3087,7 +3087,8 @@ module.exports = function (app) {
                     if (hasAccess && hasAccess.topic.permissions.level === TopicMemberGroup.LEVELS.admin) {
                         const topicMember = await TopicMemberGroup.findOne({
                             where: {
-                                topicId: request.topicId
+                                topicId: request.topicId,
+                                groupId: groupId
                             }
                         })
                         if (!topicMember) {
