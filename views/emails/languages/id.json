@@ -87,7 +87,7 @@
     "SUBJECT": "Rahvaalgatus.ee edastab kollektiivse pöördumise \"{{topic.title}}\""
   },
   "NEWSLETTER": {
-    "SUBJECT": "Changes in the Citizen OS Platform User Experience"
+    "SUBJECT": "We've launched a new feature: idea gathering"
   },
   "REQUEST_ADD_TOPIC_TO_GROUP": {
     "SUBJECT": "Request to add topic to group {{group.name}}"
