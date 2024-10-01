@@ -87,7 +87,7 @@
     "SUBJECT": "Rahvaalgatus.ee edastab kollektiivse pöördumise \"{{topic.title}}\""
   },
   "NEWSLETTER": {
-    "SUBJECT": "We've launched a new feature: idea gathering"
+    "SUBJECT": "Представляем новую функцию: сбор идей"
   },
   "REQUEST_ADD_TOPIC_TO_GROUP": {
     "SUBJECT": "Запрос на добавление темы в группу {{group.name}}"
