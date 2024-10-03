@@ -3,7 +3,7 @@
         <tr>
             <td valign="middle" style="padding:22px 22px 22px 0;">
                 <p id="header_title_description">
-                    An idea reply has been reported in
+                    Eine Antwort auf eine Idee wurde gemeldet im Thema
                 </p>
                 <p id="header_title">{{topic.title}}</p>
             </td>
@@ -14,16 +14,16 @@
     <tbody>
         <tr>
             <td valign="middle" style="padding-bottom: 32px;">
-                Hi {{userModerator.name}}!
+                Hallo, {{userModerator.name}}!
             </td>
         </tr>
         <tr>
           <td width="100%">
-            A reply to an idea has been reported as inappropriate in a topic you moderate.{{#isUserNotified}} The author of the reply has been notified. {{/isUserNotified}}{{^isUserNotified}}The author of the reply has now deleted their account.{{/isUserNotified}} Please see the reasons for reporting below, review the content, and decide on the necessary course of action.
+            Eine Antwort auf eine Idee wurde in einem von Ihnen moderierten Thema als unangemessen gemeldet.{{#isUserNotified}} Der Autor der Antwort wurde benachrichtigt. {{/isUserNotified}}{{^isUserNotified}}Der Autor der Antwort hat sein Konto gelöscht.{{/isUserNotified}} Bitte lesen Sie die Gründe für die Meldung unten, überprüfen Sie den Inhalt und entscheiden Sie über die notwendige Vorgehensweise.
             </td>
         </tr>
         <tr>
-            <td><p class="info_heading">Content</p></td>
+            <td><p class="info_heading">Inhalt</p></td>
         </tr>
         <tr>
             <td valign="middle">
@@ -50,7 +50,7 @@
             </td>
         </tr>
         <tr>
-            <td><p class="info_heading">Reason</p></td>
+            <td><p class="info_heading">Begründung</p></td>
         </tr>
         <tr>
             <td>
@@ -76,20 +76,19 @@
             <td style="padding-bottom: 32px; padding-top: 16px;">
                 <p class="submit_button">
                     <a href="{{linkModerate}}" target="_blank"
-                        style="color:#FFFFFF; text-decoration: none; font-weight: 600;padding: 9px 60px;">Review argument</a>
+                        style="color:#FFFFFF; text-decoration: none; font-weight: 600;padding: 9px 60px;">Argument überprüfen</a>
                 </p>
             </td>
         </tr>
 
         <tr>
             <td valign="bottom" style="border-top: 1px solid #E1E7EE;padding-top:16px;font-size:14px;">
-                You can also leave it as is, but other moderators may decide to have it hidden by default (users will get a warning prior to seeing the content).
+                Sie können den Beitrag unverändert lassen, aber dennoch können Moderatoren noch darüber entscheiden, ob er standardmäßig ausgeblendet werden soll (Benutzer erhalten eine Warnung, bevor sie den Inhalt sehen).
             </td>
         </tr>
         <tr>
             <td valign="bottom" style="padding-top:16px;font-size: 14px;">
-                <a href="{{linkViewModerationGuidelines}}">Learn more about the Citizen OS moderation process
-                    here.</a>
+                <a href="{{linkViewModerationGuidelines}}">Erfahren Sie hier mehr über den Moderationsprozess von Citizen OS.</a>
             </td>
         </tr>
     </tbody>
