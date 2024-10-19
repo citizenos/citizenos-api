@@ -341,7 +341,7 @@ module.exports = function (app) {
             _.cloneDeep(EMAIL_OPTIONS_DEFAULT), // Deep clone to guarantee no funky business messing with the class level defaults, cant use Object.assign({}.. as this is not a deep clone.
             {
                 subject: 'Help request',
-                to: ['support@citizenos.com'],
+                to: [config.email.supportTo],
                 replyTo: debugData.email,
                 from: "no-reply@citizenos.com",
                 linkedData: {
@@ -369,7 +369,7 @@ module.exports = function (app) {
             _.cloneDeep(EMAIL_OPTIONS_DEFAULT), // Deep clone to guarantee no funky business messing with the class level defaults, cant use Object.assign({}.. as this is not a deep clone.
             {
                 subject: 'Feedback',
-                to: ['support@citizenos.com'],
+                to: [config.email.feedbackTo],
                 from: "no-reply@citizenos.com",
                 linkedData: {
                     translations: template.translations,
