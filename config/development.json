@@ -57,7 +57,7 @@
       "port": "9001",
       "ssl": true,
       "rejectUnauthorized": false,
-      "apikey": "LUVORFBXdUhrb0RMLXhzekREcXpjR1NsU1BBeTZRWmJGRUR4blZpX3YzYjJRa3FZ"
+      "apikey": "ZHwu7C2d6EwWZXGDNuYCzM7kHeTeMN9dfXZMYSYmYB5CmlChMUj4FC6VnqY"
     },
     "signature": {
       "certificates": {
@@ -66,6 +66,30 @@
           "config/tsl/estonian-tsl.xml"
         ],
         "issuers": [
+          {
+            "C":	"EE",
+            "O":	"SK ID Solutions AS",
+            "OID": "NTREE-10747013",
+            "CN":	"TEST of SK ID Solutions EID-NQ 2021E"
+          },
+          {
+            "C":	"EE",
+            "O":	"SK ID Solutions AS",
+            "OID": "NTREE-10747013",
+            "CN":	"TEST of SK ID Solutions EID-Q 2024E"
+          },
+          {
+            "C":	"EE",
+            "O":	"SK ID Solutions AS",
+            "OID": "NTREE-10747013",
+            "CN":	"SK ID Solutions EID-NQ 2021R"
+          },
+          {
+            "C":	"EE",
+            "O":	"SK ID Solutions AS",
+            "OID": "NTREE-10747013",
+            "CN":	"SK ID Solutions EID-NQ 2021E"
+          },
           {
             "C": "EE",
             "O": "AS Sertifitseerimiskeskus",
