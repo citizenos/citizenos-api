@@ -81,7 +81,7 @@
     "superagent": "9.0.2",
     "swagger-ui-express": "5.0.1",
     "twit": "2.2.11",
-    "undersign": "0.1.337",
+    "undersign": "git+https://github.com/moll/js-undersign",
     "uuid": "10.0.0",
     "validator": "13.12.0"
   },

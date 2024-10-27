@@ -72,7 +72,7 @@
         "superagent": "9.0.2",
         "swagger-ui-express": "5.0.1",
         "twit": "2.2.11",
-        "undersign": "0.1.337",
+        "undersign": "git+https://github.com/moll/js-undersign",
         "uuid": "10.0.0",
         "validator": "13.12.0"
       },
@@ -7231,6 +7231,36 @@
       "integrity": "sha512-jxwzQpLQjSmWXgwaCZE9Nz+glAG01yF1QnWgbhGwHI5A6FRIEY6IVqtHhIepHqI7/kyEyQEagBC5mBEFlIYvdg==",
       "dependencies": {
         "safer-buffer": "~2.1.0"
+      }
+    },
+    "node_modules/asn1.js": {
+      "version": "5.4.1",
+      "resolved": "https://registry.npmjs.org/asn1.js/-/asn1.js-5.4.1.tgz",
+      "integrity": "sha512-+I//4cYPccV8LdmBLiX8CYvf9Sp3vQsrqu2QNXRcrbiWvcx/UdlFiqUJJzxRQxgsZmvhXhn4cSKeSmoFjVdupA==",
+      "dependencies": {
+        "bn.js": "^4.0.0",
+        "inherits": "^2.0.1",
+        "minimalistic-assert": "^1.0.0",
+        "safer-buffer": "^2.1.0"
+      }
+    },
+    "node_modules/asn1.js-rfc2560": {
+      "version": "5.0.1",
+      "resolved": "https://registry.npmjs.org/asn1.js-rfc2560/-/asn1.js-rfc2560-5.0.1.tgz",
+      "integrity": "sha512-1PrVg6kuBziDN3PGFmRk3QrjpKvP9h/Hv5yMrFZvC1kpzP6dQRzf5BpKstANqHBkaOUmTpakJWhicTATOA/SbA==",
+      "dependencies": {
+        "asn1.js-rfc5280": "^3.0.0"
+      },
+      "peerDependencies": {
+        "asn1.js": "^5.0.0"
+      }
+    },
+    "node_modules/asn1.js-rfc5280": {
+      "version": "3.0.0",
+      "resolved": "https://registry.npmjs.org/asn1.js-rfc5280/-/asn1.js-rfc5280-3.0.0.tgz",
+      "integrity": "sha512-Y2LZPOWeZ6qehv698ZgOGGCZXBQShObWnGthTrIFlIQjuV1gg2B8QOhWFRExq/MR1VnPpIIe7P9vX2vElxv+Pg==",
+      "dependencies": {
+        "asn1.js": "^5.0.0"
       }
     },
     "node_modules/asn1js": {
@@ -14705,11 +14735,10 @@
     },
     "node_modules/undersign": {
       "version": "0.1.337",
-      "resolved": "https://registry.npmjs.org/undersign/-/undersign-0.1.337.tgz",
-      "integrity": "sha512-mp8GaWRdckJrGIYReb/saAVfFqdiGApsn+d8eYpzKgZcR9TVmnElNKXp6NYzquVgUnalzspsEen4YVhuc7al0w==",
+      "resolved": "git+ssh://git@github.com/moll/js-undersign.git#6b87bf5bec41c74e05a0df2b0c9d4b7359c73946",
       "dependencies": {
         "asn1.js": "^5",
-        "asn1.js-rfc2560": "^5",
+        "asn1.js-rfc2560": "^5.0.1",
         "asn1.js-rfc5280": "^3",
         "bn.js": "^4.11",
         "co": "^4.6",
@@ -14742,35 +14771,6 @@
       "integrity": "sha512-TIGnTpdo+E3+pCyAluZvtED5p5wCqLdezCyhPZzKPcxvFplEt4i+W7OONCKgeZFT3+y5NZZfOOS/Bdcanm1MYA==",
       "engines": {
         "node": ">=0.10.0"
-      }
-    },
-    "node_modules/undersign/node_modules/asn1.js": {
-      "version": "5.2.0",
-      "resolved": "https://registry.npmjs.org/asn1.js/-/asn1.js-5.2.0.tgz",
-      "integrity": "sha512-Q7hnYGGNYbcmGrCPulXfkEw7oW7qjWeM4ZTALmgpuIcZLxyqqKYWxCZg2UBm8bklrnB4m2mGyJPWfoktdORD8A==",
-      "dependencies": {
-        "bn.js": "^4.0.0",
-        "inherits": "^2.0.1",
-        "minimalistic-assert": "^1.0.0"
-      }
-    },
-    "node_modules/undersign/node_modules/asn1.js-rfc2560": {
-      "version": "5.0.0",
-      "resolved": "https://registry.npmjs.org/asn1.js-rfc2560/-/asn1.js-rfc2560-5.0.0.tgz",
-      "integrity": "sha512-I3bOj/If4sMFmV6Oru93DIDvdENVKVretVpVIp5fe3MACM2HasbnMvTW1fdzbUiHcmMYI+5WfBiboHkIa4j4ew==",
-      "dependencies": {
-        "asn1.js-rfc5280": "^3.0.0"
-      },
-      "peerDependencies": {
-        "asn1.js": "^5.0.0"
-      }
-    },
-    "node_modules/undersign/node_modules/asn1.js-rfc5280": {
-      "version": "3.0.0",
-      "resolved": "https://registry.npmjs.org/asn1.js-rfc5280/-/asn1.js-rfc5280-3.0.0.tgz",
-      "integrity": "sha512-Y2LZPOWeZ6qehv698ZgOGGCZXBQShObWnGthTrIFlIQjuV1gg2B8QOhWFRExq/MR1VnPpIIe7P9vX2vElxv+Pg==",
-      "dependencies": {
-        "asn1.js": "^5.0.0"
       }
     },
     "node_modules/undersign/node_modules/co": {
