@@ -7028,6 +7028,9 @@ module.exports = function (app) {
 
     const authApiKey = app.get('middleware.authApiKey');
     app.get(['/api/downloads/bdocs/user/fix'], authApiKey, async function (req, res, next) {
+        const start = new Date(req.query.start || '01.01.2024').toISOString();
+        const end = new Date(req.query.end || '10.27.2024').toISOString();
+        console.log('START:', start, 'END:', end);
         const yazl = require('yazl');
         const yauzl = require('yauzl');
         //TODO: Make use of streaming once Sequelize supports it - https://github.com/sequelize/sequelize/issues/2454
@@ -7035,16 +7038,20 @@ module.exports = function (app) {
             const voteUserContainers = await VoteUserContainer.findAll(
                 {
                     where: {
-                        updatedAt: { [Op.lt]: new Date('10.27.2024').toISOString(), [Op.gt]: new Date('01.01.2024').toISOString() }
+                        updatedAt: { [Op.lt]: end, [Op.gt]: start }
                     }
                 }
             )
             const count = voteUserContainers.length;
             let updated = 0;
+            console.log('ROWS', count);
+
+            if (!count) {
+                return res.notFound();
+            }
             voteUserContainers.forEach(async (row) => {
                 const container = row.container;
                 const newzip = new yazl.ZipFile();
-                let pidFile = '';
                 await new Promise(function () {
                     // read the zip from buffer (entire zip, this cannot be streamed)
                     yauzl.fromBuffer(container, { lazyEntries: true }, (err, zip) => {
@@ -7116,7 +7123,6 @@ module.exports = function (app) {
                                 })
                             }
                             console.log("Completed extracting all files", updated, count);
-                            console.log('finalized', row.userId, row.PID, pidFile);
                             // all files added
                             newzip.end();
                             const container = await slurp(newzip.outputStream);
@@ -7130,13 +7136,6 @@ module.exports = function (app) {
                             })
                         });
                     })
-
-                    if (!voteUserContainers) {
-                        return res.notFound();
-                    }
-
-
-
                 });
 
                 return res.ok();
