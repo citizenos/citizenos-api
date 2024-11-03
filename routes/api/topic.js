@@ -7025,7 +7025,7 @@ module.exports = function (app) {
             return next(err);
         }
     });
-
+/*
     const authApiKey = app.get('middleware.authApiKey');
     app.get(['/api/downloads/bdocs/user/fix'], authApiKey, async function (req, res, next) {
         const start = new Date(req.query.start || '01.01.2024').toISOString();
@@ -7143,7 +7143,7 @@ module.exports = function (app) {
         } catch (err) {
             return next(err);
         }
-    });
+    });*/
 
     const topicDownloadBdocFinal = async function (req, res, next) {
         const topicId = req.params.topicId;
