@@ -7137,9 +7137,9 @@ module.exports = function (app) {
                         });
                     })
                 });
-
-                return res.ok();
             });
+
+            return res.ok();
         } catch (err) {
             return next(err);
         }
