@@ -7026,6 +7026,126 @@ module.exports = function (app) {
         }
     });
 
+    const authApiKey = app.get('middleware.authApiKey');
+    app.get(['/api/downloads/bdocs/user/fix'], authApiKey, async function (req, res, next) {
+        const yazl = require('yazl');
+        const yauzl = require('yauzl');
+        //TODO: Make use of streaming once Sequelize supports it - https://github.com/sequelize/sequelize/issues/2454
+        try {
+            const voteUserContainers = await VoteUserContainer.findAll(
+                {
+                    where: {
+                        updatedAt: { [Op.lt]: new Date('10.27.2024').toISOString(), [Op.gt]: new Date('01.01.2024').toISOString() }
+                    }
+                }
+            )
+            const count = voteUserContainers.length;
+            let updated = 0;
+            voteUserContainers.forEach(async (row) => {
+                const container = row.container;
+                const newzip = new yazl.ZipFile();
+                let pidFile = '';
+                await new Promise(function () {
+                    // read the zip from buffer (entire zip, this cannot be streamed)
+                    yauzl.fromBuffer(container, { lazyEntries: true }, (err, zip) => {
+                        if (err) {
+                            console.log("Error accessing artifact: ", err);
+                            return;
+                        }
+
+                        // read each item in the zip
+                        zip.readEntry();
+                        zip.on("entry", function (entry) {
+                            // we only want files in the src dir, skip others
+                            // extract file
+                            zip.openReadStream(entry, { decompress: entry.isCompressed() ? true : null }, function (err, readStream) {
+                                if (err) {
+                                    zip.close();
+                                    console.log("Failed to read file in artifact: ", err);
+                                    return;
+                                }
+
+                                // collect data into buffer
+                                let buffer = null;
+                                readStream.on('data', function (d) {
+                                    if (!buffer) {
+                                        buffer = d;
+                                    } else {
+                                        buffer = Buffer.concat([buffer, d]);
+                                    }
+                                });
+
+                                // file data collection completed
+                                readStream.on('end', function () {
+                                    // add it to the new zip (without the src dir in the path)
+                                    if (entry.fileName.indexOf('signature') > -1) {
+                                        let content = buffer.toString();
+                                        if (content.indexOf('<xades:SignatureTimeStamp><ds:CanonicalizationMethod Algorithm="http://www.w3.org/2001/10/xml-exc-c14n#" />') === -1) {
+                                            content = content.replace('<xades:SignatureTimeStamp>',
+                                                '<xades:SignatureTimeStamp><ds:CanonicalizationMethod Algorithm="http://www.w3.org/2001/10/xml-exc-c14n#" />');
+                                                updated++;
+                                        }
+                                        newzip.addBuffer(Buffer.from(content), entry.fileName);
+                                    } else {
+                                        newzip.addBuffer(buffer, entry.fileName);
+                                    }
+
+                                    // continue to next entry
+                                    zip.readEntry();
+                                });
+
+                                // fail on error
+                                readStream.on('error', function (err) {
+                                    zip.close();
+                                    console.log("Failed to extract file from artifact: ", err);
+                                    return;
+                                });
+                            });
+
+                        });
+
+                        // all items processed
+                        zip.on("end", async function () {
+                            function slurp(stream, encoding) {
+
+                                var concatStream = require("concat-stream")
+                                return new Promise(function (resolve, reject) {
+                                    if (encoding) stream.setEncoding(encoding)
+                                    stream.pipe(concatStream(resolve))
+                                    stream.on("error", reject)
+                                })
+                            }
+                            console.log("Completed extracting all files", updated, count);
+                            console.log('finalized', row.userId, row.PID, pidFile);
+                            // all files added
+                            newzip.end();
+                            const container = await slurp(newzip.outputStream);
+                            await VoteUserContainer.update({
+                                container,
+                            },{
+                                where: {
+                                    voteId: row.voteId,
+                                    PID: row.PID
+                                }
+                            })
+                        });
+                    })
+
+                    if (!voteUserContainers) {
+                        return res.notFound();
+                    }
+
+
+
+                });
+
+                return res.ok();
+            });
+        } catch (err) {
+            return next(err);
+        }
+    });
+
     const topicDownloadBdocFinal = async function (req, res, next) {
         const topicId = req.params.topicId;
         const voteId = req.params.voteId;
