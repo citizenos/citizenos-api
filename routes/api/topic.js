@@ -7025,7 +7025,7 @@ module.exports = function (app) {
             return next(err);
         }
     });
-/*
+
     const authApiKey = app.get('middleware.authApiKey');
     app.get(['/api/downloads/bdocs/user/fix'], authApiKey, async function (req, res, next) {
         const start = new Date(req.query.start || '01.01.2024').toISOString();
@@ -7038,7 +7038,7 @@ module.exports = function (app) {
             const voteUserContainers = await VoteUserContainer.findAll(
                 {
                     where: {
-                        updatedAt: { [Op.lt]: end, [Op.gt]: start }
+                        createdAt: { [Op.lt]: end, [Op.gt]: start }
                     }
                 }
             )
@@ -7086,11 +7086,22 @@ module.exports = function (app) {
                                 readStream.on('end', function () {
                                     // add it to the new zip (without the src dir in the path)
                                     if (entry.fileName.indexOf('signature') > -1) {
+                                        const replaceLast = (str, pattern, replacement) => {
+                                            const match = typeof pattern === "string"
+                                            ? pattern
+                                            : (str.match(new RegExp(pattern.source, "g")) || []).slice(-1)[0];
+                                            if (!match) return str;
+                                            const last = str.lastIndexOf(match);
+                                            return last !== -1
+                                            ? `${str.slice(0, last)}${replacement}${str.slice(last + match.length)}`
+                                            : str;
+                                        };
+
                                         let content = buffer.toString();
-                                        if (content.indexOf('<xades:SignatureTimeStamp><ds:CanonicalizationMethod Algorithm="http://www.w3.org/2001/10/xml-exc-c14n#" />') === -1) {
-                                            content = content.replace('<xades:SignatureTimeStamp>',
-                                                '<xades:SignatureTimeStamp><ds:CanonicalizationMethod Algorithm="http://www.w3.org/2001/10/xml-exc-c14n#" />');
-                                                updated++;
+                                        const match = content.match(/<ds:CanonicalizationMethod Algorithm="http:\/\/www\.w3\.org\/2001\/10\/xml-exc-c14n#" \/>/g);
+                                        if (match.length === 3) {
+                                            updated++;
+                                            content = replaceLast(content, '<ds:CanonicalizationMethod Algorithm="http://www.w3.org/2001/10/xml-exc-c14n#" />', '')
                                         }
                                         newzip.addBuffer(Buffer.from(content), entry.fileName);
                                     } else {
@@ -7122,10 +7133,11 @@ module.exports = function (app) {
                                     stream.on("error", reject)
                                 })
                             }
-                            console.log("Completed extracting all files", updated, count);
+                         //   console.log("Completed extracting all files", updated, count);
                             // all files added
                             newzip.end();
                             const container = await slurp(newzip.outputStream);
+                            console.log('Updated', updated);
                             await VoteUserContainer.update({
                                 container,
                             },{
@@ -7143,7 +7155,7 @@ module.exports = function (app) {
         } catch (err) {
             return next(err);
         }
-    });*/
+    });
 
     const topicDownloadBdocFinal = async function (req, res, next) {
         const topicId = req.params.topicId;
