@@ -27,6 +27,7 @@ module.exports = function (app) {
     const Tsl = require('undersign/lib/tsl');
     let tslCertificates;
 
+    const Op = db.Sequelize.Op;
     const tslPath = config.services.signature.certificates.tsl;
 
     if (Array.isArray(tslPath)) {
@@ -1076,7 +1077,8 @@ module.exports = function (app) {
 
                 const voteContainerFiles = await VoteContainerFile.findAll({
                     where: {
-                        voteId: voteId
+                        voteId: voteId,
+                        fileName: {[Op.ne]: SIGNATURE_FILE.name}
                     }
                 });
 
