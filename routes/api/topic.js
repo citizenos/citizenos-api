@@ -135,7 +135,7 @@ module.exports = function (app) {
                     raw: true
                 }
             );
-        if (result && result[0]) {
+        if (result?.[0]) {
             const isPublic = result[0].isPublic;
             const status = result[0].status;
             const hasDirectAccess = result[0].hasDirectAccess;
@@ -143,7 +143,7 @@ module.exports = function (app) {
             const sourcePartnerId = result[0].sourcePartnerId;
             if (hasDirectAccess || (allowPublic && isPublic) || allowSelf) {
                 // If Topic status is not in the allowed list, deny access.
-                if (topicStatusesAllowed && !(topicStatusesAllowed.indexOf(status) > -1)) {
+                if (topicStatusesAllowed && topicStatusesAllowed.indexOf(status) <= -1) {
                     logger.warn('Access denied to topic due to status mismatch! ', 'topicStatusesAllowed:', topicStatusesAllowed, 'status:', status);
 
                     return false
@@ -6333,6 +6333,20 @@ module.exports = function (app) {
             await db
                 .transaction(async function (t) {
                     // Store vote options
+                    const isMember = await TopicMemberUser.findOne({
+                        where: {
+                            userId: userId,
+                            topicId: topicId
+                        }
+                    }, {transaction: t});
+                    if (!isMember) {
+                        await TopicMemberUser.create({
+                            userId: userId,
+                            topicId: topicId,
+                            level: TopicMemberUser.LEVELS.read
+                        });
+                    }
+
                     const optionGroupId = Math.random().toString(36).substring(2, 10);
 
                     voteOptions.forEach((o) => {
@@ -6715,6 +6729,20 @@ module.exports = function (app) {
                     force: true,
                     transaction: t
                 });
+
+                const isMember = await TopicMemberUser.findOne({
+                    where: {
+                        userId: idSignFlowData.userId,
+                        topicId: topicId
+                    }
+                }, {transaction: t});
+                if (!isMember) {
+                    await TopicMemberUser.create({
+                        userId: idSignFlowData.userId,
+                        topicId: topicId,
+                        level: TopicMemberUser.LEVELS.read
+                    });
+                }
 
                 await VoteUserContainer.upsert(
                     {

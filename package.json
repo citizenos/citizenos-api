@@ -102,11 +102,11 @@
     "grunt-eslint": "25.0.0",
     "grunt-exec": "3.0.0",
     "grunt-plantuml": "1.0.3",
-    "mocha": "10.7.0",
+    "mocha": "10.8.2",
     "supertest": "7.0.0"
   },
   "engines": {
-    "node": "20.15.1",
-    "npm": "10.7.0"
+    "node": "20.18.0",
+    "npm": "10.9.0"
   }
 }
