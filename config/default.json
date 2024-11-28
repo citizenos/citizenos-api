@@ -155,6 +155,18 @@
           },
           {
             "C": "EE",
+            "O": "SK ID Solutions AS",
+            "OID": "NTREE-10747013",
+            "CN": "SK ID Solutions EID-Q 2024E"
+          },
+          {
+            "C": "EE",
+            "O": "SK ID Solutions AS",
+            "OID": "NTREE-10747013",
+            "CN": "SK ID Solutions EID-Q 2024R"
+          },
+          {
+            "C": "EE",
             "O": "AS Sertifitseerimiskeskus",
             "OID": "NTREE-10747013",
             "CN": "EID-SK 2016"
