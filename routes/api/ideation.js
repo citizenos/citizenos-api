@@ -540,6 +540,21 @@ module.exports = function (app) {
             if (ideation.deadline && new Date(ideation.deadline) < new Date()) return res.forbidden();
             await db
                 .transaction(async function (t) {
+
+                    const isMember = await TopicMemberUser.findOne({
+                        where: {
+                            userId: req.user.id,
+                            topicId: topicId
+                        }
+                    }, {transaction: t});
+                    if (!isMember) {
+                        await TopicMemberUser.create({
+                            userId: req.user.id,
+                            topicId: topicId,
+                            level: TopicMemberUser.LEVELS.read
+                        });
+                    }
+
                     const idea = Idea.build({
                         authorId: req.user.id,
                         statement,
@@ -2310,6 +2325,19 @@ module.exports = function (app) {
 
             await db
                 .transaction(async function (t) {
+                    const isMember = await TopicMemberUser.findOne({
+                        where: {
+                            userId: req.user.id,
+                            topicId: topicId
+                        }
+                    }, {transaction: t});
+                    if (!isMember) {
+                        await TopicMemberUser.create({
+                            userId: req.user.id,
+                            topicId: topicId,
+                            level: TopicMemberUser.LEVELS.read
+                        });
+                    }
                     await comment.save({ transaction: t });
                     //comment.edits.createdAt = JSON.stringify(comment.createdAt);
                     const idea = await Idea.findOne({
@@ -3446,7 +3474,21 @@ module.exports = function (app) {
 
             await db
                 .transaction(async function (t) {
-                    idea.topicId = req.params.topicId;
+                    const topicId = req.params.topicId;
+                    idea.topicId = topicId;
+                    const isMember = await TopicMemberUser.findOne({
+                        where: {
+                            userId: req.user.id,
+                            topicId: topicId
+                        }
+                    }, {transaction: t});
+                    if (!isMember) {
+                        await TopicMemberUser.create({
+                            userId: req.user.id,
+                            topicId: topicId,
+                            level: TopicMemberUser.LEVELS.read
+                        });
+                    }
                     const vote = await CommentVote
                         .findOne({
                             where: {
