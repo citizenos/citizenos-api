@@ -214,8 +214,13 @@ module.exports = function (app) {
         if (rev) {
             params.rev = rev;
         }
-
-        let html = (await etherpadClient.getHTMLAsync(params)).html;
+        let html;
+        try {
+           html = (await etherpadClient.getHTMLAsync(params)).html;
+        } catch (err) {
+            logger.error('Error getting HTML from Etherpad', err);
+            return Promise.reject(new Error(err.message));
+        }
         html = await _inlineToClasses(html);
        // const title = _getTopicTitleFromPadContent(html);
 
