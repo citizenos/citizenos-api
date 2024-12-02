@@ -517,6 +517,19 @@ module.exports = function (app) {
                 });
 
                 if (parentId) {
+                    const isMember = await TopicMemberUser.findOne({
+                        where: {
+                            userId: req.user.id,
+                            topicId: topic.id
+                        }
+                    }, {transaction: t});
+                    if (!isMember) {
+                        await TopicMemberUser.create({
+                            userId: req.user.id,
+                            topicId: topic.id,
+                            level: TopicMemberUser.LEVELS.read
+                        });
+                    }
                     const parentComment = await Comment.findOne({
                         where: {
                             id: parentId

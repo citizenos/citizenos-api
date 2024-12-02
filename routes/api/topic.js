@@ -135,7 +135,7 @@ module.exports = function (app) {
                     raw: true
                 }
             );
-        if (result && result[0]) {
+        if (result?.[0]) {
             const isPublic = result[0].isPublic;
             const status = result[0].status;
             const hasDirectAccess = result[0].hasDirectAccess;
@@ -143,7 +143,7 @@ module.exports = function (app) {
             const sourcePartnerId = result[0].sourcePartnerId;
             if (hasDirectAccess || (allowPublic && isPublic) || allowSelf) {
                 // If Topic status is not in the allowed list, deny access.
-                if (topicStatusesAllowed && !(topicStatusesAllowed.indexOf(status) > -1)) {
+                if (topicStatusesAllowed && topicStatusesAllowed.indexOf(status) <= -1) {
                     logger.warn('Access denied to topic due to status mismatch! ', 'topicStatusesAllowed:', topicStatusesAllowed, 'status:', status);
 
                     return false
@@ -799,8 +799,13 @@ module.exports = function (app) {
         }
 
         topic.url = urlLib.getFe('/topics/:topicId', { topicId: topic.id });
-        topic.revision = (await cosEtherpad.topicPadRevisions(topicId)).revisions;
-        if (include && include.indexOf('vote') > -1 && topic.vote && topic.vote.id) {
+        try {
+            topic.revision = (await cosEtherpad.topicPadRevisions(topicId)).revisions;
+        } catch {
+            logger.error('Failed to get topic pad revisions');
+            topic.revision = [];
+        }
+        if (include && include.indexOf('vote') > -1 && topic.vote?.id) {
             const voteResults = await getVoteResults(topic.vote.id);
             const options = [];
 
@@ -811,7 +816,7 @@ module.exports = function (app) {
                     value: option[1],
                     ideaId: option[2] || null
                 };
-                if (voteResults && voteResults.length) {
+                if (voteResults?.length) {
                     const res = voteResults.find(opt => opt.optionId === o.id);
                     if (res) {
                         o.voteCount = res.voteCount;
@@ -820,7 +825,7 @@ module.exports = function (app) {
                 options.push(o);
             });
 
-            if (voteResults && voteResults.length) {
+            if (voteResults?.length) {
                 topic.vote.votersCount = voteResults[0].votersCount;
             }
 
@@ -1394,7 +1399,15 @@ module.exports = function (app) {
     };
 
     const _syncTopicAuthors = async (topicId) => {
-        const authorIds = await cosEtherpad.getTopicPadAuthors(topicId);
+        let authorIds = [];
+        try {
+            authorIds = await cosEtherpad.getTopicPadAuthors(topicId);
+            if (!authorIds) authorIds = [];
+        } catch (err) {
+            authorIds = [];
+            logger.error('Failed to sync authors from etherpad', err);
+        }
+
         const topicData = await Topic.findOne({
             where: {
                 id: topicId
@@ -1748,16 +1761,26 @@ module.exports = function (app) {
             const topicId = req.params.topicId;
             const user = req.user;
             const partner = req.locals.partner;
-            await cosEtherpad.syncTopicWithPad(topicId);
+            try {
+                await cosEtherpad.syncTopicWithPad(topicId);
+            } catch (err) {
+                logger.error('Failed to sync topic with pad', err);
+            }
             const topic = await _topicReadAuth(topicId, include, user, partner);
-            const revision = await cosEtherpad.topicPadRevisions(topicId);
-            topic.revision = revision.revisions;
+            try {
+                const revision = await cosEtherpad.topicPadRevisions(topicId);
+                topic.revision = revision.revisions;
+            } catch (err) {
+                topic.revision = [];
+                logger.error('Failed to get topic pad revisions', err);
+            }
             if (!topic) {
                 return res.notFound();
             }
-
+            console.log('Topic', topic);
             return res.ok(topic);
         } catch (err) {
+            console.log(err);
             return next(err);
         }
     });
@@ -1798,9 +1821,13 @@ module.exports = function (app) {
         if (include && !Array.isArray(include)) {
             include = [include];
         }
-
         try {
             await cosEtherpad.syncTopicWithPad(topicId);
+        } catch (err) {
+            logger.error('Failed to sync topic with pad', err);
+        }
+
+        try {
             const topic = await _topicReadUnauth(topicId, include);
 
             if (!topic) {
@@ -6333,6 +6360,20 @@ module.exports = function (app) {
             await db
                 .transaction(async function (t) {
                     // Store vote options
+                    const isMember = await TopicMemberUser.findOne({
+                        where: {
+                            userId: userId,
+                            topicId: topicId
+                        }
+                    }, {transaction: t});
+                    if (!isMember) {
+                        await TopicMemberUser.create({
+                            userId: userId,
+                            topicId: topicId,
+                            level: TopicMemberUser.LEVELS.read
+                        });
+                    }
+
                     const optionGroupId = Math.random().toString(36).substring(2, 10);
 
                     voteOptions.forEach((o) => {
@@ -6715,6 +6756,20 @@ module.exports = function (app) {
                     force: true,
                     transaction: t
                 });
+
+                const isMember = await TopicMemberUser.findOne({
+                    where: {
+                        userId: idSignFlowData.userId,
+                        topicId: topicId
+                    }
+                }, {transaction: t});
+                if (!isMember) {
+                    await TopicMemberUser.create({
+                        userId: idSignFlowData.userId,
+                        topicId: topicId,
+                        level: TopicMemberUser.LEVELS.read
+                    });
+                }
 
                 await VoteUserContainer.upsert(
                     {
