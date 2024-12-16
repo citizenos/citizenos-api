@@ -64,26 +64,26 @@ module.exports = function (app) {
         });
     };
 
-    const getActivityTopicTitle = async function (dataobject, data) {
+    const getActivityTopicTitle = async function (data, topicIds) {
         const target = data.target;
         const origin = data.origin;
-        if (['Topic', 'VoteFinalContainer'].indexOf(dataobject['@type']) > -1) {
-            return dataobject.title;
+        if (['Topic', 'VoteFinalContainer'].indexOf(data['@type']) > -1) {
+            return data.title;
         }
-        if (dataobject.object['@type'] === 'Topic') {
-            return dataobject.object.title;
+        if (data.object['@type'] === 'Topic') {
+            return data.object.title;
         }
-        if (dataobject['@type'] === 'CommentVote') {
-            const topic = await Topic.findOne({
-                where: {
-                    id: dataobject.topicId
-                },
-                attributes: ['title']
-            });
+        const title = data?.topicTitle || target?.title || target?.topicTitle || origin?.title || origin?.topicTitle;
+        if (title) return title;
 
-            return topic.title;
-        }
-        return dataobject?.topicTitle || target?.title || target?.topicTitle || origin?.title || origin?.topicTitle;
+        const topic = await Topic.findOne({
+            where: {
+                id: topicIds
+            },
+            attributes: ['title']
+        });
+
+        return topic.title;
     };
 
     const getActivityDescription = function (dataobject, data) {
@@ -96,15 +96,17 @@ module.exports = function (app) {
     };
 
     const getActivityGroupName = function (data) {
+        let groupName = null;
         Object.values(data).forEach((value) => {
             if (value.groupName) {
-                return value.groupName;
+                groupName = value.groupName;
             } else if (value['@type'] === 'Group') {
-                return value.name
+                groupName = value.name;
             } else if (Array.isArray(value) && value[0]['@type'] === 'Group') {
-                return value[0].name;
+                groupName = value[0].name;
             }
         });
+        return groupName;
     };
 
     const getActivityAttachmentName = function (dataobject) {
@@ -125,9 +127,9 @@ module.exports = function (app) {
         let levelKeyPrefix = 'NOTIFICATIONS.NOTIFICATION_TOPIC_LEVELS_';
         let levelKey;
 
-        if (data.actor && data.actor.level) {
+        if (data.actor?.level) {
             levelKey = levelKeyPrefix + data.actor.level;
-        } else if (data.target && data.target.level) { // Invite to Topic has target User - https://github.com/citizenos/citizenos-fe/issues/112
+        } else if (data.target?.level) { // Invite to Topic has target User - https://github.com/citizenos/citizenos-fe/issues/112
             levelKey = levelKeyPrefix + data.target.level;
         }
 
@@ -232,10 +234,10 @@ module.exports = function (app) {
                 dataobject = dataobject[0];
             }
             await getActivityUsers(activity.data, values);
-            values.topicTitle = await getActivityTopicTitle(activity.data, activity.data);
+            values.topicTitle = await getActivityTopicTitle(activity.data, activity.topicIds);
             values.description = getActivityDescription(dataobject, activity.data);
             values.groupName = getActivityGroupName(activity.data);
-            values.attachmentName = getActivityAttachmentName(dataobject, activity.data);
+            values.attachmentName = getActivityAttachmentName(dataobject);
             values.connectionName = getAactivityUserConnectionName(dataobject);
             getActivityUserLevel(activity.data, values);
 
@@ -431,9 +433,7 @@ module.exports = function (app) {
         try {
             if (!userIds.length || !topicIds?.length) return []; //add with group notifications  && !groupIds?.length)
             let where = `usn."topicId" IN (:topicIds) `;
-            /*   if (groupIds.length) {
-                   where = `usn."groupId" IN (:groupIds) `
-               }*/
+
             const users = await db
                 .query(`
                 SELECT
@@ -480,6 +480,7 @@ module.exports = function (app) {
 
     const getRelatedUsers = async (activity) => {
         const activityType = getActivityType(activity);
+
         getRelatedItemIds(activity);
         let users = activity.userIds || [];
         if (activity.topicIds?.length) {
@@ -533,8 +534,64 @@ module.exports = function (app) {
         });
     };
 
+    const _getIdeationTopicIds = async (activity) => {
+        const ideationTypes = ['Idea', 'Ideation', 'IdeaVote', 'TopicIdeation', 'IdeaComment'];
+            if (!activity.topicIds && (ideationTypes.indexOf(activity.data.object?.['@type']) > -1 || ideationTypes.indexOf(activity.data.target?.['@type']) > -1)) {
+                activity.topicIds = [];
+                let ideationId = null;
+                if (activity.data.object?.ideationId || activity.data.target?.ideationId) {
+                    ideationId = activity.data.object?.ideationId || activity.data.target?.ideationId;
+                } else if (activity.data.object?.['@type'] === 'Ideation') {
+                    ideationId = activity.data.object.id;
+                } else if (activity.data.target?.['@type'] === 'Ideation') {
+                    ideationId = activity.data.target.id;
+                }
+
+                if (ideationId) {
+                    const topicIdeation = await models.TopicIdeation.findOne({
+                        where: {
+                            ideationId: ideationId
+                        },
+                        attributes: ['topicId']
+                    });
+                    if (topicIdeation?.topicId) {
+                        activity.topicIds.push(topicIdeation.topicId);
+                    }
+                }
+            }
+    }
+
+    const _getDiscussionTopicIds = async (activity) => {
+        const discussionTypes = ['Discussion', 'DiscussionComment', 'DiscussionVote'];
+        if (!activity.topicIds && (discussionTypes.indexOf(activity.data.object?.['@type']) > -1 || discussionTypes.indexOf(activity.data.target?.['@type']) > -1)) {
+            activity.topicIds = [];
+            let discussionId = null;
+            if (activity.data.object?.discussionId || activity.data.target?.discussionId) {
+                discussionId = activity.data.object?.ideationId || activity.data.target?.discussionId;
+            } else if (activity.data.object?.['@type'] === 'Discussion') {
+                discussionId = activity.data.object.id;
+            } else if (activity.data.target?.['@type'] === 'Discussion') {
+                discussionId = activity.data.target.id;
+            }
+
+            if (discussionId) {
+                const topicDiscussion = await models.TopicDiscussion.findOne({
+                    where: {
+                        discussionId: discussionId
+                    },
+                    attributes: ['topicId']
+                });
+                if (topicDiscussion?.topicId) {
+                    activity.topicIds.push(topicDiscussion.topicId);
+                }
+            }
+        }
+    }
+
     const sendActivityNotifications = async (activity) => {
         try {
+            _getIdeationTopicIds(activity);
+            _getDiscussionTopicIds(activity);
             if (!activity || ((['Accept', 'Join', 'Leave'].indexOf(activity.data.type) > -1 && activity.data.object && activity.data.object['@type'] !== 'Request'))) return;
             getRelatedItemIds(activity);
             const users = await getRelatedUsers(activity);
