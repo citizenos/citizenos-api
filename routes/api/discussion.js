@@ -517,19 +517,6 @@ module.exports = function (app) {
                 });
 
                 if (parentId) {
-                    const isMember = await TopicMemberUser.findOne({
-                        where: {
-                            userId: req.user.id,
-                            topicId: topic.id
-                        }
-                    }, {transaction: t});
-                    if (!isMember) {
-                        await TopicMemberUser.create({
-                            userId: req.user.id,
-                            topicId: topic.id,
-                            level: TopicMemberUser.LEVELS.read
-                        });
-                    }
                     const parentComment = await Comment.findOne({
                         where: {
                             id: parentId
@@ -567,6 +554,20 @@ module.exports = function (app) {
                             req.method + ' ' + req.path,
                             t
                         );
+                }
+
+                const isMember = await TopicMemberUser.findOne({
+                    where: {
+                        userId: req.user.id,
+                        topicId: topic.id
+                    }
+                }, { transaction: t });
+                if (!isMember) {
+                    await TopicMemberUser.create({
+                        userId: req.user.id,
+                        topicId: topic.id,
+                        level: TopicMemberUser.LEVELS.read
+                    });
                 }
 
                 await DiscussionComment
@@ -613,8 +614,8 @@ module.exports = function (app) {
                     const resObj = resComment.toJSON();
                     resObj.creator = creator.toJSON();
                     resObj.discussionId = discussionId;
-                    resObj.replies = {rows: [], count: 0};
-                    resObj.votes = {up: {count: 0, selected: false}, down: {count: 0, selected: false}, count: 0};
+                    resObj.replies = { rows: [], count: 0 };
+                    resObj.votes = { up: { count: 0, selected: false }, down: { count: 0, selected: false }, count: 0 };
                     return res.created(resObj);
                 });
             });
