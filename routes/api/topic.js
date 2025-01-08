@@ -1777,7 +1777,7 @@ module.exports = function (app) {
             if (!topic) {
                 return res.notFound();
             }
-            console.log('Topic', topic);
+
             return res.ok(topic);
         } catch (err) {
             console.log(err);
@@ -7794,6 +7794,21 @@ module.exports = function (app) {
                             id: topicId
                         }
                     });
+
+                    const isMember = await TopicMemberUser.findOne({
+                        where: {
+                            userId: userId,
+                            topicId: topicId
+                        }
+                    }, {transaction: t});
+                    if (!isMember) {
+                        await TopicMemberUser.create({
+                            userId: userId,
+                            topicId: topicId,
+                            level: TopicMemberUser.LEVELS.read
+                        });
+                    }
+
                     const userSettingsPromise = UserNotificationSettings.findOne({
                         where: {
                             userId,
