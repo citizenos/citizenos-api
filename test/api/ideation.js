@@ -1,6 +1,6 @@
 'use strict';
 
-const _ideationCreate = async function (agent, userId, topicId, question, deadline, expectedHttpCode) {
+const _ideationCreate = async function (agent, userId, topicId, question, deadline, disableReplies, expectedHttpCode) {
     const path = '/api/users/:userId/topics/:topicId/ideations'
         .replace(':userId', userId)
         .replace(':topicId', topicId);
@@ -10,14 +10,15 @@ const _ideationCreate = async function (agent, userId, topicId, question, deadli
         .set('Content-Type', 'application/json')
         .send({
             question: question,
-            deadline: deadline
+            deadline: deadline,
+            disableReplies: disableReplies
         })
         .expect(expectedHttpCode)
         .expect('Content-Type', /json/)
 };
 
-const ideationCreate = async function (agent, userId, topicId, question, deadline) {
-    return _ideationCreate(agent, userId, topicId, question, deadline, 201);
+const ideationCreate = async function (agent, userId, topicId, question, deadline, disableReplies) {
+    return _ideationCreate(agent, userId, topicId, question, deadline, disableReplies, 201);
 };
 
 const _ideationRead = async function (agent, userId, topicId, ideationId, expectedHttpCode) {
@@ -53,7 +54,7 @@ const ideationReadUnauth = async function (agent, topicId, ideationId) {
     return _ideationReadUnauth(agent, topicId, ideationId, 200);
 };
 
-const _ideationUpdate = async function (agent, userId, topicId, ideationId, question, deadline, expectedHttpCode) {
+const _ideationUpdate = async function (agent, userId, topicId, ideationId, question, deadline, disableReplies, expectedHttpCode) {
     const path = '/api/users/:userId/topics/:topicId/ideations/:ideationId'
         .replace(':userId', userId)
         .replace(':topicId', topicId)
@@ -61,10 +62,12 @@ const _ideationUpdate = async function (agent, userId, topicId, ideationId, ques
 
     let body = {
         deadline,
-        question
+        question,
+        disableReplies
     };
     if (deadline === undefined) delete body.deadline;
     if (question === undefined) delete body.question;
+    if (disableReplies === undefined) delete body.disableReplies;
     return agent
         .put(path)
         .send(body)
@@ -73,8 +76,8 @@ const _ideationUpdate = async function (agent, userId, topicId, ideationId, ques
         .expect('Content-Type', /json/)
 };
 
-const ideationUpdate = async function (agent, userId, topicId, ideationId, question, deadline) {
-    return _ideationUpdate(agent, userId, topicId, ideationId, question, deadline, 200);
+const ideationUpdate = async function (agent, userId, topicId, ideationId, question, deadline, disableReplies) {
+    return _ideationUpdate(agent, userId, topicId, ideationId, question, deadline, disableReplies, 200);
 };
 
 const _ideationDelete = async function (agent, userId, topicId, ideationId, expectedHttpCode) {
@@ -1043,9 +1046,21 @@ suite('Users', function () {
                 assert.equal(new Date(ideation.deadline).getTime(), deadline.getTime());
             });
 
+            test('Success - disableReplies', async function () {
+                const question = 'Test ideation?';
+                const deadline = new Date(new Date().getTime() + 24 * 60 * 60 * 1000);
+                const disableReplies = true;
+                const ideation = (await ideationCreate(agent, user.id, topic.id, question, deadline, disableReplies)).body.data;
+                assert.property(ideation, 'id');
+                assert.equal(ideation.creatorId, user.id);
+                assert.equal(ideation.question, question);
+                assert.equal(ideation.disableReplies, disableReplies);
+                assert.equal(new Date(ideation.deadline).getTime(), deadline.getTime());
+            });
+
             test('Fail - Bad Request - deadline wrong format', async function () {
                 const question = 'Test ideation?';
-                const errors = (await _ideationCreate(agent, user.id, topic.id, question, 'TEST', 400)).body.errors;
+                const errors = (await _ideationCreate(agent, user.id, topic.id, question, 'TEST', null, 400)).body.errors;
 
                 assert.equal(errors.deadline, 'Ideation deadline must be in the future.');
             });
@@ -1054,7 +1069,7 @@ suite('Users', function () {
             test('Fail - Bad Request - deadline is in the past', async function () {
                 const question = 'Test ideation?';
                 const deadlineInPast = new Date(new Date().getTime() - 24 * 60 * 60 * 1000);
-                const errors = (await _ideationCreate(agent, user.id, topic.id, question, deadlineInPast, 400)).body.errors;
+                const errors = (await _ideationCreate(agent, user.id, topic.id, question, deadlineInPast, null, 400)).body.errors;
 
                 assert.equal(errors.deadline, 'Ideation deadline must be in the future.');
             });
@@ -1157,7 +1172,7 @@ suite('Users', function () {
 
             test('Fail - deadline in the past', async function () {
                 const deadline = new Date(new Date().getTime() - 24 * 60 * 60 * 1000);
-                const errors = (await _ideationUpdate(agent, user.id, topic.id, ideation.id, undefined, deadline, 400)).body.errors;
+                const errors = (await _ideationUpdate(agent, user.id, topic.id, ideation.id, undefined, deadline, null, 400)).body.errors;
 
                 assert.equal(errors.deadline, 'Ideation deadline must be in the future.');
             });
@@ -2287,6 +2302,21 @@ suite('Users', function () {
                         assert.equal(comment.creator.id, user.id);
                     });
 
+                    test('Fail - disableReplies', async function () {
+                        const topic = (await topicLib.topicCreate(agent, user.id, null)).body.data;
+                        const ideation = (await ideationCreate(agent, user.id, topic.id, 'TEST ideation', null, true)).body.data;
+                        await topicLib.topicUpdate(agent, user.id, topic.id, Topic.STATUSES.ideation);
+                        idea = (await ideationIdeaCreate(agent, user.id, topic.id, ideation.id, 'TEST', 'TEST')).body.data;
+                        const resBody = (await _ideationIdeaCommentCreate(agent, user.id, topic.id, ideation.id, idea.id, null, null, Comment.TYPES.pro, 'subject', 'text', 403)).body;
+                        const resBodyExpected = {
+                            status: {
+                                code: 40300,
+                                message: 'Replies are disabled for this ideation'
+                            }
+                        };
+                        assert.deepEqual(resBody, resBodyExpected);
+                    });
+
                     test('Fail - 40000 - text can be 1 - N characters longs - PRO', async function () {
                         const type = Comment.TYPES.pro;
                         const maxLength = Comment.TYPE_LENGTH_LIMIT[type];
@@ -2381,11 +2411,11 @@ suite('Users', function () {
                         const commentEdited = (await ideationIdeaCommentList(agent3, user3.id, topic.id, ideation.id, idea.id, 'date')).body.data.rows[0];
                         assert.property(commentEdited, 'id');
                         assert.property(commentEdited, 'edits');
-                        assert.equal(commentEdited.edits.length, 2);
+                        assert.equal(commentEdited.edits.length, 1);
                         assert.equal(commentEdited.edits[0].subject, subject);
-                        assert.equal(commentEdited.edits[1].subject, editSubject);
+                        assert.equal(commentEdited.subject, editSubject);
                         assert.equal(commentEdited.edits[0].text, text);
-                        assert.equal(commentEdited.edits[1].text, editText);
+                        assert.equal(commentEdited.text, editText);
                         assert.equal(commentEdited.edits[0].createdAt, commentEdited.createdAt);
                         assert.notEqual(commentEdited.type, Comment.TYPES.reply);
                         assert.equal(commentEdited.type, Comment.TYPES.con);

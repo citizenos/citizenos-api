@@ -47,6 +47,12 @@ module.exports = function (sequelize, Sequelize) {
                     }
                 }
             },
+            disableReplies: {
+                type: Sequelize.BOOLEAN,
+                allowNull: false,
+                defaultValue: false,
+                comment: 'Disable replies'
+            },
             createdAt: {
                 allowNull: false,
                 type: Sequelize.DATE
@@ -89,6 +95,7 @@ module.exports = function (sequelize, Sequelize) {
             question: this.dataValues.question,
             creatorId: this.dataValues.creatorId,
             deadline: this.dataValues.deadline,
+            disableReplies: this.dataValues.disableReplies,
             createdAt: this.dataValues.createdAt,
             updatedAt: this.dataValues.updatedAt
         };
