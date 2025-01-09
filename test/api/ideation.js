@@ -1170,6 +1170,19 @@ suite('Users', function () {
                 assert.deepEqual(ideationUpdated, ideationR);
             });
 
+            test('Success - disableReplies when topic status ideation', async function () {
+                const topic = (await topicLib.topicCreate(agent, user.id, null, null, null, Topic.VISIBILITY.private)).body.data;
+                const ideation = (await ideationCreate(agent, user.id, topic.id, 'TEST ideation', null, true)).body.data;
+                await topicLib.topicUpdate(agent, user.id, topic.id, Topic.STATUSES.ideation);
+                const idea = (await ideationIdeaCreate(agent, user.id, topic.id, ideation.id, 'TEST', 'TEST')).body.data;
+                await _ideationIdeaCommentCreate(agent, user.id, topic.id, ideation.id, idea.id, null, null, Comment.TYPES.pro, 'TEST', 'TEST', 403);
+                const ideationUpdated = (await ideationUpdate(agent, user.id, topic.id, ideation.id, null, null, false)).body.data;
+                await ideationIdeaCommentCreate(agent, user.id, topic.id, ideation.id, idea.id, null, null, Comment.TYPES.pro, 'TEST2', 'TEST2');
+                const ideationR = (await ideationRead(agent, user.id, topic.id, ideation.id)).body.data;
+                // The difference from create result is that there is "members" and "creator" is extended. Might consider changing in the future..
+                assert.deepEqual(ideationUpdated, ideationR);
+            });
+
             test('Fail - deadline in the past', async function () {
                 const deadline = new Date(new Date().getTime() - 24 * 60 * 60 * 1000);
                 const errors = (await _ideationUpdate(agent, user.id, topic.id, ideation.id, undefined, deadline, null, 400)).body.errors;
