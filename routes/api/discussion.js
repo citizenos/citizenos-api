@@ -556,19 +556,7 @@ module.exports = function (app) {
                         );
                 }
 
-                const isMember = await TopicMemberUser.findOne({
-                    where: {
-                        userId: req.user.id,
-                        topicId: topic.id
-                    }
-                }, { transaction: t });
-                if (!isMember) {
-                    await TopicMemberUser.create({
-                        userId: req.user.id,
-                        topicId: topic.id,
-                        level: TopicMemberUser.LEVELS.read
-                    });
-                }
+                await topicLib.addUserAsMember(req.user.id, topic.id, t);
 
                 await DiscussionComment
                     .create(
@@ -1389,6 +1377,9 @@ module.exports = function (app) {
                             },
                             transaction: t
                         });
+
+                    await topicLib.addUserAsMember(req.user.id, req.params.topicId, t);
+
                     if (vote) {
                         //User already voted
                         if (vote.value === value) { // Same value will 0 the vote...
