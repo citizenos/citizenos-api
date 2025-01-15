@@ -541,19 +541,7 @@ module.exports = function (app) {
             await db
                 .transaction(async function (t) {
 
-                    const isMember = await TopicMemberUser.findOne({
-                        where: {
-                            userId: req.user.id,
-                            topicId: topicId
-                        }
-                    }, {transaction: t});
-                    if (!isMember) {
-                        await TopicMemberUser.create({
-                            userId: req.user.id,
-                            topicId: topicId,
-                            level: TopicMemberUser.LEVELS.read
-                        });
-                    }
+                    await topicLib.addUserAsMember(req.user.id, topicId, t);
 
                     const idea = Idea.build({
                         authorId: req.user.id,
@@ -2115,6 +2103,8 @@ module.exports = function (app) {
 
             await db
                 .transaction(async function (t) {
+                    await topicLib.addUserAsMember(req.user.id, topicId, t);
+
                     const vote = await IdeaVote
                         .findOne({
                             where: {
@@ -2325,19 +2315,8 @@ module.exports = function (app) {
 
             await db
                 .transaction(async function (t) {
-                    const isMember = await TopicMemberUser.findOne({
-                        where: {
-                            userId: req.user.id,
-                            topicId: topicId
-                        }
-                    }, {transaction: t});
-                    if (!isMember) {
-                        await TopicMemberUser.create({
-                            userId: req.user.id,
-                            topicId: topicId,
-                            level: TopicMemberUser.LEVELS.read
-                        });
-                    }
+                    await topicLib.addUserAsMember(req.user.id, topicId, t);
+
                     await comment.save({ transaction: t });
                     //comment.edits.createdAt = JSON.stringify(comment.createdAt);
                     const idea = await Idea.findOne({
@@ -3476,19 +3455,9 @@ module.exports = function (app) {
                 .transaction(async function (t) {
                     const topicId = req.params.topicId;
                     idea.topicId = topicId;
-                    const isMember = await TopicMemberUser.findOne({
-                        where: {
-                            userId: req.user.id,
-                            topicId: topicId
-                        }
-                    }, {transaction: t});
-                    if (!isMember) {
-                        await TopicMemberUser.create({
-                            userId: req.user.id,
-                            topicId: topicId,
-                            level: TopicMemberUser.LEVELS.read
-                        });
-                    }
+
+                    await topicLib.addUserAsMember(req.user.id, topicId, t);
+
                     const vote = await CommentVote
                         .findOne({
                             where: {
