@@ -46,8 +46,6 @@ module.exports = function (app) {
         const question = req.body.question;
         const deadline = req.body.deadline;
         const topicId = req.params.topicId;
-        const disableReplies = req.body.disableReplies;
-
         try {
             if (!question) {
                 return res.badRequest('Ideation question is missing', 1);
@@ -56,7 +54,6 @@ module.exports = function (app) {
             const ideation = Ideation.build({
                 question,
                 deadline,
-                disableReplies,
                 creatorId: req.user.id
             });
 
@@ -137,7 +134,6 @@ module.exports = function (app) {
                     i.id,
                     i.question,
                     i.deadline,
-                    i."disableReplies",
                     i."creatorId",
                     i."createdAt",
                     i."updatedAt",
@@ -387,7 +383,7 @@ module.exports = function (app) {
         try {
             const topicId = req.params.topicId;
             const ideationId = req.params.ideationId;
-            let fields = ['deadline', 'question', 'disableReplies'];
+            let fields = ['deadline', 'question'];
 
             const topic = await Topic.findOne({
                 where: {
@@ -402,7 +398,7 @@ module.exports = function (app) {
                     }
                 ]
             });
-            if (!topic?.Ideations?.length) {
+            if (!topic || !topic.Ideations || !topic.Ideations.length) {
                 return res.notFound();
             }
             if (topic.status === Topic.STATUSES.draft) {
@@ -436,7 +432,6 @@ module.exports = function (app) {
                         i.id,
                         i.question,
                         i.deadline,
-                        i."disableReplies",
                         i."creatorId",
                         i."createdAt",
                         i."updatedAt",
@@ -539,7 +534,7 @@ module.exports = function (app) {
                 ]
             });
 
-            if (!ideation?.Topics?.length) {
+            if (!ideation || !ideation.Topics.length) {
                 return res.notFound();
             }
             if (ideation.deadline && new Date(ideation.deadline) < new Date()) return res.forbidden();
@@ -736,7 +731,7 @@ module.exports = function (app) {
                     }
                 ]
             });
-            if (!ideation?.Topics.length || ideation.Topics[0].visbility === Topic.VISIBILITY.private) {
+            if (!ideation || !ideation.Topics.length || ideation.Topics[0].visbility === Topic.VISIBILITY.private) {
                 return res.notFound();
             }
 
@@ -1078,7 +1073,7 @@ module.exports = function (app) {
                 ]
             });
 
-            if (!ideation?.Topics?.length || ideation.Topics[0].visbility === Topic.VISIBILITY.private) {
+            if (!ideation || !ideation.Topics.length || ideation.Topics[0].visbility === Topic.VISIBILITY.private) {
                 return res.notFound();
             }
 
@@ -1117,7 +1112,7 @@ module.exports = function (app) {
                 ]
             });
 
-            if (!ideation?.Topics?.length) {
+            if (!ideation || !ideation.Topics.length) {
                 return res.notFound();
             }
 
@@ -1180,7 +1175,7 @@ module.exports = function (app) {
                     },
                 ]
             });
-            if (!ideation?.Topics?.length || ideation.Topics[0].visbility === Topic.VISIBILITY.private) {
+            if (!ideation || !ideation.Topics.length || ideation.Topics[0].visbility === Topic.VISIBILITY.private) {
                 return res.notFound();
             }
 
@@ -1245,7 +1240,7 @@ module.exports = function (app) {
                     },
                 ]
             });
-            if (!ideation?.Topics?.length || ideation.Topics[0].visbility === Topic.VISIBILITY.private) {
+            if (!ideation || !ideation.Topics.length || ideation.Topics[0].visbility === Topic.VISIBILITY.private) {
                 return res.notFound();
             }
 
@@ -1340,7 +1335,7 @@ module.exports = function (app) {
                     },
                 ]
             });
-            if (!ideation?.Topics?.length || ideation.Topics[0].visbility === Topic.VISIBILITY.private) {
+            if (!ideation || !ideation.Topics.length || ideation.Topics[0].visbility === Topic.VISIBILITY.private) {
                 return res.notFound();
             }
 
@@ -1380,7 +1375,7 @@ module.exports = function (app) {
                 }
             ]
         });
-        if (!ideation?.Topics?.length || ideation.Topics[0].visbility === Topic.VISIBILITY.private) {
+        if (!ideation || !ideation.Topics.length || ideation.Topics[0].visbility === Topic.VISIBILITY.private) {
             return res.notFound();
         }
 
@@ -1717,7 +1712,7 @@ module.exports = function (app) {
                 ]
             });
 
-            if (!ideation?.Ideas?.length || !ideation?.Topics?.length || ideation.Topics[0].visbility === Topic.VISIBILITY.private) {
+            if (!ideation || !ideation.Ideas.length || !ideation.Topics.length || ideation.Topics[0].visbility === Topic.VISIBILITY.private) {
                 return res.notFound();
             }
 
@@ -1793,7 +1788,7 @@ module.exports = function (app) {
                 ]
             });
 
-            if (!ideation?.Ideas?.length || !ideation?.Topics?.length || ideation.Topics[0].visbility === Topic.VISIBILITY.private) {
+            if (!ideation || !ideation.Ideas.length || !ideation.Topics.length || ideation.Topics[0].visbility === Topic.VISIBILITY.private) {
                 return res.notFound();
             }
 
@@ -1870,7 +1865,7 @@ module.exports = function (app) {
             ]
         });
 
-        if (!ideation?.Ideas?.length || !ideation?.Topics?.length || ideation.Topics[0].visbility === Topic.VISIBILITY.private) {
+        if (!ideation || !ideation.Ideas.length || !ideation.Topics.length || ideation.Topics[0].visbility === Topic.VISIBILITY.private) {
             return res.notFound();
         }
 
@@ -1969,7 +1964,7 @@ module.exports = function (app) {
                 ]
             });
 
-            if (!ideation?.Topics?.length || ideation.Topics[0].visbility === Topic.VISIBILITY.private) {
+            if (!ideation || !ideation.Topics.length || ideation.Topics[0].visbility === Topic.VISIBILITY.private) {
                 return res.notFound();
             }
 
@@ -2284,14 +2279,6 @@ module.exports = function (app) {
      */
     app.post('/api/users/:userId/topics/:topicId/ideations/:ideationId/ideas/:ideaId/comments', loginCheck(['partner']), topicLib.hasPermission(TopicMemberUser.LEVELS.read, true), async (req, res, next) => {
         try {
-            const ideation = await Ideation.findOne({
-                where: {
-                    id: req.params.ideationId
-                }
-            });
-            if (ideation?.disableReplies) {
-                return res.forbidden('Replies are disabled for this ideation');
-            }
             let type = req.body.type || Comment.TYPES.reply;
             const parentId = req.body.parentId;
             const topicId = req.params.topicId;
@@ -2331,6 +2318,7 @@ module.exports = function (app) {
                     await topicLib.addUserAsMember(req.user.id, topicId, t);
 
                     await comment.save({ transaction: t });
+                    //comment.edits.createdAt = JSON.stringify(comment.createdAt);
                     const idea = await Idea.findOne({
                         where: {
                             id: req.params.ideaId
@@ -2804,9 +2792,9 @@ module.exports = function (app) {
     app.get('/api/topics/:topicId/ideations/:ideationId/ideas/:ideaId/comments', topicLib.hasVisibility(Topic.VISIBILITY.public), topicLib.isModerator(), ideaCommentsList);
 
     /**
-     * Delete Idea Comment
+     * Delete Topic Comment
      */
-    app.delete('/api/users/:userId/topics/:topicId/ideations/:ideationId/ideas/:ideaId/comments/:commentId', loginCheck(['partner']), discussionLib.isCommentCreator(), topicLib.hasPermission(TopicMemberUser.LEVELS.read, false, null, true));
+    app.delete('/api/users/:userId/topics/:topicId/ideations/:ideationId/ideas/:ideaId/comments/:commentId', loginCheck(['partner']), discussionLib.isCommentCreator(), topicLib.hasPermission(TopicMemberUser.LEVELS.admin, false, null, true));
 
     //WARNING: Don't mess up with order here! In order to use "next('route')" in the isCommentCreator, we have to have separate route definition
     //NOTE: If you have good ideas how to keep one route definition with several middlewares, feel free to share!
@@ -2887,6 +2875,7 @@ module.exports = function (app) {
                 createdAt: now,
                 type: type
             });
+            comment.set('edits', null);
             comment.set('edits', edits);
             comment.subject = subject;
             comment.text = text;
@@ -3047,7 +3036,7 @@ module.exports = function (app) {
                     }
                 );
 
-            if (!results?.length) {
+            if (!results || !results.length) {
                 return res.notFound();
             }
 
