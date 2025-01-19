@@ -4561,12 +4561,12 @@ suite('Users', function () {
                     const idea = (await ideationIdeaCreate(agent, user.id, topic.id, ideation.id, 'TEST', 'TEST')).body.data;
                     await topicLib.topicUpdate(agent, user.id, topic.id, null, Topic.VISIBILITY.public);
                     const agentModerator = request.agent(app);
-                    const userModerator = await userLib.createUser(agentModerator, 'moderator@test.com', null, null);
+                    const userModerator = await userLib.createUser(agentModerator, 'moderator' + new Date().getTime() + '@test.com', null, null);
                     await Moderator.create({
                         userId: userModerator.id
                     });
                     const agentReporter = request.agent(app);
-                    const userReporter = await userLib.createUserAndLogin(agentReporter, 'reporter@test.com', null, null);
+                    const userReporter = await userLib.createUserAndLogin(agentReporter, 'reporter' + new Date().getTime() + '@test.com', null, null);
                     const report = (await ideationIdeaReportCreate(agentReporter, topic.id, ideation.id, idea.id, Report.TYPES.hate, 'Report create test text')).body.data;
 
                     assert.isTrue(validator.isUUID(report.id));
@@ -5489,7 +5489,7 @@ suite('Users', function () {
                         assert.equal(attachment.source, expectedAttachment.source);
                         assert.equal(attachment.type, expectedAttachment.type);
                         assert.equal(attachment.size, expectedAttachment.size);
-                        assert.equal(attachment.creatorId, creator.id);
+                        assert.equal(attachment.creatorId, null);
                     });
 
                     test('Fail, no link', async function () {
@@ -5537,7 +5537,7 @@ suite('Users', function () {
                         assert.equal(readAttachment.source, attachment.source);
                         assert.equal(readAttachment.type, attachment.type);
                         assert.equal(readAttachment.size, attachment.size);
-                        assert.equal(readAttachment.creatorId, attachment.creatorId);
+                        assert.equal(readAttachment.creatorId, null);
                     });
 
                     test('Unauth - Success', async function () {
@@ -5550,7 +5550,7 @@ suite('Users', function () {
                         assert.equal(readAttachment.source, attachment.source);
                         assert.equal(readAttachment.type, attachment.type);
                         assert.equal(readAttachment.size, attachment.size);
-                        assert.equal(readAttachment.creatorId, attachment.creatorId);
+                        assert.equal(readAttachment.creatorId, null);
                     });
 
                     test('Unauth- Fail', async function () {
@@ -5589,7 +5589,7 @@ suite('Users', function () {
                         assert.equal(updateAttachment.type, attachment.type);
                         assert.equal(updateAttachment.source, attachment.source);
                         assert.equal(updateAttachment.size, attachment.size);
-                        assert.equal(updateAttachment.creatorId, creator.id);
+                        assert.equal(updateAttachment.creatorId, null);
                     });
 
                     test('Update attachment - Fail - Missing attachment name', async function () {
@@ -5764,7 +5764,7 @@ suite('Users', function () {
                             source: 'dropbox',
                             link: `https://www.dropbox.com/s/6schppqdg5qfofe/Getting%20Started.pdf?dl=0`,
                             type: '.pdf',
-                            creatorId: creator.id
+                            creatorId: null
                         };
                         attachment = (await ideaAttachmentAdd(creatorAgent, creator.id, topic.id, ideation.id, idea.id, expectedAttachment.name, expectedAttachment.link, expectedAttachment.source, expectedAttachment.type, expectedAttachment.size)).body.data;
                     });
@@ -5780,7 +5780,7 @@ suite('Users', function () {
                         assert.equal(listAttachment.link, attachment.link);
                         assert.equal(listAttachment.type, attachment.type);
                         assert.equal(listAttachment.size, attachment.size);
-                        assert.equal(listAttachment.creator.id, creator.id);
+                        assert.equal(listAttachment.creator.id, null);
                     });
 
                     test('Success unauth', async function () {
@@ -5794,7 +5794,7 @@ suite('Users', function () {
                         assert.equal(listAttachment.type, attachment.type);
                         assert.equal(listAttachment.source, attachment.source);
                         assert.equal(listAttachment.size, attachment.size);
-                        assert.equal(listAttachment.creator.id, creator.id);
+                        assert.equal(listAttachment.creator.id, null);
                     });
                 });
             });
@@ -5844,6 +5844,22 @@ suite('Users', function () {
                     const folder = (await ideationFolderCreate(agent, user.id, topic.id, ideation.id, name)).body.data;
                     assert.equal(folder.name, name);
                     assert.equal(folder.description, null);
+                    assert.equal(folder.creatorId, user.id);
+                    assert.exists(folder, 'id');
+                    assert.exists(folder, 'createdAt');
+                    assert.exists(folder, 'updatedAt');
+                    assert.exists(folder, 'deletedAt');
+                });
+
+                test('Success - anonymous ideation', async function () {
+                    const topic = (await topicLib.topicCreate(agent, user.id, 'TEST', null, null, Topic.VISIBILITY.private)).body.data;
+                    const ideation = (await ideationCreate(agent, user.id, topic.id, 'TEST ideation', null, null, true)).body.data;
+                    await topicLib.topicUpdate(agent, user.id, topic.id, Topic.STATUSES.ideation);
+                    const name = 'TEST ideas';
+                    const description = 'This folder is just for testing';
+                    const folder = (await ideationFolderCreate(agent, user.id, topic.id, ideation.id, name, description)).body.data;
+                    assert.equal(folder.name, name);
+                    assert.equal(folder.description, description);
                     assert.equal(folder.creatorId, user.id);
                     assert.exists(folder, 'id');
                     assert.exists(folder, 'createdAt');
@@ -5916,11 +5932,47 @@ suite('Users', function () {
                     assert.deepEqual(folderR, folder);
                 });
 
+                test('Success - anonymous ideation', async function () {
+                    const topic = (await topicLib.topicCreate(agent, user.id, 'TEST', null, null, Topic.VISIBILITY.private)).body.data;
+                    const ideation = (await ideationCreate(agent, user.id, topic.id, 'TEST ideation', null, null, true)).body.data;
+                    await topicLib.topicUpdate(agent, user.id, topic.id, Topic.STATUSES.ideation);
+                    idea = (await ideationIdeaCreate(agent, user.id, topic.id, ideation.id, 'TEST', 'TEST')).body.data;
+                    folder = (await ideationFolderCreate(agent, user.id, topic.id, ideation.id, folderName, description)).body.data;
+                    folder.ideas = {
+                        count: 1,
+                        rows: [idea]
+                    };
+                    await ideationFolderIdeaCreate(agent, user.id, topic.id, ideation.id, folder.id, idea);
+
+                    const folderR = (await ideationFolderRead(agent, user.id, topic.id, ideation.id, folder.id)).body.data;
+                    assert.deepEqual(folderR, folder);
+                    folderR.ideas.rows.forEach(idea => {
+                        assert.equal(idea.author, null);
+                    });
+                });
+
                 test('Success - public topic unauth', async function () {
                     const folderR = (await ideationFolderRead(agent, user.id, topic.id, ideation.id, folder.id)).body.data;
                     await topicLib.topicUpdate(agent, user.id, topic.id, null, Topic.VISIBILITY.public);
                     const folderRUnauth = (await ideationFolderReadUnauth(request.agent(app), topic.id, ideation.id, folder.id)).body.data;
                     assert.deepEqual(folderR, folderRUnauth);
+                });
+
+                test('Success - public topic unauth - anonymous ideation', async function () {
+                    const topic = (await topicLib.topicCreate(agent, user.id, 'TEST', null, null, Topic.VISIBILITY.private)).body.data;
+                    const ideation = (await ideationCreate(agent, user.id, topic.id, 'TEST ideation', null, null, true)).body.data;
+                    await topicLib.topicUpdate(agent, user.id, topic.id, Topic.STATUSES.ideation);
+                    idea = (await ideationIdeaCreate(agent, user.id, topic.id, ideation.id, 'TEST', 'TEST')).body.data;
+                    await ideationFolderIdeaCreate(agent, user.id, topic.id, ideation.id, folder.id, idea);
+
+                    const folderR = (await ideationFolderRead(agent, user.id, topic.id, ideation.id, folder.id)).body.data;
+                    await topicLib.topicUpdate(agent, user.id, topic.id, null, Topic.VISIBILITY.public);
+                    const folderRUnauth = (await ideationFolderReadUnauth(request.agent(app), topic.id, ideation.id, folder.id)).body.data;
+                    assert.deepEqual(folderR, folderRUnauth);
+
+                    folderRUnauth.ideas.rows.forEach(idea => {
+                        assert.equal(idea.author, null);
+                    });
                 });
 
                 test('Fail - Unauthorized', async function () {
@@ -5969,6 +6021,27 @@ suite('Users', function () {
                         assert.deepEqual(folderR, { count: 1, rows: [idea] });
                     });
 
+
+                    test('Success - anonymous ideation', async function () {
+                        const topic = (await topicLib.topicCreate(agent, user.id, 'TEST', null, null, Topic.VISIBILITY.private)).body.data;
+                        const ideation = (await ideationCreate(agent, user.id, topic.id, 'TEST ideation', null, null, true)).body.data;
+                        await topicLib.topicUpdate(agent, user.id, topic.id, Topic.STATUSES.ideation);
+                        const idea = (await ideationIdeaCreate(agent, user.id, topic.id, ideation.id, 'TEST', 'TEST')).body.data;
+                        const statement = 'TEST folder';
+                        const description = 'This folder is just for testing';
+                        const folder = (await ideationFolderCreate(agent, user.id, topic.id, ideation.id, statement, description)).body.data;
+                        const addIdeaRes = (await ideationFolderIdeaCreate(agent, user.id, topic.id, ideation.id, folder.id, idea)).body;
+                        const expectedRes = { status: { code: 20100 } };
+                        assert.deepEqual(addIdeaRes, expectedRes);
+
+                        const folderR = (await ideationFolderReadIdeas(agent, user.id, topic.id, ideation.id, folder.id)).body.data;
+                        assert.deepEqual(folderR, { count: 1, rows: [idea] });
+                        folderR.rows.forEach(idea => {
+                            assert.equal(idea.author, null);
+                        });
+                    });
+
+
                     test('Success - 2 ideas', async function () {
                         const statement = 'TEST folder';
                         const description = 'This folder is just for testing';
@@ -5979,6 +6052,27 @@ suite('Users', function () {
 
                         const folderR = (await ideationFolderReadIdeas(agent, user.id, topic.id, ideation.id, folder.id)).body.data;
                         assert.deepEqual(folderR, { count: 2, rows: [idea, idea2] });
+                    });
+
+                    test('Success - 2 ideas anonymous ideation', async function () {
+                        const topic = (await topicLib.topicCreate(agent, user.id, 'TEST', null, null, Topic.VISIBILITY.private)).body.data;
+                        const ideation = (await ideationCreate(agent, user.id, topic.id, 'TEST ideation', null, null, true)).body.data;
+                        await topicLib.topicUpdate(agent, user.id, topic.id, Topic.STATUSES.ideation);
+                        const idea = (await ideationIdeaCreate(agent, user.id, topic.id, ideation.id, 'TEST', 'TEST')).body.data;
+                        const idea2 = (await ideationIdeaCreate(agent, user.id, topic.id, ideation.id, 'TEST2', 'TEST2')).body.data;
+
+                        const statement = 'TEST folder';
+                        const description = 'This folder is just for testing';
+                        const folder = (await ideationFolderCreate(agent, user.id, topic.id, ideation.id, statement, description)).body.data;
+                        const addIdeaRes = (await ideationFolderIdeaCreate(agent, user.id, topic.id, ideation.id, folder.id, [idea, idea2])).body;
+                        const expectedRes = { status: { code: 20100 } };
+                        assert.deepEqual(addIdeaRes, expectedRes);
+
+                        const folderR = (await ideationFolderReadIdeas(agent, user.id, topic.id, ideation.id, folder.id)).body.data;
+                        assert.deepEqual(folderR, { count: 2, rows: [idea, idea2] });
+                        folderR.rows.forEach(idea => {
+                            assert.equal(idea.author, null);
+                        });
                     });
                 });
 
@@ -6264,6 +6358,25 @@ suite('Users', function () {
                 });
 
                 test('Success', async function () {
+                    const folder = (await ideationFolderCreate(agent, user.id, topic.id, ideation.id, 'TEST', 'TEST')).body.data;
+                    const folders = (await ideationFolderList(agent, user.id, topic.id, ideation.id)).body.data;
+                    const expectedFolder = Object.assign({
+                        creator: {
+                            id: user.id,
+                            imageUrl: user.imageUrl,
+                            name: user.name
+                        },
+                        ideas: { count: 0 }
+                    }, folder);
+                    delete expectedFolder.creatorId;
+                    delete expectedFolder.deletedAt;
+                    assert.deepEqual(folders, { count: 1, rows: [expectedFolder] });
+                });
+
+                test('Success - anonymous ideation', async function () {
+                    const topic = (await topicLib.topicCreate(agent, user.id, 'TEST', null, null, Topic.VISIBILITY.private)).body.data;
+                    const ideation = (await ideationCreate(agent, user.id, topic.id, 'TEST ideation', null, null, true)).body.data;
+                    await topicLib.topicUpdate(agent, user.id, topic.id, Topic.STATUSES.ideation);
                     const folder = (await ideationFolderCreate(agent, user.id, topic.id, ideation.id, 'TEST', 'TEST')).body.data;
                     const folders = (await ideationFolderList(agent, user.id, topic.id, ideation.id)).body.data;
                     const expectedFolder = Object.assign({
