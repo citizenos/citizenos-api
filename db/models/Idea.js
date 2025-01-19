@@ -50,6 +50,12 @@ module.exports = function (sequelize, DataTypes) {
                 onUpdate: 'CASCADE',
                 onDelete: 'CASCADE'
             },
+            sessionId: {
+                type: DataTypes.STRING,
+                allowNull: true,
+                defaultValue: null,
+                comment: 'Encrypted Session ID when the idea was created'
+            },
             statement: {
                 type: DataTypes.STRING(2048),
                 allowNull: false,
@@ -141,6 +147,10 @@ module.exports = function (sequelize, DataTypes) {
         } else {
             data.author = {};
             data.author.id = this.dataValues.authorId;
+        }
+
+        if(this.dataValues.sessionId) {
+            data.sessionId = this.dataValues.sessionId;
         }
 
         if (this.dataValues.deletedBy) {

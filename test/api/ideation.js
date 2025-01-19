@@ -4275,6 +4275,8 @@ suite('Users', function () {
                     const statement = 'TEST idea';
                     const description = 'This idea is just for testing';
                     const idea = (await ideationIdeaCreate(agent, user.id, topic.id, ideation.id, statement, description)).body.data;
+                    assert.property(idea, 'sessionId');
+                    delete idea.sessionId;
                     const ideaR = (await ideationIdeaRead(agent, user.id, topic.id, ideation.id, idea.id)).body.data;
                     assert.notProperty(ideaR, 'author');
                     assert.notProperty(idea, 'author');
@@ -4302,6 +4304,8 @@ suite('Users', function () {
                     const statement = 'TEST idea';
                     const description = 'This idea is just for testing';
                     const idea = (await ideationIdeaCreate(agent, user.id, topic.id, ideation.id, statement, description)).body.data;
+                    assert.property(idea, 'sessionId');
+                    delete idea.sessionId;
                     const ideaR = (await ideationIdeaRead(agent, user.id, topic.id, ideation.id, idea.id)).body.data;
 
                     assert.notProperty(ideaR, 'author');
@@ -4320,6 +4324,8 @@ suite('Users', function () {
                     const statement = 'TEST idea';
                     const description = 'This idea is just for testing';
                     const idea = (await ideationIdeaCreate(agent, user.id, topic.id, ideation.id, statement, description)).body.data;
+                    assert.property(idea, 'sessionId');
+                    delete idea.sessionId;
                     const ideaR = (await ideationIdeaRead(agent, user.id, topic.id, ideation.id, idea.id)).body.data;
                     assert.deepEqual(ideaR.votes, {
                         down: {
@@ -4378,30 +4384,16 @@ suite('Users', function () {
                     }]);
                 });
 
-                test('Fail', async function () {
+                test('Success - anonymous', async function () {
                     const statement = 'TEST idea';
                     const description = 'This idea is just for testing';
-
+                    const idea = (await ideationIdeaCreate(agent, user.id, topic.id, ideation.id, statement, description)).body.data;
                     const updatedStatement = 'Test idea Update';
                     const updatedDescription = 'Updated description';
-                    const idea = (await ideationIdeaCreate(agent, user.id, topic.id, ideation.id, statement, description)).body.data;
-
-                    assert.notProperty(idea, 'author');
-
-                    assert.equal(idea.statement, statement);
-                    assert.equal(idea.description, description);
-                    assert.exists(idea, 'id');
-                    assert.exists(idea, 'createdAt');
-                    assert.exists(idea, 'updatedAt');
-                    assert.exists(idea, 'deletedAt');
-                    const ideaUpdate = (await _ideationIdeaUpdate(agent, user.id, topic.id, ideation.id, idea.id, updatedStatement, updatedDescription, null, 403)).body;
-
-                    assert.deepEqual(
-                        ideaUpdate,
-                        {
-                            status: { code: 40300, message: "Forbidden" }
-                        }
-                    );
+                    const ideaUpdate = (await ideationIdeaUpdate(agent, user.id, topic.id, ideation.id, idea.id, updatedStatement, updatedDescription, null)).body.data;
+                    assert.equal(ideaUpdate.id, idea.id);
+                    assert.equal(ideaUpdate.statement, updatedStatement);
+                    assert.equal(ideaUpdate.description, updatedDescription);
                 });
 
                 test('Fail - Unauthorized', async function () {
@@ -4489,6 +4481,8 @@ suite('Users', function () {
 
                 test('Success', async function () {
                     const idea = (await ideationIdeaCreate(agent, user.id, topic.id, ideation.id, 'TEST', 'TEST')).body.data;
+                    assert.property(idea, 'sessionId');
+                    delete idea.sessionId;
                     const ideas = (await ideationIdeaList(agent, user.id, topic.id, ideation.id)).body.data;
                     assert.exists(ideas.rows[0], 'favourite');
                     delete ideas.rows[0].favourite;
@@ -4506,6 +4500,8 @@ suite('Users', function () {
                     const idea = (await ideationIdeaCreate(agent, user.id, topic.id, ideation.id, 'TEST', 'TEST')).body.data;
                     await topicLib.topicUpdate(agent, user.id, topic.id, null, Topic.VISIBILITY.public);
                     const ideas = (await ideationIdeaListUnauth(request.agent(app), topic.id, ideation.id)).body.data;
+                    assert.property(idea, 'sessionId');
+                    delete idea.sessionId;
                     assert.exists(ideas.rows[0], 'favourite');
                     delete ideas.rows[0].favourite;
                     assert.deepEqual(ideas.rows[0].replies, { count: 0 });
@@ -5613,13 +5609,12 @@ suite('Users', function () {
                             source: 'upload',
                             type: '.txt',
                             size: 1000,
-                            creatorId: creator.id,
                             file: path.join(__dirname, '/uploads/test.txt')
                         };
 
                         const attachment = (await uploadAttachmentFile(creatorAgent, creator.id, topic.id, ideation.id, idea.id, expectedAttachment)).body.data;
                         assert.equal(attachment.name, expectedAttachment.name);
-                        assert.equal(attachment.creatorId, expectedAttachment.creatorId);
+                        assert.equal(attachment.creatorId, null);
                         assert.equal(attachment.name, expectedAttachment.name);
                         assert.equal(attachment.name, expectedAttachment.name);
                     });
