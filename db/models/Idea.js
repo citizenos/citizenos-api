@@ -163,6 +163,10 @@ module.exports = function (sequelize, DataTypes) {
             data.sessionId = this.dataValues.sessionId;
         }
 
+        if(this.dataValues.sessionId) {
+            data.sessionId = this.dataValues.sessionId;
+        }
+
         if (this.dataValues.deletedBy) {
             data.deletedBy = this.dataValues.deletedBy;
         } else {
