@@ -48,6 +48,7 @@ module.exports = function (app) {
         const topicId = req.params.topicId;
         const disableReplies = req.body.disableReplies;
 
+        const allowAnonymous = req.body.allowAnonymous || false;
         try {
             if (!question) {
                 return res.badRequest('Ideation question is missing', 1);
@@ -57,7 +58,8 @@ module.exports = function (app) {
                 question,
                 deadline,
                 disableReplies,
-                creatorId: req.user.id
+                creatorId: req.user.id,
+                allowAnonymous
             });
 
 
@@ -549,7 +551,7 @@ module.exports = function (app) {
                     await topicLib.addUserAsMember(req.user.id, topicId, t);
 
                     const idea = Idea.build({
-                        authorId: req.user.id,
+                        authorId: (ideation.allowAnonymous) ? null : req.user.id,
                         statement,
                         description,
                         imageUrl,
