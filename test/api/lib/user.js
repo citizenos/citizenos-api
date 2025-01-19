@@ -90,6 +90,10 @@ module.exports = function (app) {
         return user;
     };
 
+    const _loginUser = async function (agent, email, password, language) {
+        return auth.login(agent, email, password, language);
+    };
+
     const _deleteUser = async function (agent, userId) {
         return userLib.userDelete(agent, userId);
     };
@@ -97,7 +101,8 @@ module.exports = function (app) {
     return {
         deleteUser: _deleteUser,
         createUser: _createUser,
-        createUserAndLogin: _createUserAndLogin
+        createUserAndLogin: _createUserAndLogin,
+        loginUser: _loginUser
     };
 
 };
