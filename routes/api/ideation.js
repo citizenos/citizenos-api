@@ -46,6 +46,7 @@ module.exports = function (app) {
         const question = req.body.question;
         const deadline = req.body.deadline;
         const topicId = req.params.topicId;
+        const allowAnonymous = req.body.allowAnonymous || false;
         try {
             if (!question) {
                 return res.badRequest('Ideation question is missing', 1);
@@ -54,7 +55,8 @@ module.exports = function (app) {
             const ideation = Ideation.build({
                 question,
                 deadline,
-                creatorId: req.user.id
+                creatorId: req.user.id,
+                allowAnonymous
             });
 
 
@@ -556,7 +558,7 @@ module.exports = function (app) {
                     }
 
                     const idea = Idea.build({
-                        authorId: req.user.id,
+                        authorId: (ideation.allowAnonymous) ? null : req.user.id,
                         statement,
                         description,
                         imageUrl,

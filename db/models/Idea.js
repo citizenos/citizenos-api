@@ -41,7 +41,7 @@ module.exports = function (sequelize, DataTypes) {
             },
             authorId: {
                 type: DataTypes.UUID,
-                allowNull: false,
+                allowNull: true,
                 comment: 'Author of the idea',
                 references: {
                     model: 'Users',
