@@ -1213,6 +1213,7 @@ module.exports = function (app) {
                 })
                 const resFolder = folder.toJSON();
                 resFolder.ideas = ideas;
+
                 return res.ok(resFolder);
 
             } catch (err) {
@@ -3848,7 +3849,7 @@ module.exports = function (app) {
                     c.name as "creator.name"
                 FROM "IdeaAttachments" ia
                 JOIN "Attachments" a ON a.id = ia."attachmentId"
-                JOIN "Users" c ON c.id = a."creatorId"
+                LEFT JOIN "Users" c ON c.id = a."creatorId"
                 WHERE ia."ideaId" = :ideaId AND ia.type=:type
                 AND a."deletedAt" IS NULL
                 ;
