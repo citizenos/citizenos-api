@@ -59,7 +59,7 @@ module.exports = function (sequelize, DataTypes) {
             creatorId: {
                 type: DataTypes.UUID,
                 comment: 'User ID of the reporter.',
-                allowNull: false,
+                allowNull: true,
                 references: {
                     model: 'Users',
                     key: 'id'

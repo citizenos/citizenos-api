@@ -1,6 +1,6 @@
 'use strict';
 
-const _ideationCreate = async function (agent, userId, topicId, question, deadline, expectedHttpCode) {
+const _ideationCreate = async function (agent, userId, topicId, question, deadline, disableReplies, allowAnonymous, expectedHttpCode) {
     const path = '/api/users/:userId/topics/:topicId/ideations'
         .replace(':userId', userId)
         .replace(':topicId', topicId);
@@ -9,15 +9,17 @@ const _ideationCreate = async function (agent, userId, topicId, question, deadli
         .post(path)
         .set('Content-Type', 'application/json')
         .send({
-            question: question,
-            deadline: deadline
+            question,
+            deadline,
+            disableReplies,
+            allowAnonymous
         })
         .expect(expectedHttpCode)
         .expect('Content-Type', /json/)
 };
 
-const ideationCreate = async function (agent, userId, topicId, question, deadline) {
-    return _ideationCreate(agent, userId, topicId, question, deadline, 201);
+const ideationCreate = async function (agent, userId, topicId, question, deadline, disableReplies, allowAnonymous) {
+    return _ideationCreate(agent, userId, topicId, question, deadline, disableReplies, allowAnonymous, 201);
 };
 
 const _ideationRead = async function (agent, userId, topicId, ideationId, expectedHttpCode) {
@@ -53,7 +55,7 @@ const ideationReadUnauth = async function (agent, topicId, ideationId) {
     return _ideationReadUnauth(agent, topicId, ideationId, 200);
 };
 
-const _ideationUpdate = async function (agent, userId, topicId, ideationId, question, deadline, expectedHttpCode) {
+const _ideationUpdate = async function (agent, userId, topicId, ideationId, question, deadline, disableReplies, allowAnonymous, expectedHttpCode) {
     const path = '/api/users/:userId/topics/:topicId/ideations/:ideationId'
         .replace(':userId', userId)
         .replace(':topicId', topicId)
@@ -61,10 +63,14 @@ const _ideationUpdate = async function (agent, userId, topicId, ideationId, ques
 
     let body = {
         deadline,
-        question
+        question,
+        disableReplies,
+        allowAnonymous
     };
     if (deadline === undefined) delete body.deadline;
     if (question === undefined) delete body.question;
+    if (disableReplies === undefined) delete body.disableReplies;
+    if (allowAnonymous === undefined) delete body.allowAnonymous;
     return agent
         .put(path)
         .send(body)
@@ -73,8 +79,8 @@ const _ideationUpdate = async function (agent, userId, topicId, ideationId, ques
         .expect('Content-Type', /json/)
 };
 
-const ideationUpdate = async function (agent, userId, topicId, ideationId, question, deadline) {
-    return _ideationUpdate(agent, userId, topicId, ideationId, question, deadline, 200);
+const ideationUpdate = async function (agent, userId, topicId, ideationId, question, deadline, disableReplies, allowAnonymous) {
+    return _ideationUpdate(agent, userId, topicId, ideationId, question, deadline, disableReplies, allowAnonymous, 200);
 };
 
 const _ideationDelete = async function (agent, userId, topicId, ideationId, expectedHttpCode) {
@@ -1043,9 +1049,33 @@ suite('Users', function () {
                 assert.equal(new Date(ideation.deadline).getTime(), deadline.getTime());
             });
 
+            test('Success - disableReplies', async function () {
+                const question = 'Test ideation?';
+                const deadline = new Date(new Date().getTime() + 24 * 60 * 60 * 1000);
+                const disableReplies = true;
+                const ideation = (await ideationCreate(agent, user.id, topic.id, question, deadline, disableReplies)).body.data;
+                assert.property(ideation, 'id');
+                assert.equal(ideation.creatorId, user.id);
+                assert.equal(ideation.question, question);
+                assert.equal(ideation.disableReplies, disableReplies);
+                assert.equal(new Date(ideation.deadline).getTime(), deadline.getTime());
+            });
+
+            test('Success - allowAnonymous', async function () {
+                const question = 'Test ideation?';
+                const deadline = new Date(new Date().getTime() + 24 * 60 * 60 * 1000);
+                const disableReplies = true;
+                const ideation = (await ideationCreate(agent, user.id, topic.id, question, deadline, disableReplies)).body.data;
+                assert.property(ideation, 'id');
+                assert.equal(ideation.creatorId, user.id);
+                assert.equal(ideation.question, question);
+                assert.equal(ideation.disableReplies, disableReplies);
+                assert.equal(new Date(ideation.deadline).getTime(), deadline.getTime());
+            });
+
             test('Fail - Bad Request - deadline wrong format', async function () {
                 const question = 'Test ideation?';
-                const errors = (await _ideationCreate(agent, user.id, topic.id, question, 'TEST', 400)).body.errors;
+                const errors = (await _ideationCreate(agent, user.id, topic.id, question, 'TEST', null, null, 400)).body.errors;
 
                 assert.equal(errors.deadline, 'Ideation deadline must be in the future.');
             });
@@ -1054,7 +1084,7 @@ suite('Users', function () {
             test('Fail - Bad Request - deadline is in the past', async function () {
                 const question = 'Test ideation?';
                 const deadlineInPast = new Date(new Date().getTime() - 24 * 60 * 60 * 1000);
-                const errors = (await _ideationCreate(agent, user.id, topic.id, question, deadlineInPast, 400)).body.errors;
+                const errors = (await _ideationCreate(agent, user.id, topic.id, question, deadlineInPast, null, null, 400)).body.errors;
 
                 assert.equal(errors.deadline, 'Ideation deadline must be in the future.');
             });
@@ -1155,9 +1185,44 @@ suite('Users', function () {
                 assert.deepEqual(ideationUpdated, ideationR);
             });
 
+            test('Success - disableReplies when topic status ideation', async function () {
+                const topic = (await topicLib.topicCreate(agent, user.id, null, null, null, Topic.VISIBILITY.private)).body.data;
+                const ideation = (await ideationCreate(agent, user.id, topic.id, 'TEST ideation', null, true)).body.data;
+                await topicLib.topicUpdate(agent, user.id, topic.id, Topic.STATUSES.ideation);
+                const idea = (await ideationIdeaCreate(agent, user.id, topic.id, ideation.id, 'TEST', 'TEST')).body.data;
+                await _ideationIdeaCommentCreate(agent, user.id, topic.id, ideation.id, idea.id, null, null, Comment.TYPES.pro, 'TEST', 'TEST', 403);
+                const ideationUpdated = (await ideationUpdate(agent, user.id, topic.id, ideation.id, null, null, false)).body.data;
+                await ideationIdeaCommentCreate(agent, user.id, topic.id, ideation.id, idea.id, null, null, Comment.TYPES.pro, 'TEST2', 'TEST2');
+                const ideationR = (await ideationRead(agent, user.id, topic.id, ideation.id)).body.data;
+                // The difference from create result is that there is "members" and "creator" is extended. Might consider changing in the future..
+                assert.deepEqual(ideationUpdated, ideationR);
+            });
+
+            test('Success - allowAnonymous', async function () {
+                const topic = (await topicLib.topicCreate(agent, user.id, null, Topic.STATUSES.draft, null, Topic.VISIBILITY.private)).body.data;
+                const ideation = (await ideationCreate(agent, user.id, topic.id, 'TEST ideation', null, false, false)).body.data;
+                const ideationUpdated = (await ideationUpdate(agent, user.id, topic.id, ideation.id, null, null, null, true)).body.data;
+                const ideationR = (await ideationRead(agent, user.id, topic.id, ideation.id)).body.data;
+                assert.deepEqual(ideationUpdated, ideationR);
+                assert.equal(ideationUpdated.disableReplies, true);
+                assert.equal(ideationUpdated.allowAnonymous, true);
+            });
+
+            test('Fail - turn off allowAnonymous after topic status ideation', async function () {
+                const topic = (await topicLib.topicCreate(agent, user.id, null, Topic.STATUSES.draft, null, Topic.VISIBILITY.private)).body.data;
+                const ideation = (await ideationCreate(agent, user.id, topic.id, 'TEST ideation', null, false, true)).body.data;
+                await topicLib.topicUpdate(agent, user.id, topic.id, Topic.STATUSES.ideation);
+                const ideationUpdated = (await ideationUpdate(agent, user.id, topic.id, ideation.id, null, null, null, false)).body.data;
+                const ideationR = (await ideationRead(agent, user.id, topic.id, ideation.id)).body.data;
+                assert.equal(ideationUpdated.disableReplies, true);
+                assert.equal(ideationUpdated.allowAnonymous, true);
+                assert.equal(ideationR.disableReplies, true);
+                assert.equal(ideationR.allowAnonymous, true);
+            });
+
             test('Fail - deadline in the past', async function () {
                 const deadline = new Date(new Date().getTime() - 24 * 60 * 60 * 1000);
-                const errors = (await _ideationUpdate(agent, user.id, topic.id, ideation.id, undefined, deadline, 400)).body.errors;
+                const errors = (await _ideationUpdate(agent, user.id, topic.id, ideation.id, undefined, deadline, null, null, 400)).body.errors;
 
                 assert.equal(errors.deadline, 'Ideation deadline must be in the future.');
             });
@@ -1205,6 +1270,8 @@ suite('Users', function () {
         });
 
         suite('Idea', function () {
+
+
             suite('Create', function () {
                 const agent = request.agent(app);
                 const agent2 = request.agent(app);
@@ -2287,6 +2354,21 @@ suite('Users', function () {
                         assert.equal(comment.creator.id, user.id);
                     });
 
+                    test('Fail - disableReplies', async function () {
+                        const topic = (await topicLib.topicCreate(agent, user.id, null)).body.data;
+                        const ideation = (await ideationCreate(agent, user.id, topic.id, 'TEST ideation', null, true)).body.data;
+                        await topicLib.topicUpdate(agent, user.id, topic.id, Topic.STATUSES.ideation);
+                        idea = (await ideationIdeaCreate(agent, user.id, topic.id, ideation.id, 'TEST', 'TEST')).body.data;
+                        const resBody = (await _ideationIdeaCommentCreate(agent, user.id, topic.id, ideation.id, idea.id, null, null, Comment.TYPES.pro, 'subject', 'text', 403)).body;
+                        const resBodyExpected = {
+                            status: {
+                                code: 40300,
+                                message: 'Replies are disabled for this ideation'
+                            }
+                        };
+                        assert.deepEqual(resBody, resBodyExpected);
+                    });
+
                     test('Fail - 40000 - text can be 1 - N characters longs - PRO', async function () {
                         const type = Comment.TYPES.pro;
                         const maxLength = Comment.TYPE_LENGTH_LIMIT[type];
@@ -2381,11 +2463,11 @@ suite('Users', function () {
                         const commentEdited = (await ideationIdeaCommentList(agent3, user3.id, topic.id, ideation.id, idea.id, 'date')).body.data.rows[0];
                         assert.property(commentEdited, 'id');
                         assert.property(commentEdited, 'edits');
-                        assert.equal(commentEdited.edits.length, 2);
+                        assert.equal(commentEdited.edits.length, 1);
                         assert.equal(commentEdited.edits[0].subject, subject);
-                        assert.equal(commentEdited.edits[1].subject, editSubject);
+                        assert.equal(commentEdited.subject, editSubject);
                         assert.equal(commentEdited.edits[0].text, text);
-                        assert.equal(commentEdited.edits[1].text, editText);
+                        assert.equal(commentEdited.text, editText);
                         assert.equal(commentEdited.edits[0].createdAt, commentEdited.createdAt);
                         assert.notEqual(commentEdited.type, Comment.TYPES.reply);
                         assert.equal(commentEdited.type, Comment.TYPES.con);
@@ -3799,6 +3881,1591 @@ suite('Users', function () {
                     idea = (await ideationIdeaCreate(creatorAgent, creator.id, topic.id, ideation.id, 'TEST', 'TEST')).body.data;
                     topic2 = (await topicLib.topicCreate(creatorAgent, creator.id, null, Topic.STATUSES.draft, null, Topic.VISIBILITY.private)).body.data;
                     ideation2 = (await ideationCreate(creatorAgent, creator.id, topic2.id, 'TEST ideation')).body.data;
+                    await topicLib.topicUpdate(creatorAgent, creator.id, topic2.id, Topic.STATUSES.ideation);
+                    idea2 = (await ideationIdeaCreate(creatorAgent, creator.id, topic2.id, ideation2.id, 'TEST', 'TEST')).body.data;
+                });
+
+                suite('Create', function () {
+                    test('Success', async function () {
+                        const expectedAttachment = {
+                            name: 'testfilename.pdf',
+                            source: 'dropbox',
+                            link: `https://www.dropbox.com/s/6schppqdg5qfofe/Getting%20Started.pdf?dl=0`,
+                            type: '.pdf',
+                            size: 1000,
+                            creatorId: creator.id
+                        };
+
+                        const attachment = (await ideaAttachmentAdd(creatorAgent, creator.id, topic.id, ideation.id, idea.id, expectedAttachment.name, expectedAttachment.link, expectedAttachment.source, expectedAttachment.type, expectedAttachment.size)).body.data;
+                        assert.property(attachment, 'id');
+                        assert.property(attachment, 'createdAt');
+                        assert.equal(attachment.name, expectedAttachment.name);
+                        assert.equal(attachment.link, expectedAttachment.link);
+                        assert.equal(attachment.source, expectedAttachment.source);
+                        assert.equal(attachment.type, expectedAttachment.type);
+                        assert.equal(attachment.size, expectedAttachment.size);
+                        assert.equal(attachment.creatorId, creator.id);
+                    });
+
+                    test('Fail, no link', async function () {
+                        const expectedAttachment = {
+                            name: 'testfilename.pdf',
+                            source: 'dropbox',
+                            link: '',
+                            type: '.pdf',
+                            size: 1000,
+                            creatorId: creator.id
+                        };
+
+                        const resBody = (await _ideaAttachmentAdd(creatorAgent, creator.id, topic.id, ideation.id, idea.id, expectedAttachment.name, expectedAttachment.link, expectedAttachment.source, expectedAttachment.type, expectedAttachment.size, 400)).body;
+                        const expectedBody = {
+                            status: {
+                                code: 40000,
+                                message: "Missing attachment link"
+                            }
+                        };
+                        assert.deepEqual(resBody, expectedBody);
+                    });
+                });
+
+                suite('Read', function () {
+                    let attachment;
+
+                    suiteSetup(async function () {
+                        const expectedAttachment = {
+                            name: 'testfilename.pdf',
+                            source: 'dropbox',
+                            link: `https://www.dropbox.com/s/6schppqdg5qfofe/Getting%20Started.pdf?dl=0`,
+                            type: '.pdf',
+                            creatorId: creator.id
+                        };
+                        attachment = (await ideaAttachmentAdd(creatorAgent, creator.id, topic.id, ideation.id, idea.id, expectedAttachment.name, expectedAttachment.link, expectedAttachment.source, expectedAttachment.type, expectedAttachment.size)).body.data;
+                    });
+
+                    test('Success', async function () {
+                        const readAttachment = (await ideaAttachmentRead(creatorAgent, creator.id, topic.id, ideation.id, idea.id, attachment.id)).body.data;
+
+                        assert.equal(readAttachment.id, attachment.id);
+                        assert.equal(readAttachment.createdAt, attachment.createdAt);
+                        assert.equal(readAttachment.name, attachment.name);
+                        assert.equal(readAttachment.link, attachment.link);
+                        assert.equal(readAttachment.source, attachment.source);
+                        assert.equal(readAttachment.type, attachment.type);
+                        assert.equal(readAttachment.size, attachment.size);
+                        assert.equal(readAttachment.creatorId, attachment.creatorId);
+                    });
+
+                    test('Unauth - Success', async function () {
+                        const readAttachment = (await ideaAttachmentReadUnauth(agent, topic.id, ideation.id, idea.id, attachment.id)).body.data;
+
+                        assert.equal(readAttachment.id, attachment.id);
+                        assert.equal(readAttachment.createdAt, attachment.createdAt);
+                        assert.equal(readAttachment.name, attachment.name);
+                        assert.equal(readAttachment.link, attachment.link);
+                        assert.equal(readAttachment.source, attachment.source);
+                        assert.equal(readAttachment.type, attachment.type);
+                        assert.equal(readAttachment.size, attachment.size);
+                        assert.equal(readAttachment.creatorId, attachment.creatorId);
+                    });
+
+                    test('Unauth- Fail', async function () {
+                        const result = (await _ideaAttachmentReadUnauth(agent, topic2.id, ideation2.id, idea2.id, attachment.id, 404)).body;
+                        const expectedResponse = {
+                            status: {
+                                code: 40400,
+                                message: 'Not Found'
+                            }
+                        };
+
+                        assert.deepEqual(result, expectedResponse);
+                    });
+                });
+
+                suite('Update', function () {
+                    let attachment;
+
+                    setup(async function () {
+                        const expectedAttachment = {
+                            name: 'testfilename.pdf',
+                            source: 'dropbox',
+                            link: `https://www.dropbox.com/s/6schppqdg5qfofe/Getting%20Started.pdf?dl=0`,
+                            type: '.pdf',
+                            creatorId: creator.id
+                        };
+                        attachment = (await ideaAttachmentAdd(creatorAgent, creator.id, topic.id, ideation.id, idea.id, expectedAttachment.name, expectedAttachment.link, expectedAttachment.source, expectedAttachment.type, expectedAttachment.size)).body.data;
+                    });
+
+                    test('Success', async function () {
+                        const updateAttachment = (await ideaAttachmentUpdate(creatorAgent, creator.id, topic.id, ideation.id, idea.id, attachment.id, 'newTestFilename')).body.data;
+                        assert.property(updateAttachment, 'id');
+                        assert.property(updateAttachment, 'createdAt');
+                        assert.equal(updateAttachment.name, 'newTestFilename');
+                        assert.equal(updateAttachment.link, attachment.link);
+                        assert.equal(updateAttachment.type, attachment.type);
+                        assert.equal(updateAttachment.source, attachment.source);
+                        assert.equal(updateAttachment.size, attachment.size);
+                        assert.equal(updateAttachment.creatorId, creator.id);
+                    });
+
+                    test('Update attachment - Fail - Missing attachment name', async function () {
+                        const resBody = (await _ideaAttachmentUpdate(creatorAgent, creator.id, topic.id, ideation.id, idea.id, attachment.id, '', 400)).body;
+                        const expectedBody = {
+                            status: {
+                                code: 40000,
+                                message: "Missing attachment name"
+                            }
+                        };
+                        assert.deepEqual(resBody, expectedBody);
+                    });
+                });
+
+                suite('Delete', function () {
+                    let attachment;
+
+                    setup(async function () {
+                        const expectedAttachment = {
+                            name: 'testfilename.pdf',
+                            source: 'dropbox',
+                            link: `https://www.dropbox.com/s/6schppqdg5qfofe/Getting%20Started.pdf?dl=0`,
+                            type: '.pdf',
+                            creatorId: creator.id
+                        };
+                        attachment = (await ideaAttachmentAdd(creatorAgent, creator.id, topic.id, ideation.id, idea.id, expectedAttachment.name, expectedAttachment.link, expectedAttachment.source, expectedAttachment.type, expectedAttachment.size)).body.data;
+                    });
+
+                    test('Success', async function () {
+                        const resBody = (await ideaAttachmentDelete(creatorAgent, creator.id, topic.id, ideation.id, idea.id, attachment.id)).body;
+                        const expectedBody = {
+                            status: {
+                                code: 20000
+                            }
+                        };
+                        assert.deepEqual(resBody, expectedBody);
+                        const list = (await ideaAttachmentList(creatorAgent, creator.id, topic.id, ideation.id, idea.id)).body.data;
+
+                        assert.equal(list.count, 0);
+                        assert.equal(list.rows.length, 0);
+                    });
+
+                    test('Fail - unauthorized', async function () {
+                        const resBody = (await _ideaAttachmentDelete(agent, user.id, topic.id, ideation.id, idea.id, attachment.id, 403)).body;
+                        const expectedBody = {
+                            status: {
+                                code: 40300,
+                                message: "Insufficient permissions"
+                            }
+                        };
+                        assert.deepEqual(resBody, expectedBody);
+                    });
+
+                });
+
+                suite('Upload', function () {
+                    test('Success', async function () {
+                        const expectedAttachment = {
+                            name: 'test.txt',
+                            source: 'upload',
+                            type: '.txt',
+                            size: 1000,
+                            creatorId: creator.id,
+                            file: path.join(__dirname, '/uploads/test.txt')
+                        };
+
+                        const attachment = (await uploadAttachmentFile(creatorAgent, creator.id, topic.id, ideation.id, idea.id, expectedAttachment)).body.data;
+                        assert.equal(attachment.name, expectedAttachment.name);
+                        assert.equal(attachment.creatorId, expectedAttachment.creatorId);
+                        assert.equal(attachment.name, expectedAttachment.name);
+                        assert.equal(attachment.name, expectedAttachment.name);
+                    });
+
+                    test('Fail - invalid format', async function () {
+                        const expectedAttachment = {
+                            name: 'test.txt',
+                            source: 'upload',
+                            type: '.txt',
+                            size: 1000,
+                            creatorId: creator.id,
+                            file: path.join(__dirname, '/uploads/test.exe')
+                        };
+
+                        const resBody = (await _uploadAttachmentFile(creatorAgent, creator.id, topic.id, ideation.id, idea.id, expectedAttachment, 403)).body;
+                        assert.deepEqual(resBody, {
+                            "status": {
+                                "code": 40300,
+                                "message": "File type application/x-msdos-program is invalid"
+                            }
+                        })
+                    });
+
+                    test('Fail - invalid format .exe with text/plain header', async function () {
+                        const attachment = {
+                            name: 'test.txt',
+                            source: 'upload',
+                            type: '.txt',
+                            size: 1000,
+                            creatorId: creator.id,
+                            file: path.join(__dirname, '/uploads/test.exe')
+                        };
+
+                        const request = creatorAgent
+                            .post('/api/users/:userId/topics/:topicId/attachments/upload'
+                                .replace(':userId', creator.id)
+                                .replace(':topicId', topic.id));
+
+                        Object.keys(attachment).forEach(function (key) {
+                            request.field(key, attachment[key])
+                        });
+
+                        const res = await request
+                            .attach("name", attachment.file, { contentType: 'text/plain' })
+                            .set('Content-Type', 'multipart/form-data')
+                            .expect(403);
+
+                        assert.deepEqual(res.body, {
+                            "status": {
+                                "code": 40300,
+                                "message": "File type text/plain is invalid"
+                            }
+                        });
+                    });
+
+                    test('Fail - invalid format .exe with .txt filename', async function () {
+                        const file = path.join(__dirname, '/uploads/test.exe');
+
+                        const request = creatorAgent
+                            .post('/api/users/:userId/topics/:topicId/attachments/upload'
+                                .replace(':userId', creator.id)
+                                .replace(':topicId', topic.id));
+
+                        request.field('folder', 'test');
+
+                        const res = await request
+                            .attach("name", file, { contentType: 'text/plain' })
+                            .set('Content-Type', 'multipart/form-data')
+                            .expect(403);
+
+                        assert.deepEqual(res.body, {
+                            "status": {
+                                "code": 40300,
+                                "message": "File type text/plain is invalid"
+                            }
+                        });
+                    });
+
+                    test('Fail - invalid format file without extension', async function () {
+                        const file = path.join(__dirname, '/uploads/test');
+
+                        const request = creatorAgent
+                            .post('/api/users/:userId/topics/:topicId/attachments/upload'
+                                .replace(':userId', creator.id)
+                                .replace(':topicId', topic.id));
+
+                        request.field('folder', 'test');
+
+                        return request
+                            .attach("name", file, { contentType: 'text/plain' })
+                            .set('Content-Type', 'multipart/form-data')
+                            .expect(403);
+                    });
+
+                });
+
+                suite('List', function () {
+                    let attachment;
+
+                    setup(async function () {
+                        const expectedAttachment = {
+                            name: 'testfilename.pdf',
+                            source: 'dropbox',
+                            link: `https://www.dropbox.com/s/6schppqdg5qfofe/Getting%20Started.pdf?dl=0`,
+                            type: '.pdf',
+                            creatorId: creator.id
+                        };
+                        attachment = (await ideaAttachmentAdd(creatorAgent, creator.id, topic.id, ideation.id, idea.id, expectedAttachment.name, expectedAttachment.link, expectedAttachment.source, expectedAttachment.type, expectedAttachment.size)).body.data;
+                    });
+
+                    test('Success', async function () {
+                        const list = (await ideaAttachmentList(creatorAgent, creator.id, topic.id, ideation.id, idea.id)).body.data;
+                        const listAttachment = list.rows[0];
+
+                        assert.equal(list.count, 1);
+                        assert.property(listAttachment, 'id');
+                        assert.property(listAttachment, 'createdAt');
+                        assert.equal(listAttachment.name, attachment.name);
+                        assert.equal(listAttachment.link, attachment.link);
+                        assert.equal(listAttachment.type, attachment.type);
+                        assert.equal(listAttachment.size, attachment.size);
+                        assert.equal(listAttachment.creator.id, creator.id);
+                    });
+
+                    test('Success unauth', async function () {
+                        const list = (await ideaAttachmentListUnauth(creatorAgent, topic.id, ideation.id, idea.id)).body.data;
+                        assert.equal(list.count, 1);
+                        const listAttachment = list.rows[0];
+                        assert.property(listAttachment, 'id');
+                        assert.property(listAttachment, 'createdAt');
+                        assert.equal(listAttachment.name, attachment.name);
+                        assert.equal(listAttachment.link, attachment.link);
+                        assert.equal(listAttachment.type, attachment.type);
+                        assert.equal(listAttachment.source, attachment.source);
+                        assert.equal(listAttachment.size, attachment.size);
+                        assert.equal(listAttachment.creator.id, creator.id);
+                    });
+                });
+            });
+        });
+
+        suite('Idea Anonymous', function () {
+            suite('Create', function () {
+                const agent = request.agent(app);
+                const agent2 = request.agent(app);
+                const email = 'test_topicr_' + new Date().getTime() + '@test.ee';
+                const email2 = 'test_topicr_' + new Date().getTime() + 2 + '@test.ee';
+                const password = 'testPassword123';
+
+                let user;
+                let user2;
+                let topic;
+                let ideation;
+
+                suiteSetup(async function () {
+                    user = await userLib.createUserAndLogin(agent, email, password, null);
+                    user2 = await userLib.createUserAndLogin(agent2, email2, password, null);
+                    topic = (await topicLib.topicCreate(agent, user.id, 'TEST', null, null, Topic.VISIBILITY.private)).body.data;
+                    ideation = (await ideationCreate(agent, user.id, topic.id, 'TEST ideation', null, false, true)).body.data;
+                    await topicLib.topicUpdate(agent, user.id, topic.id, Topic.STATUSES.ideation);
+                    await memberLib.topicMemberUsersCreate(topic.id, [{
+                        userId: user2.id,
+                        level: TopicMemberUser.LEVELS.edit
+                    }]);
+                });
+
+                test('Success', async function () {
+                    const statement = 'TEST idea';
+                    const description = 'This idea is just for testing';
+                    const idea = (await ideationIdeaCreate(agent, user.id, topic.id, ideation.id, statement, description)).body.data;
+                    assert.equal(idea.statement, statement);
+                    assert.equal(idea.description, description);
+                    assert.notProperty(idea, 'author');
+                    assert.exists(idea, 'id');
+                    assert.exists(idea, 'createdAt');
+                    assert.exists(idea, 'updatedAt');
+                    assert.exists(idea, 'deletedAt');
+                });
+
+                test('Fail - missing statement', async function () {
+                    const description = 'This idea is just for testing';
+                    const ideaRes = (await _ideationIdeaCreate(agent, user.id, topic.id, ideation.id, null, description, null, 400)).body;
+                    const expectedRes = {
+                        status: { code: 40000 },
+                        errors: { statement: 'Idea.statement cannot be null' }
+                    };
+
+                    assert.deepEqual(ideaRes, expectedRes);
+                });
+
+                test('Fail - missing description', async function () {
+                    const statement = 'This idea is just for testing';
+                    const ideaRes = (await _ideationIdeaCreate(agent, user.id, topic.id, ideation.id, statement, null, null, 400)).body;
+                    const expectedRes = {
+                        status: { code: 40000 },
+                        errors: { description: 'Idea.description cannot be null' }
+                    };
+
+                    assert.deepEqual(ideaRes, expectedRes);
+                });
+
+                test('Fail - topic status not ideation', async function () {
+                    await discussionCreate(agent, user.id, topic.id, 'TEST?');
+                    await topicLib.topicUpdate(agent, user.id, topic.id, Topic.STATUSES.followUp);
+                    await _ideationIdeaCreate(request.agent(app), user.id, topic.id, ideation.id, 'TEST idea', 'description', null, 401);
+                });
+
+                test('Fail - Unauthorized', async function () {
+                    await _ideationIdeaCreate(request.agent(app), user.id, topic.id, ideation.id, 'TEST idea', 'description', null, 401);
+                });
+            });
+
+            suite('Read', function () {
+                const agent = request.agent(app);
+                const agent2 = request.agent(app);
+                const email = 'test_topicr_' + new Date().getTime() + '@test.ee';
+                const email2 = 'test_topicr_' + new Date().getTime() + '@test.ee';
+                const password = 'testPassword123';
+
+                let user;
+                let user2;
+                let topic;
+                let ideation;
+
+                suiteSetup(async function () {
+                    user = await userLib.createUserAndLogin(agent, email, password, null);
+                    user2 = await userLib.createUserAndLogin(agent2, email2, password, null);
+                    topic = (await topicLib.topicCreate(agent, user.id, 'TEST', null, null, Topic.VISIBILITY.private)).body.data;
+                    ideation = (await ideationCreate(agent, user.id, topic.id, 'TEST ideation', null, false, true)).body.data;
+                    await topicLib.topicUpdate(agent, user.id, topic.id, Topic.STATUSES.ideation);
+                    await memberLib.topicMemberUsersCreate(topic.id, [{
+                        userId: user2.id,
+                        level: TopicMemberUser.LEVELS.edit
+                    }]);
+                });
+
+                test('Success', async function () {
+                    const statement = 'TEST idea';
+                    const description = 'This idea is just for testing';
+                    const idea = (await ideationIdeaCreate(agent, user.id, topic.id, ideation.id, statement, description)).body.data;
+                    const ideaR = (await ideationIdeaRead(agent, user.id, topic.id, ideation.id, idea.id)).body.data;
+                    assert.notProperty(ideaR, 'author');
+                    assert.notProperty(idea, 'author');
+                    assert.deepEqual(ideaR.votes, {
+                        down: {
+                            count: 0,
+                            selected: false
+                        },
+                        up: {
+                            count: 0,
+                            selected: false
+                        }
+                    });
+                    assert.equal(ideaR.favourite, false)
+                    assert.deepEqual(ideaR.replies, {
+                        count: 0
+                    });
+                    delete ideaR.replies;
+                    delete ideaR.votes;
+                    delete ideaR.favourite;
+                    assert.deepEqual(idea, ideaR);
+                });
+
+                test('Success - public topic unauth', async function () {
+                    const statement = 'TEST idea';
+                    const description = 'This idea is just for testing';
+                    const idea = (await ideationIdeaCreate(agent, user.id, topic.id, ideation.id, statement, description)).body.data;
+                    const ideaR = (await ideationIdeaRead(agent, user.id, topic.id, ideation.id, idea.id)).body.data;
+
+                    assert.notProperty(ideaR, 'author');
+                    assert.notProperty(idea, 'author');
+
+                    await topicLib.topicUpdate(agent, user.id, topic.id, null, Topic.VISIBILITY.public);
+                    delete ideaR.favourite;
+                    delete ideaR.votes.up.selected;
+                    delete ideaR.votes.down.selected;
+                    const ideaRUnauth = (await ideationIdeaReadUnauth(request.agent(app), topic.id, ideation.id, idea.id)).body.data;
+                    assert.notProperty(ideaRUnauth, 'author');
+                    assert.deepEqual(ideaR, ideaRUnauth);
+                });
+
+                test('Success - member topic', async function () {
+                    const statement = 'TEST idea';
+                    const description = 'This idea is just for testing';
+                    const idea = (await ideationIdeaCreate(agent, user.id, topic.id, ideation.id, statement, description)).body.data;
+                    const ideaR = (await ideationIdeaRead(agent, user.id, topic.id, ideation.id, idea.id)).body.data;
+                    assert.deepEqual(ideaR.votes, {
+                        down: {
+                            count: 0,
+                            selected: false
+                        },
+                        up: {
+                            count: 0,
+                            selected: false
+                        }
+                    });
+                    assert.notProperty(ideaR, 'author');
+                    assert.notProperty(idea, 'author');
+                    assert.equal(ideaR.favourite, false)
+                    assert.deepEqual(ideaR.replies, {
+                        count: 0
+                    });
+                    delete ideaR.replies;
+                    delete ideaR.votes;
+                    delete ideaR.favourite;
+                    assert.deepEqual(idea, ideaR);
+                });
+
+                test('Fail - Unauthorized', async function () {
+                    const statement = 'TEST idea';
+                    const description = 'This idea is just for testing';
+                    const idea = (await ideationIdeaCreate(agent, user.id, topic.id, ideation.id, statement, description)).body.data;
+                    await _ideationIdeaRead(request.agent(app), user.id, topic.id, ideation.id, idea.id, 401);
+                });
+            });
+
+            suite('Update', function () {
+                const agent = request.agent(app);
+                const agent2 = request.agent(app);
+                const email = 'test_topicr_' + new Date().getTime() + '@test.ee';
+                const email2 = 'test_topicr_' + new Date().getTime() + 2 + '@test.ee';
+                const password = 'testPassword123';
+
+                let user;
+                let user2;
+                let topic;
+                let ideation;
+
+                suiteSetup(async function () {
+                    user = await userLib.createUserAndLogin(agent, email, password, null);
+                    user2 = await userLib.createUserAndLogin(agent2, email2, password, null);
+                });
+
+                setup(async function () {
+                    topic = (await topicLib.topicCreate(agent, user.id, 'TEST', null, null, Topic.VISIBILITY.private)).body.data;
+                    ideation = (await ideationCreate(agent, user.id, topic.id, 'TEST ideation', null, false, true)).body.data;
+                    await topicLib.topicUpdate(agent, user.id, topic.id, Topic.STATUSES.ideation);
+                    await memberLib.topicMemberUsersCreate(topic.id, [{
+                        userId: user2.id,
+                        level: TopicMemberUser.LEVELS.edit
+                    }]);
+                });
+
+                test('Fail', async function () {
+                    const statement = 'TEST idea';
+                    const description = 'This idea is just for testing';
+
+                    const updatedStatement = 'Test idea Update';
+                    const updatedDescription = 'Updated description';
+                    const idea = (await ideationIdeaCreate(agent, user.id, topic.id, ideation.id, statement, description)).body.data;
+
+                    assert.notProperty(idea, 'author');
+
+                    assert.equal(idea.statement, statement);
+                    assert.equal(idea.description, description);
+                    assert.exists(idea, 'id');
+                    assert.exists(idea, 'createdAt');
+                    assert.exists(idea, 'updatedAt');
+                    assert.exists(idea, 'deletedAt');
+                    const ideaUpdate = (await _ideationIdeaUpdate(agent, user.id, topic.id, ideation.id, idea.id, updatedStatement, updatedDescription, null, 403)).body;
+
+                    assert.deepEqual(
+                        ideaUpdate,
+                        {
+                            status: { code: 40300, message: "Forbidden" }
+                        }
+                    );
+                });
+
+                test('Fail - Unauthorized', async function () {
+                    const idea = (await ideationIdeaCreate(agent, user.id, topic.id, ideation.id, 'TEST', 'TEST')).body.data;
+                    await _ideationIdeaUpdate(request.agent(app), user.id, topic.id, ideation.id, idea.id, 'TEST idea', 'description', null, 401);
+                });
+            });
+
+            suite('Delete', function () {
+                const agent = request.agent(app);
+                const agent2 = request.agent(app);
+                const email = 'test_topicr_' + new Date().getTime() + '@test.ee';
+                const email2 = 'test_topicr_' + new Date().getTime() + 2 + '@test.ee';
+                const password = 'testPassword123';
+
+                let user;
+                let user2;
+                let topic;
+                let ideation;
+
+                suiteSetup(async function () {
+                    user = await userLib.createUserAndLogin(agent, email, password, null);
+                    user2 = await userLib.createUserAndLogin(agent2, email2, password, null);
+                });
+
+                setup(async function () {
+                    topic = (await topicLib.topicCreate(agent, user.id, 'TEST', null, null, Topic.VISIBILITY.private)).body.data;
+                    ideation = (await ideationCreate(agent, user.id, topic.id, 'TEST ideation', null, false, true)).body.data;
+                    await topicLib.topicUpdate(agent, user.id, topic.id, Topic.STATUSES.ideation);
+                    await memberLib.topicMemberUsersCreate(topic.id, [{
+                        userId: user2.id,
+                        level: TopicMemberUser.LEVELS.edit
+                    }]);
+                });
+
+                //TODO: Update this when verified if admins can delete anonymous ideas
+                test('Success', async function () {
+                    const idea = (await ideationIdeaCreate(agent, user.id, topic.id, ideation.id, 'TEST', 'TEST')).body.data;
+                    const deleteRes = (await ideationIdeaDelete(agent, user.id, topic.id, ideation.id, idea.id)).body;
+                    const expectedBody = {
+                        status: {
+                            code: 20000
+                        }
+                    };
+                    assert.deepEqual(deleteRes, expectedBody);
+                });
+
+                test('Fail - not author of the idea', async function () {
+                    const idea = (await ideationIdeaCreate(agent, user.id, topic.id, ideation.id, 'TEST', 'TEST')).body.data;
+                    await _ideationIdeaDelete(agent2, user2.id, topic.id, ideation.id, idea.id, 403);
+                });
+
+                test('Fail - Unauthorized', async function () {
+                    const idea = (await ideationIdeaCreate(agent, user.id, topic.id, ideation.id, 'TEST', 'TEST')).body.data;
+                    await _ideationIdeaDelete(request.agent(app), user.id, topic.id, ideation.id, idea.id, 401);
+                });
+            });
+
+            suite('List', function () {
+                const agent = request.agent(app);
+                const agent2 = request.agent(app);
+                const email = 'test_topicr_' + new Date().getTime() + '@test.ee';
+                const email2 = 'test_topicr_' + new Date().getTime() + 2 + '@test.ee';
+                const password = 'testPassword123';
+
+                let user;
+                let user2;
+                let topic;
+                let ideation;
+
+                suiteSetup(async function () {
+                    user = await userLib.createUserAndLogin(agent, email, password, null);
+                    user2 = await userLib.createUserAndLogin(agent2, email2, password, null);
+                });
+
+                setup(async function () {
+                    topic = (await topicLib.topicCreate(agent, user.id, 'TEST', null, null, Topic.VISIBILITY.private)).body.data;
+                    ideation = (await ideationCreate(agent, user.id, topic.id, 'TEST ideation', null, false, true)).body.data;
+                    await topicLib.topicUpdate(agent, user.id, topic.id, Topic.STATUSES.ideation);
+                    await memberLib.topicMemberUsersCreate(topic.id, [{
+                        userId: user2.id,
+                        level: TopicMemberUser.LEVELS.edit
+                    }]);
+                });
+
+                test('Success', async function () {
+                    const idea = (await ideationIdeaCreate(agent, user.id, topic.id, ideation.id, 'TEST', 'TEST')).body.data;
+                    const ideas = (await ideationIdeaList(agent, user.id, topic.id, ideation.id)).body.data;
+                    assert.exists(ideas.rows[0], 'favourite');
+                    delete ideas.rows[0].favourite;
+                    assert.deepEqual(ideas.rows[0].replies, { count: 0 });
+                    delete ideas.rows[0].replies;
+                    assert.deepEqual(ideas.rows[0].votes, { up: { count: 0, selected: false }, down: { count: 0, selected: false } });
+                    delete ideas.rows[0].votes;
+                    assert.deepEqual(ideas, { count: 1, rows: [idea] });
+                    ideas.rows.forEach((idea) => {
+                        assert.notProperty(idea, 'author');
+                    });
+                });
+
+                test('Success - unauth', async function () {
+                    const idea = (await ideationIdeaCreate(agent, user.id, topic.id, ideation.id, 'TEST', 'TEST')).body.data;
+                    await topicLib.topicUpdate(agent, user.id, topic.id, null, Topic.VISIBILITY.public);
+                    const ideas = (await ideationIdeaListUnauth(request.agent(app), topic.id, ideation.id)).body.data;
+                    assert.exists(ideas.rows[0], 'favourite');
+                    delete ideas.rows[0].favourite;
+                    assert.deepEqual(ideas.rows[0].replies, { count: 0 });
+                    delete ideas.rows[0].replies;
+                    assert.deepEqual(ideas.rows[0].votes, { up: { count: 0 }, down: { count: 0 } });
+                    delete ideas.rows[0].votes;
+                    assert.deepEqual(ideas, { count: 1, rows: [idea] });
+                    ideas.rows.forEach((idea) => {
+                        assert.notProperty(idea, 'author');
+                    });
+                });
+
+                test('Success - query - showModerated', async function () {
+                    const idea = (await ideationIdeaCreate(agent, user.id, topic.id, ideation.id, 'TEST', 'TEST')).body.data;
+                    await topicLib.topicUpdate(agent, user.id, topic.id, null, Topic.VISIBILITY.public);
+                    const agentModerator = request.agent(app);
+                    const userModerator = await userLib.createUser(agentModerator, 'moderator@test.com', null, null);
+                    await Moderator.create({
+                        userId: userModerator.id
+                    });
+                    const agentReporter = request.agent(app);
+                    const userReporter = await userLib.createUserAndLogin(agentReporter, 'reporter@test.com', null, null);
+                    const report = (await ideationIdeaReportCreate(agentReporter, topic.id, ideation.id, idea.id, Report.TYPES.hate, 'Report create test text')).body.data;
+
+                    assert.isTrue(validator.isUUID(report.id));
+                    assert.equal(report.type, Report.TYPES.hate);
+                    assert.equal(report.text, 'Report create test text');
+                    assert.property(report, 'createdAt');
+                    assert.equal(report.creator.id, userReporter.id);
+
+                    assert.notProperty(idea, 'author');
+
+                    const moderateType = Comment.DELETE_REASON_TYPES.duplicate;
+                    const moderateText = 'Report create moderation text';
+
+                    const token = cosJwt.getTokenRestrictedUse(
+                        {
+                            userId: userModerator.id
+                        },
+                        [
+                            'POST /api/topics/:topicId/ideations/:ideationId/ideas/:ideaId/reports/:reportId/moderate'
+                                .replace(':topicId', topic.id)
+                                .replace(':ideationId', ideation.id)
+                                .replace(':ideaId', idea.id)
+                                .replace(':reportId', report.id)
+                        ]
+                    );
+
+                    await ideationIdeaReportModerate(request.agent(app), topic.id, ideation.id, idea.id, report.id, token, moderateType, moderateText);
+
+                    const ideas = (await ideationIdeaListUnauth(request.agent(app), topic.id, ideation.id, { showModerated: 'showModerated' })).body.data;
+                    assert.deepEqual(ideas.rows[0].replies, { count: 0 });
+                    delete ideas.rows[0].replies;
+                    assert.deepEqual(ideas.rows[0].votes, { up: { count: 0 }, down: { count: 0 } });
+                    delete ideas.rows[0].votes;
+                    assert.equal(ideas.count, 1);
+                    assert.equal(ideas.rows.length, 1);
+                    const ideaRes = ideas.rows[0];
+                    assert.deepEqual(ideaRes.author, idea.author);
+                    assert.equal(ideaRes.statement, idea.statement);
+                    assert.equal(ideaRes.description, idea.description);
+                    assert.equal(ideaRes.imageUrl, idea.imageUrl);
+                    assert.equal(ideaRes.createdAt, idea.createdAt);
+                    assert.deepEqual(ideaRes.deletedBy, { id: userModerator.id, name: userModerator.name });
+                    assert.deepEqual(ideaRes.report, { id: report.id });
+                    assert.notEqual(ideaRes.deletedAt, null);
+                    assert.equal(ideaRes.deletedReasonText, moderateText);
+                    assert.equal(ideaRes.deletedReasonType, moderateType);
+                });
+
+                test('Fail - Unauthorized', async function () {
+                    await ideationIdeaCreate(agent, user.id, topic.id, ideation.id, 'TEST', 'TEST');
+                    await _ideationIdeaList(request.agent(app), user.id, topic.id, ideation.id, null, 401);
+                });
+            });
+
+            suite('Reports', function () {
+
+                suite('Create', function () {
+                    const agentCreator = request.agent(app);
+                    const agentReporter = request.agent(app);
+                    const agentModerator = request.agent(app);
+
+                    const emailCreator = 'creator_' + Math.random().toString(36).replace(/[^a-z0-9]+/g, '') + 'A1@reportest.com';
+                    const emailReporter = 'reporter_' + Math.random().toString(36).replace(/[^a-z0-9]+/g, '') + 'A1@reportest.com';
+                    const emailModerator = 'moderator_' + Math.random().toString(36).replace(/[^a-z0-9]+/g, '') + 'A1@reportest.com';
+
+                    let userCreator;
+                    let userModerator;
+                    let userReporter;
+
+                    let partner;
+                    let topic;
+                    let ideation;
+                    let idea;
+
+                    suiteSetup(async function () {
+                        userCreator = await userLib.createUserAndLogin(agentCreator, emailCreator, null, null);
+                        userModerator = await userLib.createUser(agentModerator, emailModerator, null, null);
+                        userReporter = await userLib.createUserAndLogin(agentReporter, emailReporter, null, null);
+                        topic = (await topicLib.topicCreate(agentCreator, userCreator.id, null, Topic.STATUSES.draft, null, Topic.VISIBILITY.public)).body.data;
+                        ideation = (await ideationCreate(agentCreator, userCreator.id, topic.id, 'TEST ideation', null, false, true)).body.data;
+                        await topicLib.topicUpdate(agentCreator, userCreator.id, topic.id, Topic.STATUSES.ideation);
+                        idea = (await ideationIdeaCreate(agentCreator, userCreator.id, topic.id, ideation.id, 'TEST abusive', 'TEST inapropriate')).body.data;
+                        partner = await Partner.create({
+                            website: 'notimportant',
+                            redirectUriRegexp: 'notimportant'
+                        });
+
+                        await Topic.update(
+                            {
+                                sourcePartnerId: partner.id
+                            },
+                            {
+                                where: {
+                                    id: topic.id
+                                }
+                            }
+                        );
+
+                        return Moderator.create({
+                            userId: userModerator.id,
+                            partnerId: partner.id
+                        });
+                    });
+
+                    test('Success', async function () {
+                        const reportText = 'Hate speech report test';
+
+                        const reportResult = (await ideationIdeaReportCreate(agentReporter, topic.id, ideation.id, idea.id, Report.TYPES.hate, reportText)).body.data;
+                        assert.isTrue(validator.isUUID(reportResult.id));
+                        assert.notProperty(idea, 'author');
+                        assert.equal(reportResult.type, Report.TYPES.hate);
+                        assert.equal(reportResult.text, reportText);
+                        assert.property(reportResult, 'createdAt');
+                        assert.equal(reportResult.creator.id, userReporter.id);
+                    });
+
+                });
+
+                suite('Read', function () {
+                    const agentCreator = request.agent(app);
+                    const agentReporter = request.agent(app);
+                    const agentModerator = request.agent(app);
+
+                    const emailCreator = 'creator_' + Math.random().toString(36).replace(/[^a-z0-9]+/g, '') + 'A1@reportreadtest.com';
+                    const emailReporter = 'reporter_' + Math.random().toString(36).replace(/[^a-z0-9]+/g, '') + 'A1@reportreadtest.com';
+                    const emailModerator = 'moderator_' + Math.random().toString(36).replace(/[^a-z0-9]+/g, '') + 'A1@reportreadtest.com';
+
+                    let userCreator;
+                    let userModerator;
+
+                    let partner;
+                    let topic;
+                    let ideation;
+                    let idea;
+                    let report;
+
+                    suiteSetup(async function () {
+                        userCreator = await userLib.createUserAndLogin(agentCreator, emailCreator, null, null);
+                        userModerator = await userLib.createUser(agentModerator, emailModerator, null, null);
+                        await userLib.createUserAndLogin(agentReporter, emailReporter, null, null);
+                        topic = (await topicLib.topicCreate(agentCreator, userCreator.id, null, Topic.STATUSES.draft, null, Topic.VISIBILITY.public)).body.data;
+                        ideation = (await ideationCreate(agentCreator, userCreator.id, topic.id, 'TEST ideation', null, false, true)).body.data;
+                        await topicLib.topicUpdate(agentCreator, userCreator.id, topic.id, Topic.STATUSES.ideation);
+                        idea = (await ideationIdeaCreate(agentCreator, userCreator.id, topic.id, ideation.id, 'TEST', 'TEST')).body.data;
+
+                        partner = await Partner.create({
+                            website: 'notimportant',
+                            redirectUriRegexp: 'notimportant'
+                        });
+                        await Topic.update(
+                            {
+                                sourcePartnerId: partner.id
+                            },
+                            {
+                                where: {
+                                    id: topic.id
+                                }
+                            }
+                        );
+                        await Moderator.create({
+                            userId: userModerator.id,
+                            partnerId: partner.id
+                        });
+                        report = (await ideationIdeaReportCreate(agentReporter, topic.id, ideation.id, idea.id, Report.TYPES.hate, 'reported!')).body.data;
+                    });
+
+                    test('Success - token with audience', async function () {
+                        const token = cosJwt.getTokenRestrictedUse(
+                            {
+                                userId: userModerator.id
+                            },
+                            [
+                                'GET /api/topics/:topicId/ideations/:ideationId/ideas/:ideaId/reports/:reportId'
+                                    .replace(':topicId', topic.id)
+                                    .replace(':ideationId', ideation.id)
+                                    .replace(':ideaId', idea.id)
+                                    .replace(':reportId', report.id)
+                            ]
+                        );
+
+                        const resBody = (await ideationIdeaReportRead(request.agent(app), topic.id, ideation.id, idea.id, report.id, token)).body;
+
+                        const expectedResult = {
+                            status: { code: 20000 },
+                            data: {
+                                id: report.id,
+                                type: report.type,
+                                text: report.text,
+                                createdAt: report.createdAt,
+                                idea: {
+                                    statement: idea.statement,
+                                    description: idea.description,
+                                    id: idea.id
+                                }
+                            }
+                        };
+                        assert.deepEqual(resBody, expectedResult);
+                    });
+
+                    test('Fail - 40100 - Invalid token', async function () {
+                        const token = {};
+                        return _ideationIdeaReportRead(request.agent(app), topic.id, ideation.id, idea.id, report.id, token, 401);
+                    });
+
+                    test('Fail - 40100 - invalid token - without audience', async function () {
+                        const token = jwt.sign(
+                            {},
+                            config.session.privateKey,
+                            {
+                                algorithm: config.session.algorithm
+                            }
+                        );
+
+                        return _ideationIdeaReportRead(request.agent(app), topic.id, ideation.id, idea.id, report.id, token, 401);
+                    });
+
+                    test('Fail - 40100 - invalid token - invalid audience', async function () {
+                        const token = cosJwt.getTokenRestrictedUse({}, 'GET /foo/bar');
+
+                        return _ideationIdeaReportRead(request.agent(app), topic.id, ideation.id, idea.id, report.id, token, 401);
+                    });
+
+                });
+
+                suite('Moderate', function () {
+                    const agentCreator = request.agent(app);
+                    const agentReporter = request.agent(app);
+                    const agentModerator = request.agent(app);
+
+                    const emailCreator = 'creator_' + Math.random().toString(36).replace(/[^a-z0-9]+/g, '') + 'A1@repormoderationtest.com';
+                    const emailReporter = 'reporter_' + Math.random().toString(36).replace(/[^a-z0-9]+/g, '') + 'A1@repormoderationtest.com';
+                    const emailModerator = 'moderator_' + Math.random().toString(36).replace(/[^a-z0-9]+/g, '') + 'A1@repormoderationtest.com';
+
+                    let userCreator;
+                    let userModerator;
+
+                    let partner;
+                    let topic;
+                    let ideation;
+                    let idea;
+                    let report;
+
+                    suiteSetup(async function () {
+                        userCreator = await userLib.createUserAndLogin(agentCreator, emailCreator, null, null);
+                        userModerator = await userLib.createUser(agentModerator, emailModerator, null, null);
+                        await userLib.createUserAndLogin(agentReporter, emailReporter, null, null);
+                        topic = (await topicLib.topicCreate(agentCreator, userCreator.id, null, Topic.STATUSES.draft, null, Topic.VISIBILITY.private)).body.data;
+                        ideation = (await ideationCreate(agentCreator, userCreator.id, topic.id, 'TEST ideation', null, false, true)).body.data;
+                        await topicLib.topicUpdate(agentCreator, userCreator.id, topic.id, Topic.STATUSES.ideation);
+                        idea = (await ideationIdeaCreate(agentCreator, userCreator.id, topic.id, ideation.id, 'TEST', 'TEST')).body.data;
+
+                        partner = await Partner.create({
+                            website: 'notimportant',
+                            redirectUriRegexp: 'notimportant'
+                        });
+                        await Topic.update(
+                            {
+                                sourcePartnerId: partner.id
+                            },
+                            {
+                                where: {
+                                    id: topic.id
+                                }
+                            }
+                        );
+                        await Moderator.create({
+                            userId: userModerator.id,
+                            partnerId: partner.id
+                        });
+                        report = (await ideationIdeaReportCreate(agentReporter, topic.id, ideation.id, idea.id, Report.TYPES.hate, 'Report create test text')).body.data;
+
+                    });
+
+                    test('Success', async function () {
+                        const moderateType = Comment.DELETE_REASON_TYPES.duplicate;
+                        const moderateText = 'Report create moderation text';
+
+                        const token = cosJwt.getTokenRestrictedUse(
+                            {
+                                userId: userModerator.id
+                            },
+                            [
+                                'POST /api/topics/:topicId/ideations/:ideationId/ideas/:ideaId/reports/:reportId/moderate'
+                                    .replace(':topicId', topic.id)
+                                    .replace(':ideationId', ideation.id)
+                                    .replace(':ideaId', idea.id)
+                                    .replace(':reportId', report.id)
+                            ]
+                        );
+
+                        await ideationIdeaReportModerate(request.agent(app), topic.id, ideation.id, idea.id, report.id, token, moderateType, moderateText);
+
+                        const ideaRead = (await Idea.findOne({
+                            where: {
+                                id: idea.id
+                            },
+                            paranoid: false
+                        })).toJSON();
+
+                        assert.equal(ideaRead.deletedBy.id, userModerator.id);
+                        assert.equal(ideaRead.report.id, report.id);
+                        assert.equal(ideaRead.deletedReasonType, moderateType);
+                        assert.equal(ideaRead.deletedReasonText, moderateText);
+                        assert.isNotNull(ideaRead.deletedAt);
+                    });
+
+                    test('Fail - 40100 - Invalid token - random stuff', async function () {
+                        return _ideationIdeaReportModerate(request.agent(app), topic.id, ideation.id, idea.id, report.id, 'TOKEN HERE', Comment.DELETE_REASON_TYPES.abuse, 'not important', 401);
+                    });
+
+                    test('Fail - 40100 - Invalid token - invalid path', async function () {
+                        const path = '/totally/foobar/path';
+
+                        const token = jwt.sign(
+                            {
+                                path: path
+                            },
+                            config.session.privateKey,
+                            {
+                                algorithm: config.session.algorithm
+                            }
+                        );
+
+                        return _ideationIdeaReportModerate(request.agent(app), topic.id, ideation.id, idea.id, report.id, token, Comment.DELETE_REASON_TYPES.abuse, 'not important', 401);
+                    });
+
+                    test('Fail - 40010 - Report has become invalid cause comment has been updated after the report', async function () {
+                        // Revive the Comment we deleted on report
+                        await Idea.update(
+                            {
+                                deletedById: null,
+                                deletedAt: null,
+                                deletedReasonType: null,
+                                deletedReasonText: null,
+                                deletedByReportId: null
+
+                            },
+                            {
+                                where: {
+                                    id: idea.id
+                                },
+                                paranoid: false
+                            }
+                        );
+
+                        report = (await ideationIdeaReportCreate(agentReporter, topic.id, ideation.id, idea.id, Report.TYPES.hate, 'Report create test text')).body.data;
+                        const moderateType = Idea.DELETE_REASON_TYPES.duplicate;
+                        const moderateText = 'Report create moderation text';
+
+                        const token = cosJwt.getTokenRestrictedUse(
+                            {
+                                userId: userModerator.id
+                            },
+                            [
+                                'POST /api/topics/:topicId/ideations/:ideationId/ideas/:ideaId/reports/:reportId/moderate'
+                                    .replace(':topicId', topic.id)
+                                    .replace(':ideationId', ideation.id)
+                                    .replace(':ideaId', idea.id)
+                                    .replace(':reportId', report.id)
+                            ]
+                        );
+
+                        await Idea.update(
+                            {
+                                description: 'Update idea!'
+                            },
+                            {
+                                where: {
+                                    id: idea.id
+                                },
+                                paranoid: false
+                            }
+                        );
+                        const resBody = (await _ideationIdeaReportModerate(request.agent(app), topic.id, ideation.id, idea.id, report.id, token, moderateType, moderateText, 400)).body;
+                        const expectedResult = {
+                            status: {
+                                code: 40010,
+                                message: 'Report has become invalid cause idea has been updated after the report'
+                            }
+                        };
+
+                        assert.deepEqual(resBody, expectedResult);
+                    });
+                });
+
+            });
+
+            suite('Votes', function () {
+                suite('Create', function () {
+                    const creatorAgent = request.agent(app);
+                    const userAgent = request.agent(app);
+                    const user2Agent = request.agent(app);
+
+                    let creator;
+                    let user;
+                    let user2;
+                    let topic;
+                    let ideation;
+                    let idea;
+
+                    suiteSetup(async function () {
+                        creator = await userLib.createUserAndLogin(creatorAgent, null, null, null);
+                        user = await userLib.createUserAndLogin(userAgent, null, null, null);
+                        user2 = await userLib.createUserAndLogin(user2Agent, null, null, null);
+                    });
+
+                    setup(async function () {
+                        topic = (await topicLib.topicCreate(creatorAgent, creator.id, null, Topic.STATUSES.draft, null, Topic.VISIBILITY.public, [Topic.CATEGORIES.agriculture, Topic.CATEGORIES.business])).body.data;
+                        ideation = (await ideationCreate(creatorAgent, creator.id, topic.id, 'TEST ideation', null, false, true)).body.data;
+                        await topicLib.topicUpdate(creatorAgent, creator.id, topic.id, Topic.STATUSES.ideation);
+                        idea = (await ideationIdeaCreate(creatorAgent, creator.id, topic.id, ideation.id, 'TEST', 'TEST')).body.data;
+                    });
+
+                    test('Success - 20100 - Upvote', async function () {
+                        const resBody = (await ideationIdeaVotesCreate(creatorAgent, creator.id, topic.id, ideation.id, idea.id, 1)).body;
+
+                        const expected = {
+                            status: {
+                                code: 20000
+                            },
+                            data: {
+                                up: {
+                                    count: 1,
+                                    selected: true
+                                },
+                                down: {
+                                    count: 0,
+                                    selected: false
+                                }
+                            }
+                        };
+                        assert.deepEqual(resBody, expected);
+                    });
+
+
+                    test('Success - 20100 - Downvote', async function () {
+                        const resBody = (await ideationIdeaVotesCreate(creatorAgent, creator.id, topic.id, ideation.id, idea.id, -1)).body;
+                        const expected = {
+                            status: {
+                                code: 20000
+                            },
+                            data: {
+                                up: {
+                                    count: 0,
+                                    selected: false
+                                },
+                                down: {
+                                    count: 1,
+                                    selected: true
+                                }
+                            }
+                        };
+                        assert.deepEqual(resBody, expected);
+                    });
+
+                    test('Success - 20100 - clear vote', async function () {
+                        const resBody = (await ideationIdeaVotesCreate(creatorAgent, creator.id, topic.id, ideation.id, idea.id, 0)).body;
+                        const expected = {
+                            status: {
+                                code: 20000
+                            },
+                            data: {
+                                up: {
+                                    count: 0,
+                                    selected: false
+                                },
+                                down: {
+                                    count: 0,
+                                    selected: false
+                                }
+                            }
+                        };
+                        assert.deepEqual(resBody, expected);
+                    });
+
+                    test('Success - 20100 - change vote from upvote to downvote', async function () {
+                        await ideationIdeaVotesCreate(creatorAgent, creator.id, topic.id, ideation.id, idea.id, 1);
+                        const resBody = (await ideationIdeaVotesCreate(creatorAgent, creator.id, topic.id, ideation.id, idea.id, -1)).body;
+                        const expected = {
+                            status: {
+                                code: 20000
+                            },
+                            data: {
+                                up: {
+                                    count: 0,
+                                    selected: false
+                                },
+                                down: {
+                                    count: 1,
+                                    selected: true
+                                }
+                            }
+                        };
+                        assert.deepEqual(resBody, expected);
+                    });
+
+                    test('Success - Multiple users voting', async function () {
+                        await ideationIdeaVotesCreate(creatorAgent, creator.id, topic.id, ideation.id, idea.id, 1);
+                        await ideationIdeaVotesCreate(userAgent, user.id, topic.id, ideation.id, idea.id, 1);
+                        const resBody = (await ideationIdeaVotesCreate(user2Agent, user2.id, topic.id, ideation.id, idea.id, -1)).body;
+                        const expected = {
+                            status: {
+                                code: 20000
+                            },
+                            data: {
+                                up: {
+                                    count: 2,
+                                    selected: false
+                                },
+                                down: {
+                                    count: 1,
+                                    selected: true
+                                }
+                            }
+                        };
+                        assert.deepEqual(resBody, expected);
+                    });
+
+                    test('Fail - 40000 - invalid vote value', async function () {
+                        const resBody = (await _ideationIdeaVotesCreate(creatorAgent, creator.id, topic.id, ideation.id, idea.id, 666, 400)).body;
+                        const expectedBody = {
+                            status: { code: 40000 },
+                            errors: { value: 'Vote value must be 1 (up-vote), -1 (down-vote) OR 0 to clear vote.' }
+                        };
+                        assert.deepEqual(resBody, expectedBody);
+                    });
+                });
+
+                suite('List', function () {
+                    const creatorAgent = request.agent(app);
+                    const creatorAgent2 = request.agent(app);
+
+                    let creator;
+                    let creator2;
+                    let topic;
+                    let ideation;
+                    let idea;
+
+                    suiteSetup(async function () {
+                        creator = await userLib.createUserAndLogin(creatorAgent, null, null, null);
+                        creator2 = await userLib.createUserAndLogin(creatorAgent2, null, null, null);
+                    });
+
+                    setup(async function () {
+                        topic = (await topicLib.topicCreate(creatorAgent, creator.id, null, Topic.STATUSES.draft, null, Topic.VISIBILITY.public, [Topic.CATEGORIES.agriculture, Topic.CATEGORIES.business])).body.data;
+                        ideation = (await ideationCreate(creatorAgent, creator.id, topic.id, 'TEST ideation')).body.data;
+                        await topicLib.topicUpdate(creatorAgent, creator.id, topic.id, Topic.STATUSES.ideation);
+                        idea = (await ideationIdeaCreate(creatorAgent, creator.id, topic.id, ideation.id, 'TEST', 'TEST')).body.data;
+                    });
+
+                    test('Success', async function () {
+                        await ideationIdeaVotesCreate(creatorAgent, creator.id, topic.id, ideation.id, idea.id, 1);
+                        await ideationIdeaVotesCreate(creatorAgent2, creator2.id, topic.id, ideation.id, idea.id, 0); //Add cleared vote that should not be returned;
+                        const commentVotesList = (await ideationIdeaVotesList(creatorAgent, creator.id, topic.id, ideation.id, idea.id)).body.data;
+                        const commentVote = commentVotesList.rows[0];
+                        const expected = {
+                            rows: [
+                                {
+                                    company: null,
+                                    imageUrl: null,
+                                    createdAt: commentVote.createdAt,
+                                    updatedAt: commentVote.updatedAt,
+                                    name: creator.name,
+                                    vote: "up"
+                                }
+                            ],
+                            count: 1
+                        };
+
+                        assert.deepEqual(commentVotesList, expected);
+                    });
+                });
+
+            });
+
+            suite('Favourite', function () {
+                const creatorAgent = request.agent(app);
+                const user2Agent = request.agent(app);
+
+                let creator;
+                let user2;
+                let topic;
+                let ideation;
+                let idea;
+
+                suiteSetup(async function () {
+                    creator = await userLib.createUserAndLogin(creatorAgent, null, null, null);
+                    user2 = await userLib.createUserAndLogin(user2Agent, null, null, null);
+                });
+
+                setup(async function () {
+                    topic = (await topicLib.topicCreate(creatorAgent, creator.id, null, Topic.STATUSES.draft, null, Topic.VISIBILITY.public, [Topic.CATEGORIES.agriculture, Topic.CATEGORIES.business])).body.data;
+                    ideation = (await ideationCreate(creatorAgent, creator.id, topic.id, 'TEST ideation', null, false, true)).body.data;
+                    await topicLib.topicUpdate(creatorAgent, creator.id, topic.id, Topic.STATUSES.ideation);
+                    await memberLib.topicMemberUsersCreate(topic.id, [{
+                        userId: user2.id,
+                        level: TopicMemberUser.LEVELS.edit
+                    }]);
+                    idea = (await ideationIdeaCreate(creatorAgent, creator.id, topic.id, ideation.id, 'TEST', 'TEST')).body.data;
+                });
+
+                suite('Create', function () {
+                    test('Success', async function () {
+                        const resBody = (await ideationIdeaFavouriteCreate(user2Agent, user2.id, topic.id, ideation.id, idea.id)).body;
+
+                        const expectedBody = {
+                            status: {
+                                code: 20000
+                            }
+                        };
+
+                        assert.deepEqual(resBody, expectedBody);
+                    });
+                });
+
+                suite('Delete', function () {
+
+                    test('Success', async function () {
+                        const resBody = (await ideationIdeaFavouriteCreate(user2Agent, user2.id, topic.id, ideation.id, idea.id)).body;
+                        const expectedBody = {
+                            status: {
+                                code: 20000
+                            }
+                        };
+
+                        assert.deepEqual(resBody, expectedBody);
+
+                        const resBody2 = (await ideationIdeaFavouriteDelete(user2Agent, user2.id, topic.id, ideation.id, idea.id)).body
+                        const expectedBody2 = {
+                            status: {
+                                code: 20000
+                            }
+                        };
+
+                        assert.deepEqual(resBody2, expectedBody2);
+                    });
+                });
+            });
+
+            // API - /api/users/:userId/topics/:topicId/comments
+            suite('Comments', function () {
+
+                suite('Create', function () {
+                    const agent = request.agent(app);
+
+                    let user;
+                    let topic;
+                    let ideation;
+                    let idea;
+
+                    suiteSetup(async function () {
+                        user = await userLib.createUserAndLogin(agent, null, null, null);
+                        topic = (await topicLib.topicCreate(agent, user.id, null)).body.data;
+                        ideation = (await ideationCreate(agent, user.id, topic.id, 'TEST ideation', null, false, true)).body.data;
+                        await topicLib.topicUpdate(agent, user.id, topic.id, Topic.STATUSES.ideation);
+                        idea = (await ideationIdeaCreate(agent, user.id, topic.id, ideation.id, 'TEST', 'TEST')).body.data;
+                    });
+
+                    test('Fail - 40300 - type=pro', async function () {
+                        const type = Comment.TYPES.pro;
+                        const subject = `Test ${type} comment subject`;
+                        const text = `Test ${type} comment text`;
+
+                        const comment = (await _ideationIdeaCommentCreate(agent, user.id, topic.id, ideation.id, idea.id, null, null, type, subject, text, 403)).body;
+                        assert.deepEqual(comment, {
+                            status: {
+                                code: 40300,
+                                message: 'Replies are disabled for this ideation'
+                            }
+                        });
+                    });
+
+                    test('Fail - 40300 - type=con', async function () {
+                        const type = Comment.TYPES.con;
+                        const subject = `Test ${type} comment subject`;
+                        const text = `Test ${type} comment text`;
+
+                        const comment = (await _ideationIdeaCommentCreate(agent, user.id, topic.id, ideation.id, idea.id, null, null, type, subject, text, 403)).body;
+                        assert.deepEqual(comment, {
+                            status: {
+                                code: 40300,
+                                message: 'Replies are disabled for this ideation'
+                            }
+                        });
+                    });
+
+                    test('Fail - 40300 - type=poi', async function () {
+                        const type = Comment.TYPES.poi;
+                        const subject = `Test ${type} comment subject`;
+                        const text = `Test ${type} comment text`;
+
+                        const comment = (await _ideationIdeaCommentCreate(agent, user.id, topic.id, ideation.id, idea.id, null, null, type, subject, text, 403)).body;
+                        assert.deepEqual(comment, {
+                            status: {
+                                code: 40300,
+                                message: 'Replies are disabled for this ideation'
+                            }
+                        });
+                    });
+
+                    test('Fail - disableReplies', async function () {
+                        const topic = (await topicLib.topicCreate(agent, user.id, null)).body.data;
+                        const ideation = (await ideationCreate(agent, user.id, topic.id, 'TEST ideation', null, true)).body.data;
+                        await topicLib.topicUpdate(agent, user.id, topic.id, Topic.STATUSES.ideation);
+                        idea = (await ideationIdeaCreate(agent, user.id, topic.id, ideation.id, 'TEST', 'TEST')).body.data;
+                        const resBody = (await _ideationIdeaCommentCreate(agent, user.id, topic.id, ideation.id, idea.id, null, null, Comment.TYPES.pro, 'subject', 'text', 403)).body;
+                        const resBodyExpected = {
+                            status: {
+                                code: 40300,
+                                message: 'Replies are disabled for this ideation'
+                            }
+                        };
+                        assert.deepEqual(resBody, resBodyExpected);
+                    });
+
+                    test('Fail - 40300 - Forbidden - cannot comment on Topic you\'re not a member of or the Topic is not public', async function () {
+                        const type = Comment.TYPES.poi;
+                        const subject = 'subject test quotes "">\'!<';
+                        const text = 'should not pass!';
+
+                        const agentUser2 = request.agent(app);
+                        const user2 = await userLib.createUserAndLogin(agentUser2, null, null, null);
+
+                        const resBody = (await _ideationIdeaCommentCreate(agentUser2, user2.id, topic.id, ideation.id, idea.id, null, null, type, subject, text, 403)).body;
+
+                        const resBodyExpected = {
+                            status: {
+                                code: 40300,
+                                message: 'Insufficient permissions'
+                            }
+                        };
+
+                        assert.deepEqual(resBody, resBodyExpected);
+                    });
+
+                });
+
+                suite('Update', function () {
+                    const agent2 = request.agent(app);
+                    const agent3 = request.agent(app);
+
+                    let user2;
+                    let user3;
+                    let topic;
+                    let ideation;
+                    let idea;
+
+                    suiteSetup(async function () {
+                        user2 = await userLib.createUserAndLogin(agent2, null, null, null);
+                        user3 = await userLib.createUserAndLogin(agent3, null, null, null);
+                        topic = (await topicLib.topicCreate(agent2, user2.id, null, Topic.STATUSES.draft, null, Topic.VISIBILITY.public)).body.data;
+                        ideation = (await ideationCreate(agent2, user2.id, topic.id, 'TEST ideation')).body.data;
+                        await topicLib.topicUpdate(agent2, user2.id, topic.id, Topic.STATUSES.ideation);
+                        idea = (await ideationIdeaCreate(agent2, user2.id, topic.id, ideation.id, 'TEST', 'TEST')).body.data;
+                    });
+
+                    test('Success - edit comment by user', async function () {
+                        const type = Comment.TYPES.pro;
+                        const subject = 'to be edited by user';
+                        const text = 'Wohoo!';
+
+                        const comment = (await ideationIdeaCommentCreate(agent3, user3.id, topic.id, ideation.id, idea.id, null, null, type, subject, text)).body.data;
+                        assert.property(comment, 'id');
+                        assert.equal(comment.type, type);
+                        assert.equal(comment.subject, subject);
+                        assert.equal(comment.text, text);
+                        assert.equal(comment.type, Comment.TYPES.pro);
+                        assert.equal(comment.creator.id, user3.id);
+
+                        const editSubject = 'Edited by user';
+                        const editText = 'Jei, i edited';
+
+                        const status = (await ideationIdeaCommentEdit(agent3, user3.id, topic.id, ideation.id, idea.id, comment.id, editSubject, editText, Comment.TYPES.con)).body.status;
+                        assert.equal(status.code, 20000);
+                        const commentEdited = (await ideationIdeaCommentList(agent3, user3.id, topic.id, ideation.id, idea.id, 'date')).body.data.rows[0];
+                        assert.property(commentEdited, 'id');
+                        assert.property(commentEdited, 'edits');
+                        assert.equal(commentEdited.edits.length, 1);
+                        assert.equal(commentEdited.edits[0].subject, subject);
+                        assert.equal(commentEdited.subject, editSubject);
+                        assert.equal(commentEdited.edits[0].text, text);
+                        assert.equal(commentEdited.text, editText);
+                        assert.equal(commentEdited.edits[0].createdAt, commentEdited.createdAt);
+                        assert.notEqual(commentEdited.type, Comment.TYPES.reply);
+                        assert.equal(commentEdited.type, Comment.TYPES.con);
+                        assert.equal(commentEdited.subject, editSubject);
+                        assert.equal(commentEdited.text, editText);
+                        assert.equal(commentEdited.creator.id, user3.id);
+                        assert.equal(commentEdited.parent.id, comment.id);
+                    });
+
+                    test('Fail - 40000 - text can be 1 - N characters longs - PRO', async function () {
+                        const type = Comment.TYPES.pro;
+                        const maxLength = Comment.TYPE_LENGTH_LIMIT[type];
+                        const subject = 'to be edited by user';
+                        const text = 'Wohoo!';
+
+                        const comment = (await ideationIdeaCommentCreate(agent3, user3.id, topic.id, ideation.id, idea.id, null, null, type, subject, text)).body.data;
+                        const resBodyEdit = (await _ideationIdeaCommentEdit(agent3, user3.id, topic.id, ideation.id, idea.id, comment.id, subject + 'a', 'a'.repeat(maxLength + 1), type, 400)).body;
+
+                        const resBodyEditExpected = {
+                            status: { code: 40000 },
+                            errors: { text: `Text can be 1 to ${maxLength} characters long.` }
+                        };
+
+                        assert.deepEqual(resBodyEdit, resBodyEditExpected);
+                    });
+                });
+
+                suite('List', function () {
+                    const agent = request.agent(app);
+
+                    const commentType1 = Comment.TYPES.pro;
+                    const commentSubj1 = 'Test comment 1 subj';
+                    const commentText1 = 'Test comment 1 text';
+
+
+                    let user;
+                    let topic;
+                    let ideation;
+                    let idea;
+                    let comment1;
+                    let comment2;
+                    let comment3;
+
+                    setup(async function () {
+                        user = await userLib.createUserAndLogin(agent, null, null, null);
+                        topic = (await topicLib.topicCreate(agent, user.id)).body.data;
+                        ideation = (await ideationCreate(agent, user.id, topic.id, 'TEST ideation', null, false, true)).body.data;
+                        await topicLib.topicUpdate(agent, user.id, topic.id, Topic.STATUSES.ideation);
+                        idea = (await ideationIdeaCreate(agent, user.id, topic.id, ideation.id, 'TEST', 'TEST')).body.data;
+                    });
+
+                    test('Fail', async function () {
+                        comment1 = (await _ideationIdeaCommentCreate(agent, user.id, topic.id, ideation.id, idea.id, null, null, commentType1, commentSubj1, commentText1, 403)).body;
+                        const list = (await ideationIdeaCommentList(agent, user.id, topic.id, ideation.id, idea.id, null)).body.data;
+                        const comments = list.rows;
+
+                        const creatorExpected = user.toJSON();
+                        delete creatorExpected.email; // Email is not returned
+                        delete creatorExpected.language; // Language is not returned
+
+                        assert.equal(list.count.total, 0);
+                        assert.equal(comments.length, 0);
+
+                        // Comment 1
+                        const c1 = comments.find((comment) => comment.id === comment1.id);
+
+                        assert.equal(c1, null);
+
+                        // Comment 2
+                        const c2 = comments.find((comment) => comment.id === comment2.id);
+
+                        assert.equal(c2, null);
+
+                        // Comment 3
+                        const c3 = comments.find((comment) => comment.id === comment3.id);
+
+                        assert.equal(c3, null);
+                    });
+
+                    test('Success v2', async function () {
+                        const list = (await ideationIdeaCommentList(agent, user.id, topic.id, ideation.id, idea.id, 'rating')).body.data;
+                        const comments = list.rows;
+
+                        assert.equal(list.count.total, 0);
+                        assert.equal(comments.length, 0);
+
+                        // Comment 1
+                        const c1 = comments.find((comment) => comment.id === comment1.id);
+
+                        assert.equal(c1, null);
+                    });
+                });
+            });
+
+            // API - /api/users/:userId/topics/:topicId/discussions/:discussionId/comments/:commentId/attachments
+            suite('Attachments', function () {
+                const creatorAgent = request.agent(app);
+                const agent = request.agent(app);
+                let creator;
+                let user;
+                let topic;
+                let topic2;
+
+                let ideation;
+                let ideation2;
+
+                let idea;
+                let idea2;
+                setup(async function () {
+                    creator = await userLib.createUserAndLogin(creatorAgent, null, null, null);
+                    user = await userLib.createUserAndLogin(agent);
+                    topic = (await topicLib.topicCreate(creatorAgent, creator.id, null, Topic.STATUSES.draft, null, Topic.VISIBILITY.public)).body.data;
+                    ideation = (await ideationCreate(creatorAgent, creator.id, topic.id, 'TEST ideation', null, false, true)).body.data;
+                    await topicLib.topicUpdate(creatorAgent, creator.id, topic.id, Topic.STATUSES.ideation);
+                    idea = (await ideationIdeaCreate(creatorAgent, creator.id, topic.id, ideation.id, 'TEST', 'TEST')).body.data;
+                    topic2 = (await topicLib.topicCreate(creatorAgent, creator.id, null, Topic.STATUSES.draft, null, Topic.VISIBILITY.private)).body.data;
+                    ideation2 = (await ideationCreate(creatorAgent, creator.id, topic2.id, 'TEST ideation', null, false, true)).body.data;
                     await topicLib.topicUpdate(creatorAgent, creator.id, topic2.id, Topic.STATUSES.ideation);
                     idea2 = (await ideationIdeaCreate(creatorAgent, creator.id, topic2.id, ideation2.id, 'TEST', 'TEST')).body.data;
                 });

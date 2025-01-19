@@ -1777,7 +1777,7 @@ module.exports = function (app) {
             if (!topic) {
                 return res.notFound();
             }
-            console.log('Topic', topic);
+
             return res.ok(topic);
         } catch (err) {
             console.log(err);

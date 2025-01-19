@@ -16,13 +16,7 @@ module.exports = {
         queryInterface.changeColumn('Ideas', 'authorId', {
           type: Sequelize.UUID,
           allowNull: true,
-          comment: 'Author of the idea',
-          references: {
-              model: 'Users',
-              key: 'id'
-          },
-          onUpdate: 'CASCADE',
-          onDelete: 'CASCADE'
+          comment: 'Author of the idea'
         }, { transaction: t })
       ]);
     })
