@@ -4435,6 +4435,20 @@ suite('Users', function () {
                     assert.equal(ideaUpdate.description, updatedDescription);
                 });
 
+                test('Fail - anonymous - new session', async function () {
+                    const statement = 'TEST idea';
+                    const description = 'This idea is just for testing';
+                    const idea = (await ideationIdeaCreate(agent, user.id, topic.id, ideation.id, statement, description)).body.data;
+                    const updatedStatement = 'Test idea Update';
+                    const updatedDescription = 'Updated description';
+                    const agent3 = request.agent(app);
+                    const user3 = await userLib.loginUser(agent3, email, password);
+                    const ideaUpdate = (await _ideationIdeaUpdate(agent3, user3.id, topic.id, ideation.id, idea.id, updatedStatement, updatedDescription, null, 403)).body;
+                    assert.deepEqual(ideaUpdate, {
+                        status: { code: 40300, message: 'Forbidden' },
+                    });
+                });
+
                 test('Fail - Unauthorized', async function () {
                     const idea = (await ideationIdeaCreate(agent, user.id, topic.id, ideation.id, 'TEST', 'TEST')).body.data;
                     await _ideationIdeaUpdate(request.agent(app), user.id, topic.id, ideation.id, idea.id, 'TEST idea', 'description', null, 401);
@@ -4478,6 +4492,18 @@ suite('Users', function () {
                         }
                     };
                     assert.deepEqual(deleteRes, expectedBody);
+                });
+
+                test('Fail - anonymous - new session', async function () {
+                    const statement = 'TEST idea';
+                    const description = 'This idea is just for testing';
+                    const idea = (await ideationIdeaCreate(agent, user.id, topic.id, ideation.id, statement, description)).body.data;
+                    const agent3 = request.agent(app);
+                    const user3 = await userLib.loginUser(agent3, email, password);
+                    const ideaUpdate = (await _ideationIdeaDelete(agent3, user3.id, topic.id, ideation.id, idea.id, 403)).body;
+                    assert.deepEqual(ideaUpdate, {
+                        status: { code: 40300, message: 'Forbidden' },
+                    });
                 });
 
                 test('Fail - not author of the idea', async function () {
@@ -5443,8 +5469,12 @@ suite('Users', function () {
             suite('Attachments', function () {
                 const creatorAgent = request.agent(app);
                 const agent = request.agent(app);
+                const agent2 = request.agent(app);
                 let creator;
+                let email = 'test' + Date.now() + '@test.com';
+                const password = 'testPassword123';
                 let user;
+                let user2;
                 let topic;
                 let topic2;
 
@@ -5454,8 +5484,9 @@ suite('Users', function () {
                 let idea;
                 let idea2;
                 setup(async function () {
-                    creator = await userLib.createUserAndLogin(creatorAgent, null, null, null);
+                    creator = await userLib.createUserAndLogin(creatorAgent, email, password, null);
                     user = await userLib.createUserAndLogin(agent);
+                    user2 = await userLib.createUserAndLogin(agent2);
                     topic = (await topicLib.topicCreate(creatorAgent, creator.id, null, Topic.STATUSES.draft, null, Topic.VISIBILITY.public)).body.data;
                     ideation = (await ideationCreate(creatorAgent, creator.id, topic.id, 'TEST ideation', null, false, true)).body.data;
                     await topicLib.topicUpdate(creatorAgent, creator.id, topic.id, Topic.STATUSES.ideation);
@@ -5486,6 +5517,21 @@ suite('Users', function () {
                         assert.equal(attachment.type, expectedAttachment.type);
                         assert.equal(attachment.size, expectedAttachment.size);
                         assert.equal(attachment.creatorId, null);
+                    });
+
+                    test('Fail - 40300 - Insufficient permissions', async function () {
+                        const expectedAttachment = {
+                            name: 'testfilename.pdf',
+                            source: 'dropbox',
+                            link: `https://www.dropbox.com/s/6schppqdg5qfofe/Getting%20Started.pdf?dl=0`,
+                            type: '.pdf',
+                            size: 1000,
+                            creatorId: creator.id
+                        };
+                        const resBody = (await _ideaAttachmentAdd(agent2, user2.id, topic.id, ideation.id, idea.id, expectedAttachment.name, expectedAttachment.link, expectedAttachment.source, expectedAttachment.type, expectedAttachment.size, 403)).body;
+                        assert.deepEqual(resBody, {
+                            status: { code: 40300, message: 'Insufficient permissions' },
+                        });
                     });
 
                     test('Fail, no link', async function () {
@@ -5588,6 +5634,15 @@ suite('Users', function () {
                         assert.equal(updateAttachment.creatorId, null);
                     });
 
+                    test('Fail - 40300 - New session', async function () {
+                        const agent3 = request.agent(app);
+                        const user3 = await userLib.loginUser(agent3, email, password, null);
+                        const resBody = (await _ideaAttachmentUpdate(agent3, user3.id, topic.id, ideation.id, idea.id, attachment.id, 'newTestFilename', 403)).body;
+                        assert.deepEqual(resBody, {
+                            status: { code: 40300, message: 'Forbidden' },
+                        });
+                    });
+
                     test('Update attachment - Fail - Missing attachment name', async function () {
                         const resBody = (await _ideaAttachmentUpdate(creatorAgent, creator.id, topic.id, ideation.id, idea.id, attachment.id, '', 400)).body;
                         const expectedBody = {
@@ -5626,6 +5681,19 @@ suite('Users', function () {
 
                         assert.equal(list.count, 0);
                         assert.equal(list.rows.length, 0);
+                    });
+
+                    test('Fail - unauthorized - new session', async function () {
+                        const agent3 = request.agent(app);
+                        const user3 = await userLib.loginUser(agent3, email, password, null);
+                        const resBody = (await _ideaAttachmentDelete(agent3, user3.id, topic.id, ideation.id, idea.id, attachment.id, 403)).body;
+                        const expectedBody = {
+                            status: {
+                                code: 40300,
+                                message: "Forbidden"
+                            }
+                        };
+                        assert.deepEqual(resBody, expectedBody);
                     });
 
                     test('Fail - unauthorized', async function () {
