@@ -9,6 +9,7 @@ module.exports = function (app) {
     const models = app.get('models');
     const cosActivities = app.get('cosActivities');
     const authTokenRestrictedUse = app.get('middleware.authTokenRestrictedUse');
+    const { createHash } = require('crypto');
     const emailLib = app.get('email');
     const db = models.sequelize;
     const Op = db.Sequelize.Op;
@@ -535,6 +536,7 @@ module.exports = function (app) {
         const statement = req.body.statement;
         const description = req.body.description;
         const imageUrl = req.body.imageUrl;
+
         try {
 
             const ideation = await Ideation.findOne({
@@ -573,8 +575,11 @@ module.exports = function (app) {
                         }
                     }
 
+                    const sessToken = createHash('sha256').update(req.cookies[config.session.name]).digest('base64');
+
                     const idea = Idea.build({
                         authorId: (ideation.allowAnonymous) ? null : req.user.id,
+                        sessionId: (ideation.allowAnonymous) ? sessToken : null,
                         statement,
                         description,
                         imageUrl,
@@ -793,6 +798,8 @@ module.exports = function (app) {
             const topicId = req.params.topicId;
             const ideationId = req.params.ideationId;
             const ideaId = req.params.ideaId;
+            const sessToken = createHash('sha256').update(req.cookies[config.session.name]).digest('base64');
+
             let fields = ['statement', 'description', 'imageUrl'];
 
             const idea = await Idea.findOne({
@@ -828,7 +835,8 @@ module.exports = function (app) {
             if (!idea) {
                 return res.notFound();
             }
-            if (idea.authorId !== req.user.id) return res.forbidden();
+
+            if ((!ideation.allowAnonymous && idea.authorId !== req.user.id) || (ideation.allowAnonymous && idea.sessionId !== sessToken)) return res.forbidden();
 
             await db.transaction(async function (t) {
                 fields.forEach(function (field) {
@@ -866,6 +874,7 @@ module.exports = function (app) {
             const ideaId = req.params.ideaId;
             const ideationId = req.params.ideationId;
             const topicId = req.params.topicId;
+            const sessToken = createHash('sha256').update(req.cookies[config.session.name]).digest('base64');
             const idea = await Idea.findOne({
                 where: {
                     id: ideaId
@@ -892,7 +901,7 @@ module.exports = function (app) {
                 res.forbidden();
             }
 
-            if (idea.authorId !== req.user.id) {
+            if ((!ideation.allowAnonymous && idea.authorId !== req.user.id) || (ideation.allowAnonymous && idea.sessionId !== sessToken)) {
                 return res.forbidden();
             }
 
@@ -2336,7 +2345,7 @@ module.exports = function (app) {
                     id: req.params.ideationId
                 }
             });
-            if (ideation?.disableReplies) {
+            if (ideation?.disableReplies || ideation.allowAnonymous) {
                 return res.forbidden('Replies are disabled for this ideation');
             }
             let type = req.body.type || Comment.TYPES.reply;
@@ -3644,6 +3653,8 @@ module.exports = function (app) {
         const attachmentLimit = config.attachments.limit || 5;
         const topicId = req.params.topicId;
         const ideaId = req.params.ideaId;
+        const sessToken = createHash('sha256').update(req.cookies[config.session.name]).digest('base64');
+
         try {
 
             const ideation = await Ideation.findOne({
@@ -3659,6 +3670,12 @@ module.exports = function (app) {
                 include: [Attachment]
             });
 
+            if (!ideation.allowAnonymous && idea.authorId !== req.user.id) {
+                return res.forbidden();
+            }
+            if (ideation.allowAnonymous && idea.sessionId !== sessToken) {
+                return res.forbidden();
+            }
             if (!idea) {
                 return res.badRequest('Matching idea not found', 3);
             }
@@ -3667,7 +3684,12 @@ module.exports = function (app) {
             }
 
             let data = await cosUpload.upload(req, `${topicId}_${ideaId}`);
-            data.creatorId = req.user.id;
+            if (!ideation.allowAnonymous) {
+                data.creatorId = req.user.id;
+            } else {
+                data.creatorId = null;
+                data.sessionId = sessToken;
+            }
             data.source = Attachment.SOURCES.upload;
             let attachment = Attachment.build(data);
             await db.transaction(async function (t) {
@@ -3727,12 +3749,35 @@ module.exports = function (app) {
         const size = req.body.size;
         let link = req.body.link;
         const attachmentLimit = config.attachments.limit || 5;
-        const ideation = await Ideation.findOne({
+        const sessToken = createHash('sha256').update(req.cookies[config.session.name]).digest('base64');
+        const ideationPromise = Ideation.findOne({
             where: {
                 id: req.params.ideationId
             },
             attributes: ['allowAnonymous']
         });
+
+        const ideaPromise = Idea.findOne({
+            where: {
+                id: ideaId
+            },
+            include: [Attachment]
+        });
+        const [ideation, idea] = await Promise.all([ideationPromise, ideaPromise]);
+
+        if ((ideation.allowAnonymous && idea.sessionId !== sessToken) || (!ideation.allowAnonymous && req.user.id !== req.params.userId) ) {
+            return res.forbidden();
+        }
+
+
+
+        if (!idea) {
+            return res.badRequest('Matching idea not found', 3);
+        }
+        if (idea.Attachments && idea.Attachments.length >= attachmentLimit) {
+            return res.badRequest('Idea attachment limit reached', 2);
+        }
+
         if (source !== Attachment.SOURCES.upload && !link) {
             return res.badRequest('Missing attachment link');
         }
@@ -3741,19 +3786,6 @@ module.exports = function (app) {
         }
 
         try {
-            const idea = await Idea.findOne({
-                where: {
-                    id: ideaId
-                },
-                include: [Attachment]
-            });
-
-            if (!idea) {
-                return res.badRequest('Matching idea not found', 3);
-            }
-            if (idea.Attachments && idea.Attachments.length >= attachmentLimit) {
-                return res.badRequest('Idea attachment limit reached', 2);
-            }
             let urlObject;
             if (link) {
                 urlObject = new URL(link);
@@ -3834,21 +3866,33 @@ module.exports = function (app) {
             return res.badRequest('Missing attachment name');
         }
 
+        const sessToken = createHash('sha256').update(req.cookies[config.session.name]).digest('base64');
+
         try {
-            const ideation = await Ideation.findOne({
+            const ideationPromise = Ideation.findOne({
                 where: {
                     id: req.params.ideationId
                 },
                 attributes: ['allowAnonymous']
             });
-            const attachment = await Attachment
+            const attachmentPromise = Attachment
                 .findOne({
                     where: {
                         id: req.params.attachmentId
                     },
                     include: [Idea]
                 });
+            const [ideation, attachment] = await Promise.all([ideationPromise, attachmentPromise]);
 
+            const idea = attachment.Ideas[0];
+
+            if ((ideation.allowAnonymous && idea.sessionId !== sessToken) || (!ideation.allowAnonymous && req.user.id !== req.params.userId) ) {
+                return res.forbidden();
+            }
+
+            if (!idea) {
+                return res.badRequest('Matching idea not found', 3);
+            }
             attachment.name = newName;
 
             await db
@@ -3886,18 +3930,25 @@ module.exports = function (app) {
      */
     app.delete('/api/users/:userId/topics/:topicId/ideations/:ideationId/ideas/:ideaId/attachments/:attachmentId', loginCheck(['partner']), topicLib.hasPermission(TopicMemberUser.LEVELS.read, null, [Topic.STATUSES.ideation]), async function (req, res, next) {
         try {
-            const attachment = await Attachment.findOne({
+            const sessToken = createHash('sha256').update(req.cookies[config.session.name]).digest('base64');
+            const attachmentPromise = Attachment.findOne({
                 where: {
                     id: req.params.attachmentId
                 },
                 include: [Idea]
             });
-            const ideation = await Ideation.findOne({
+            const ideationPromise = Ideation.findOne({
                 where: {
                     id: req.params.ideationId
                 },
                 attributes: ['allowAnonymous']
             });
+            const [attachment, ideation] = await Promise.all([attachmentPromise, ideationPromise]);
+            const idea = attachment.Ideas[0];
+
+            if ((ideation.allowAnonymous && idea.sessionId !== sessToken) || (!ideation.allowAnonymous && req.user.id !== req.params.userId) ) {
+                return res.forbidden();
+            }
 
             await db
                 .transaction(async function (t) {
