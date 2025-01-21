@@ -2410,10 +2410,10 @@ module.exports = function (app) {
                     orderSql += ` t."createdAt" ${order} `;
                     break;
                 default:
-                    orderSql += ` "order" ASC, t."updatedAt" DESC `;
+                    orderSql += ` "t."updatedAt" DESC `;
             }
         } else {
-            orderSql += ` "order" ASC, t."updatedAt" DESC `;
+            orderSql += ` t."updatedAt" DESC `;
         }
 
         // TODO: NOT THE MOST EFFICIENT QUERY IN THE WORLD, tune it when time.
