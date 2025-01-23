@@ -3537,10 +3537,7 @@ module.exports = function (app) {
                     SELECT mg.*,count(*) OVER()::integer AS "countTotal" FROM (
                         SELECT
                             g.id,
-                            CASE
-                                WHEN gmu.level IS NOT NULL THEN g.name
-                                ELSE NULL
-                            END as "name",
+                            g.name,
                             g."createdAt",
                             g."updatedAt",
                             tmg.level,
