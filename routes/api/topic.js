@@ -75,6 +75,23 @@ module.exports = function (app) {
         return hmac.digest('hex');
     };
 
+    const addUserAsMember = async (userId, topicId, t) => {
+        const isMember = await TopicMemberUser.findOne({
+            where: {
+                userId,
+                topicId
+            },
+            transaction: t
+        });
+        if (!isMember) {
+            await TopicMemberUser.create({
+                userId,
+                topicId,
+                level: TopicMemberUser.LEVELS.read
+            });
+        }
+    }
+
     const _hasPermission = async function (topicId, userId, level, allowPublic, topicStatusesAllowed, allowSelf, partnerId) {
         const LEVELS = {
             none: 0, // Enables to override inherited permissions.
@@ -1777,7 +1794,7 @@ module.exports = function (app) {
             if (!topic) {
                 return res.notFound();
             }
-            console.log('Topic', topic);
+
             return res.ok(topic);
         } catch (err) {
             console.log(err);
@@ -6360,19 +6377,7 @@ module.exports = function (app) {
             await db
                 .transaction(async function (t) {
                     // Store vote options
-                    const isMember = await TopicMemberUser.findOne({
-                        where: {
-                            userId: userId,
-                            topicId: topicId
-                        }
-                    }, {transaction: t});
-                    if (!isMember) {
-                        await TopicMemberUser.create({
-                            userId: userId,
-                            topicId: topicId,
-                            level: TopicMemberUser.LEVELS.read
-                        });
-                    }
+                    await addUserAsMember(userId, topicId, t);
 
                     const optionGroupId = Math.random().toString(36).substring(2, 10);
 
@@ -6757,19 +6762,7 @@ module.exports = function (app) {
                     transaction: t
                 });
 
-                const isMember = await TopicMemberUser.findOne({
-                    where: {
-                        userId: idSignFlowData.userId,
-                        topicId: topicId
-                    }
-                }, {transaction: t});
-                if (!isMember) {
-                    await TopicMemberUser.create({
-                        userId: idSignFlowData.userId,
-                        topicId: topicId,
-                        level: TopicMemberUser.LEVELS.read
-                    });
-                }
+                await addUserAsMember(idSignFlowData.userId, topicId, t);
 
                 await VoteUserContainer.upsert(
                     {
@@ -7794,6 +7787,9 @@ module.exports = function (app) {
                             id: topicId
                         }
                     });
+
+                    await addUserAsMember(userId, topicId, t);
+
                     const userSettingsPromise = UserNotificationSettings.findOne({
                         where: {
                             userId,
@@ -7881,6 +7877,7 @@ module.exports = function (app) {
         getVoteResults: getVoteResults,
         getAllVotesResults: getAllVotesResults,
         isModerator: isModerator,
-        hasVisibility: hasVisibility
+        hasVisibility: hasVisibility,
+        addUserAsMember: addUserAsMember
     };
 };
