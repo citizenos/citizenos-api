@@ -1,3 +1,6 @@
+## 2025-01-29 - v5.0.8
+  * Fix: Issue FE #1361 - IDEATION: Insufficient permissions when editing own idea
+
 ## 2025-01-29 - v5.0.7
   * Fix: Issue #307 - Add participants to public topics automatically when they engage (add idea, like, vote, etc)
   * Fix: Issue #1657 - GROUPS: Bugs in last edit and/or order of public topics displayed within public group
