@@ -517,19 +517,6 @@ module.exports = function (app) {
                 });
 
                 if (parentId) {
-                    const isMember = await TopicMemberUser.findOne({
-                        where: {
-                            userId: req.user.id,
-                            topicId: topic.id
-                        }
-                    }, {transaction: t});
-                    if (!isMember) {
-                        await TopicMemberUser.create({
-                            userId: req.user.id,
-                            topicId: topic.id,
-                            level: TopicMemberUser.LEVELS.read
-                        });
-                    }
                     const parentComment = await Comment.findOne({
                         where: {
                             id: parentId
@@ -568,6 +555,8 @@ module.exports = function (app) {
                             t
                         );
                 }
+
+                await topicLib.addUserAsMember(req.user.id, topic.id, t);
 
                 await DiscussionComment
                     .create(
@@ -613,8 +602,8 @@ module.exports = function (app) {
                     const resObj = resComment.toJSON();
                     resObj.creator = creator.toJSON();
                     resObj.discussionId = discussionId;
-                    resObj.replies = {rows: [], count: 0};
-                    resObj.votes = {up: {count: 0, selected: false}, down: {count: 0, selected: false}, count: 0};
+                    resObj.replies = { rows: [], count: 0 };
+                    resObj.votes = { up: { count: 0, selected: false }, down: { count: 0, selected: false }, count: 0 };
                     return res.created(resObj);
                 });
             });
@@ -1388,6 +1377,9 @@ module.exports = function (app) {
                             },
                             transaction: t
                         });
+
+                    await topicLib.addUserAsMember(req.user.id, req.params.topicId, t);
+
                     if (vote) {
                         //User already voted
                         if (vote.value === value) { // Same value will 0 the vote...
