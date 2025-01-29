@@ -1,3 +1,7 @@
+## 2025-01-29 - v5.0.7
+  * Fix: Issue #307 - Add participants to public topics automatically when they engage (add idea, like, vote, etc)
+  * Fix: Issue #1657 - GROUPS: Bugs in last edit and/or order of public topics displayed within public group
+
 ## 2022-01-31
 
 * `GET /api/topics/:topicId/invites/users/:inviteId` & `GET /api/users/:userId/topics/:topicId/invites/users/:inviteId` to return status code 20002 when invited User has not been registered - https://github.com/citizenos/citizenos-fe/issues/773
