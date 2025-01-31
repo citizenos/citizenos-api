@@ -3176,13 +3176,12 @@ module.exports = function (app) {
                 }
             );
 
-
-        if (groups && groups.length) {
+        if (groups?.length) {
             response.groups.count = groups.length;
             response.groups.rows = groups;
         }
 
-        if (users && users.length) {
+        if (users?.length) {
             response.users.count = users.length;
             response.users.rows = users;
         }
@@ -3196,7 +3195,7 @@ module.exports = function (app) {
      */
     app.get('/api/users/:userId/topics/:topicId/members', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.read), async function (req, res, next) {
         try {
-            const showExtraUserInfo = (req.user && req.user.moderator) || req.locals.topic.permissions.level === TopicMemberUser.LEVELS.admin;
+            const showExtraUserInfo = req.user?.moderator;
             const response = await _getAllTopicMembers(req.params.topicId, req.user.userId, showExtraUserInfo);
 
             return res.ok(response);
@@ -3249,7 +3248,7 @@ module.exports = function (app) {
         let dataForModeratorAndAdmin = '';
         let joinForAdmin = '';
         let groupForAdmin = '';
-        if ((req.user && req.user.moderator) || req.locals?.topic.permissions.level === TopicMemberUser.LEVELS.admin) {
+        if (req.user?.moderator) {
             dataForModeratorAndAdmin = `
             tm.email,
             uc."connectionData"::jsonb->>'phoneNumber' AS "phoneNumber",
@@ -3338,7 +3337,7 @@ module.exports = function (app) {
                     }
                 )
             let countTotal = 0;
-            if (users && users.length) {
+            if (users?.length) {
                 countTotal = users[0].countTotal;
             }
             users.forEach(function (userRow) {
@@ -4450,7 +4449,6 @@ module.exports = function (app) {
         if (permissions && permissions.topic.permissions.level === TopicMemberUser.LEVELS.admin) {
             dataForTopicAdmin = `
             u.email as "user.email",
-            uc."connectionData"::jsonb->>'phoneNumber' AS "user.phoneNumber",
             `;
         }
 
@@ -4511,6 +4509,9 @@ module.exports = function (app) {
         }
 
         invites.forEach(function (invite) {
+            if (invite.user.email) {
+                invite.user.email = invite.user.email.replace(/^(.).*(?=@)/, '$1*****');
+            }
             delete invite.countTotal;
         });
 

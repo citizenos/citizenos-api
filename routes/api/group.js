@@ -1084,7 +1084,7 @@ module.exports = function (app) {
                 }
             );
         let countTotal = 0;
-        if (members && members.length) {
+        if (members?.length) {
             countTotal = members[0].countTotal;
             members.forEach(function (member) {
                 if (!member.invite) {
@@ -1161,13 +1161,11 @@ module.exports = function (app) {
         }
 
         let dataForAdmin = '';
-        if (req.locals && req.locals.group && req.locals.group.level === GroupMemberUser.LEVELS.admin) {
+        if (req.locals?.group?.level === GroupMemberUser.LEVELS.admin) {
             dataForAdmin = `
             member.email,
-            uc."connectionData"::jsonb->>'phoneNumber' AS "phoneNumber",
             `;
         }
-
         const members = await db
             .query(
                 `
@@ -1218,12 +1216,16 @@ module.exports = function (app) {
             );
 
         let countTotal = 0;
-        if (members && members.length) {
+        if (members?.length) {
             countTotal = members[0].countTotal;
             members.forEach(function (member) {
-                if (!member.invite) {
+                if (!member.invite?.id) {
+                    delete member.email;
                     delete member.invite;
+                } else if (member.email) {
+                    member.email = member.email.replace(/^(.).*(?=@)/, '$1*****');
                 }
+
                 delete member.countTotal;
             });
         }
@@ -1738,7 +1740,7 @@ module.exports = function (app) {
             }
 
             // Go through the newly created users and add them to the validUserIdMembers list so that they get invited
-            if (createdUsers && createdUsers.length) {
+            if (createdUsers?.length) {
                 _(createdUsers).forEach(function (u) {
                     const member = {
                         userId: u.id
@@ -1892,7 +1894,6 @@ module.exports = function (app) {
         if (permissions && (permissions.group.level === GroupMemberUser.LEVELS.admin || permissions.group.isModerator)) {
             dataForTopicAdminAndModerator = `
             u.email as "user.email",
-            uc."connectionData"::jsonb->>'phoneNumber' AS "user.phoneNumber",
             `;
         }
 
@@ -1946,6 +1947,10 @@ module.exports = function (app) {
         }
 
         invites.forEach(function (invite) {
+
+            if (invite.user?.email) {
+                invite.user.email = invite.user.email.replace(/^(.).*(?=@)/, '$1*****');
+            }
             delete invite.countTotal;
         });
 

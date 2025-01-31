@@ -1540,9 +1540,8 @@ suite('Users', function () {
 
                         assert.equal(inviteListInviteUser1.id, userToInvite1.id);
                         assert.equal(inviteListInviteUser1.name, userToInvite1.name);
-                        assert.equal(inviteListInviteUser1.email, userToInvite1.email);
+                        assert.equal(inviteListInviteUser1.email, userToInvite1.email.replace(/^(.).*(?=@)/, '$1*****'));
                         assert.notProperty(inviteListInviteUser1, 'pid');
-                        assert.property(inviteListInviteUser1, 'phoneNumber');
                         assert.property(inviteListInviteUser1, 'imageUrl');
 
                         delete inviteListInvite1.user;
@@ -1557,7 +1556,6 @@ suite('Users', function () {
                         assert.equal(inviteListInviteUser2.id, userToInvite2.id);
                         assert.equal(inviteListInviteUser2.name, userToInvite2.name);
                         assert.notProperty(inviteListInviteUser2, 'pid');
-                        assert.property(inviteListInviteUser2, 'phoneNumber');
                         assert.property(inviteListInviteUser2, 'imageUrl');
 
                         delete inviteListInvite2.user;
@@ -1585,7 +1583,6 @@ suite('Users', function () {
                         assert.equal(inviteListInviteUser2.id, userToInvite2.id);
                         assert.equal(inviteListInviteUser2.name, userToInvite2.name);
                         assert.notProperty(inviteListInviteUser2, 'pid');
-                        assert.notProperty(inviteListInviteUser2, 'phoneNumber');
                         assert.property(inviteListInviteUser2, 'imageUrl');
 
                         delete inviteListInvite2.user;
@@ -1619,7 +1616,6 @@ suite('Users', function () {
                         assert.equal(inviteListInviteUser2.id, userToInvite2.id);
                         assert.equal(inviteListInviteUser2.name, userToInvite2.name);
                         assert.notProperty(inviteListInviteUser2, 'pid');
-                        assert.property(inviteListInviteUser2, 'phoneNumber');
                         assert.property(inviteListInviteUser2, 'imageUrl');
 
                         delete inviteListInvite2.user;
@@ -1921,8 +1917,7 @@ suite('Users', function () {
                             invite: "{}",
                             imageUrl: userCreator.imageUrl,
                             level: GroupMemberUser.LEVELS.admin,
-                            email: userCreator.email,
-                            phoneNumber: null
+                            email: userCreator.email
                         };
                         assert.property(userCreatorMember, 'latestActivity');
                         delete userCreatorMember.latestActivity;
