@@ -1007,7 +1007,7 @@ module.exports = function (app) {
     /**
      * Delete Topic Comment
      */
-    app.delete('/api/users/:userId/topics/:topicId/discussions/:discussionId/comments/:commentId', loginCheck(['partner']), isCommentCreator(), topicLib.hasPermission(TopicMemberUser.LEVELS.admin, false, null, true));
+    app.delete('/api/users/:userId/topics/:topicId/discussions/:discussionId/comments/:commentId', loginCheck(['partner']), isCommentCreator(), topicLib.hasPermission(TopicMemberUser.LEVELS.read, false, null, true));
 
     //WARNING: Don't mess up with order here! In order to use "next('route')" in the isCommentCreator, we have to have separate route definition
     //NOTE: If you have good ideas how to keep one route definition with several middlewares, feel free to share!

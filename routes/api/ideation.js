@@ -712,6 +712,7 @@ module.exports = function (app) {
                 "Idea"."description",
                 "Idea"."createdAt",
                 "Idea"."imageUrl",
+                "Idea"."status",
                 "Idea"."updatedAt",
                 "Idea"."deletedAt",
                 "author"."id" AS "author.id",
@@ -952,6 +953,10 @@ module.exports = function (app) {
         const favourite = req.query.favourite;
         const folderId = req.query.folderId;
         const showModerated = req.query.showModerated || false;
+        let status = req.query.status || null;
+        if (!req.user?.id || !req.user?.userId) {
+            status = 'published';
+        }
         let groupBySql = ``;
         let joinSql = `
         LEFT JOIN (
@@ -976,6 +981,16 @@ module.exports = function (app) {
         let returncolumns = ``;
         if (authorId) {
             where += ` AND "Idea"."authorId" = :authorId `;
+        }
+        if (status) {
+            if (status === 'draft') {
+                where += ` AND "Idea"."status" = :status `;
+                where += ` AND "Idea"."authorId" = :userId `;
+            } else {
+                where += ` AND "Idea"."status" = 'published' `;
+            }
+        } else {
+            where += ` AND ("Idea"."status" = 'published' OR "Idea"."status" = 'draft' AND "Idea"."authorId"=:userId) `;
         }
         let orderSql = ' iv."up.count" DESC, "replies.count" DESC, "Idea"."createdAt" DESC ';
         if (!showModerated || showModerated == "false") {
@@ -1047,6 +1062,7 @@ module.exports = function (app) {
                 "Idea"."description",
                 "Idea"."createdAt",
                 "Idea"."imageUrl",
+                "Idea"."status",
                 "Idea"."updatedAt",
                 "Idea"."deletedAt",
                 "author"."id" AS "author.id",
@@ -1087,6 +1103,7 @@ module.exports = function (app) {
                     userId: req.user?.id || req.user?.userId,
                     ideationId,
                     authorId,
+                    status,
                     favourite,
                     folderId,
                     limit,
