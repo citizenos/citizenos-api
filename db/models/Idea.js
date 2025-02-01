@@ -65,6 +65,12 @@ module.exports = function (sequelize, DataTypes) {
                 allowNull: true,
                 comment: 'Image for the idea'
             },
+            status: {
+                type: DataTypes.ENUM('draft', 'published'),
+                allowNull: false,
+                defaultValue: 'draft',
+                comment: 'Idea status'
+            },
             deletedById: {
                 type: DataTypes.UUID,
                 comment: 'User ID of the person who deleted the Comment',
@@ -128,6 +134,7 @@ module.exports = function (sequelize, DataTypes) {
             statement: this.dataValues.statement,
             description: this.dataValues.description,
             imageUrl: this.dataValues.imageUrl,
+            status: this.dataValues.status,
             createdAt: this.dataValues.createdAt,
             updatedAt: this.dataValues.updatedAt,
             deletedAt: this.dataValues.deletedAt,

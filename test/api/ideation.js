@@ -93,7 +93,7 @@ const ideationDelete = async function (agent, userId, topicId, ideationId) {
     return _ideationDelete(agent, userId, topicId, ideationId, 200);
 };
 
-const _ideationIdeaCreate = async function (agent, userId, topicId, ideationId, statement, description, imageUrl, expectedHttpCode) {
+const _ideationIdeaCreate = async function (agent, userId, topicId, ideationId, statement, description, imageUrl, status, expectedHttpCode) {
     const path = '/api/users/:userId/topics/:topicId/ideations/:ideationId/ideas'
         .replace(':userId', userId)
         .replace(':topicId', topicId)
@@ -105,14 +105,15 @@ const _ideationIdeaCreate = async function (agent, userId, topicId, ideationId, 
         .send({
             statement,
             description,
-            imageUrl
+            imageUrl,
+            status
         })
         .expect(expectedHttpCode)
         .expect('Content-Type', /json/)
 };
 
-const ideationIdeaCreate = async function (agent, userId, topicId, ideationId, statement, description, imageUrl) {
-    return _ideationIdeaCreate(agent, userId, topicId, ideationId, statement, description, imageUrl, 201)
+const ideationIdeaCreate = async function (agent, userId, topicId, ideationId, statement, description, imageUrl, status) {
+    return _ideationIdeaCreate(agent, userId, topicId, ideationId, statement, description, imageUrl, status, 201)
 };
 
 const _ideationIdeaRead = async function (agent, userId, topicId, ideationId, ideaId, expectedHttpCode) {
@@ -150,7 +151,7 @@ const ideationIdeaReadUnauth = async function (agent, topicId, ideationId, ideaI
     return _ideationIdeaReadUnauth(agent, topicId, ideationId, ideaId, 200)
 };
 
-const _ideationIdeaUpdate = async function (agent, userId, topicId, ideationId, ideaId, statement, description, imageUrl, expectedHttpCode) {
+const _ideationIdeaUpdate = async function (agent, userId, topicId, ideationId, ideaId, statement, description, imageUrl, status, expectedHttpCode) {
     const path = '/api/users/:userId/topics/:topicId/ideations/:ideationId/ideas/:ideaId'
         .replace(':userId', userId)
         .replace(':topicId', topicId)
@@ -167,6 +168,10 @@ const _ideationIdeaUpdate = async function (agent, userId, topicId, ideationId, 
     if (imageUrl) {
         body.imageUrl = imageUrl;
     }
+    if (status) {
+        body.status = status;
+    }
+
     return agent
         .put(path)
         .send(body)
@@ -175,8 +180,8 @@ const _ideationIdeaUpdate = async function (agent, userId, topicId, ideationId, 
         .expect('Content-Type', /json/)
 };
 
-const ideationIdeaUpdate = async function (agent, userId, topicId, ideationId, ideaId, statement, description, imageUrl) {
-    return _ideationIdeaUpdate(agent, userId, topicId, ideationId, ideaId, statement, description, imageUrl, 200);
+const ideationIdeaUpdate = async function (agent, userId, topicId, ideationId, ideaId, statement, description, imageUrl, status) {
+    return _ideationIdeaUpdate(agent, userId, topicId, ideationId, ideaId, statement, description, imageUrl, status, 200);
 };
 
 
@@ -1229,10 +1234,38 @@ suite('Users', function () {
                     }]);
                 });
 
-                test('Success', async function () {
+                test('Success - draft', async function () {
                     const statement = 'TEST idea';
                     const description = 'This idea is just for testing';
                     const idea = (await ideationIdeaCreate(agent, user.id, topic.id, ideation.id, statement, description)).body.data;
+                    assert.equal(idea.statement, statement);
+                    assert.equal(idea.description, description);
+                    assert.equal(idea.author.id, user.id);
+                    assert.equal(idea.status, 'draft');
+                    assert.exists(idea, 'id');
+                    assert.exists(idea, 'createdAt');
+                    assert.exists(idea, 'updatedAt');
+                    assert.exists(idea, 'deletedAt');
+                });
+
+                test('Success - draft from param', async function () {
+                    const statement = 'TEST idea';
+                    const description = 'This idea is just for testing';
+                    const idea = (await ideationIdeaCreate(agent, user.id, topic.id, ideation.id, statement, description, null, 'draft')).body.data;
+                    assert.equal(idea.statement, statement);
+                    assert.equal(idea.description, description);
+                    assert.equal(idea.author.id, user.id);
+                    assert.equal(idea.status, 'draft');
+                    assert.exists(idea, 'id');
+                    assert.exists(idea, 'createdAt');
+                    assert.exists(idea, 'updatedAt');
+                    assert.exists(idea, 'deletedAt');
+                });
+
+                test('Success - published', async function () {
+                    const statement = 'TEST idea';
+                    const description = 'This idea is just for testing';
+                    const idea = (await ideationIdeaCreate(agent, user.id, topic.id, ideation.id, statement, description, null, 'published')).body.data;
                     assert.equal(idea.statement, statement);
                     assert.equal(idea.description, description);
                     assert.equal(idea.author.id, user.id);
@@ -1244,7 +1277,7 @@ suite('Users', function () {
 
                 test('Fail - missing statement', async function () {
                     const description = 'This idea is just for testing';
-                    const ideaRes = (await _ideationIdeaCreate(agent, user.id, topic.id, ideation.id, null, description, null, 400)).body;
+                    const ideaRes = (await _ideationIdeaCreate(agent, user.id, topic.id, ideation.id, null, description, null, 'draft', 400)).body;
                     const expectedRes = {
                         status: { code: 40000 },
                         errors: { statement: 'Idea.statement cannot be null' }
@@ -1255,7 +1288,7 @@ suite('Users', function () {
 
                 test('Fail - missing description', async function () {
                     const statement = 'This idea is just for testing';
-                    const ideaRes = (await _ideationIdeaCreate(agent, user.id, topic.id, ideation.id, statement, null, null, 400)).body;
+                    const ideaRes = (await _ideationIdeaCreate(agent, user.id, topic.id, ideation.id, statement, null, null, 'draft', 400)).body;
                     const expectedRes = {
                         status: { code: 40000 },
                         errors: { description: 'Idea.description cannot be null' }
@@ -1267,11 +1300,11 @@ suite('Users', function () {
                 test('Fail - topic status not ideation', async function () {
                     await discussionCreate(agent, user.id, topic.id, 'TEST?');
                     await topicLib.topicUpdate(agent, user.id, topic.id, Topic.STATUSES.followUp);
-                    await _ideationIdeaCreate(request.agent(app), user.id, topic.id, ideation.id, 'TEST idea', 'description', null, 401);
+                    await _ideationIdeaCreate(request.agent(app), user.id, topic.id, ideation.id, 'TEST idea', 'description', null, 'draft', 401);
                 });
 
                 test('Fail - Unauthorized', async function () {
-                    await _ideationIdeaCreate(request.agent(app), user.id, topic.id, ideation.id, 'TEST idea', 'description', null, 401);
+                    await _ideationIdeaCreate(request.agent(app), user.id, topic.id, ideation.id, 'TEST idea', 'description', null, 'draft', 401);
                 });
             });
 
@@ -1302,7 +1335,7 @@ suite('Users', function () {
                 test('Success', async function () {
                     const statement = 'TEST idea';
                     const description = 'This idea is just for testing';
-                    const idea = (await ideationIdeaCreate(agent, user.id, topic.id, ideation.id, statement, description)).body.data;
+                    const idea = (await ideationIdeaCreate(agent, user.id, topic.id, ideation.id, statement, description, null, 'published')).body.data;
                     const ideaR = (await ideationIdeaRead(agent, user.id, topic.id, ideation.id, idea.id)).body.data;
                     assert.deepEqual(ideaR.votes, {
                         down: {
@@ -1327,7 +1360,7 @@ suite('Users', function () {
                 test('Success - public topic unauth', async function () {
                     const statement = 'TEST idea';
                     const description = 'This idea is just for testing';
-                    const idea = (await ideationIdeaCreate(agent, user.id, topic.id, ideation.id, statement, description)).body.data;
+                    const idea = (await ideationIdeaCreate(agent, user.id, topic.id, ideation.id, statement, description, null, 'published')).body.data;
                     const ideaR = (await ideationIdeaRead(agent, user.id, topic.id, ideation.id, idea.id)).body.data;
 
                     await topicLib.topicUpdate(agent, user.id, topic.id, null, Topic.VISIBILITY.public);
@@ -1341,7 +1374,7 @@ suite('Users', function () {
                 test('Success - member topic', async function () {
                     const statement = 'TEST idea';
                     const description = 'This idea is just for testing';
-                    const idea = (await ideationIdeaCreate(agent, user.id, topic.id, ideation.id, statement, description)).body.data;
+                    const idea = (await ideationIdeaCreate(agent, user.id, topic.id, ideation.id, statement, description, null, 'published')).body.data;
                     const ideaR = (await ideationIdeaRead(agent, user.id, topic.id, ideation.id, idea.id)).body.data;
                     assert.deepEqual(ideaR.votes, {
                         down: {
@@ -1366,7 +1399,7 @@ suite('Users', function () {
                 test('Fail - Unauthorized', async function () {
                     const statement = 'TEST idea';
                     const description = 'This idea is just for testing';
-                    const idea = (await ideationIdeaCreate(agent, user.id, topic.id, ideation.id, statement, description)).body.data;
+                    const idea = (await ideationIdeaCreate(agent, user.id, topic.id, ideation.id, statement, description, null, 'published')).body.data;
                     await _ideationIdeaRead(request.agent(app), user.id, topic.id, ideation.id, idea.id, 401);
                 });
             });
@@ -1409,11 +1442,12 @@ suite('Users', function () {
                     assert.equal(idea.statement, statement);
                     assert.equal(idea.description, description);
                     assert.equal(idea.author.id, user.id);
+                    assert.equal(idea.status, 'draft');
                     assert.exists(idea, 'id');
                     assert.exists(idea, 'createdAt');
                     assert.exists(idea, 'updatedAt');
                     assert.exists(idea, 'deletedAt');
-                    const ideaUpdate = (await ideationIdeaUpdate(agent, user.id, topic.id, ideation.id, idea.id, updatedStatement, updatedDescription)).body.data;
+                    const ideaUpdate = (await ideationIdeaUpdate(agent, user.id, topic.id, ideation.id, idea.id, updatedStatement, updatedDescription, null, 'published')).body.data;
 
                     assert.equal(ideaUpdate.statement, updatedStatement);
                     assert.equal(ideaUpdate.description, updatedDescription);
@@ -1422,18 +1456,19 @@ suite('Users', function () {
                     assert.exists(ideaUpdate.createdAt, idea.createdAt);
                     assert.notEqual(ideaUpdate.updatedAt, idea.updatedAt);
                     assert.equal(ideaUpdate.deletedAt, idea.deletedAt);
+                    assert.equal(ideaUpdate.status, 'published');
                 });
 
                 test('Fail - topic status not ideation', async function () {
-                    const idea = (await ideationIdeaCreate(agent, user.id, topic.id, ideation.id, 'TEST', 'TEST')).body.data;
+                    const idea = (await ideationIdeaCreate(agent, user.id, topic.id, ideation.id, 'TEST', 'TEST', null, 'published')).body.data;
                     await discussionCreate(agent, user.id, topic.id, 'TEST');
                     await topicLib.topicUpdate(agent, user.id, topic.id, Topic.STATUSES.inProgress);
-                    await _ideationIdeaUpdate(agent, user.id, topic.id, ideation.id, idea.id, 'TEST idea', 'description', null, 403);
+                    await _ideationIdeaUpdate(agent, user.id, topic.id, ideation.id, idea.id, 'TEST idea', 'description', null, 'draft', 403);
                 });
 
                 test('Fail - Unauthorized', async function () {
-                    const idea = (await ideationIdeaCreate(agent, user.id, topic.id, ideation.id, 'TEST', 'TEST')).body.data;
-                    await _ideationIdeaUpdate(request.agent(app), user.id, topic.id, ideation.id, idea.id, 'TEST idea', 'description', null, 401);
+                    const idea = (await ideationIdeaCreate(agent, user.id, topic.id, ideation.id, 'TEST', 'TEST', null, 'published')).body.data;
+                    await _ideationIdeaUpdate(request.agent(app), user.id, topic.id, ideation.id, idea.id, 'TEST idea', 'description', null, 'draft', 401);
                 });
             });
 
@@ -1465,7 +1500,7 @@ suite('Users', function () {
                 });
 
                 test('Success', async function () {
-                    const idea = (await ideationIdeaCreate(agent, user.id, topic.id, ideation.id, 'TEST', 'TEST')).body.data;
+                    const idea = (await ideationIdeaCreate(agent, user.id, topic.id, ideation.id, 'TEST', 'TEST', null, 'published')).body.data;
                     const deleteRes = (await ideationIdeaDelete(agent, user.id, topic.id, ideation.id, idea.id)).body;
                     const expectedBody = {
                         status: {
@@ -1476,12 +1511,12 @@ suite('Users', function () {
                 });
 
                 test('Fail - not author of the idea', async function () {
-                    const idea = (await ideationIdeaCreate(agent, user.id, topic.id, ideation.id, 'TEST', 'TEST')).body.data;
+                    const idea = (await ideationIdeaCreate(agent, user.id, topic.id, ideation.id, 'TEST', 'TEST', null, 'published')).body.data;
                     await _ideationIdeaDelete(agent2, user2.id, topic.id, ideation.id, idea.id, 403);
                 });
 
                 test('Fail - Unauthorized', async function () {
-                    const idea = (await ideationIdeaCreate(agent, user.id, topic.id, ideation.id, 'TEST', 'TEST')).body.data;
+                    const idea = (await ideationIdeaCreate(agent, user.id, topic.id, ideation.id, 'TEST', 'TEST', null, 'published')).body.data;
                     await _ideationIdeaDelete(request.agent(app), user.id, topic.id, ideation.id, idea.id, 401);
                 });
             });
@@ -1513,21 +1548,46 @@ suite('Users', function () {
                     }]);
                 });
 
-                test('Success', async function () {
-                    const idea = (await ideationIdeaCreate(agent, user.id, topic.id, ideation.id, 'TEST', 'TEST')).body.data;
+                test('Success - with draft', async function () {
+                    const idea = (await ideationIdeaCreate(agent, user.id, topic.id, ideation.id, 'TEST', 'TEST', null, 'published')).body.data;
+                    const idea2 = (await ideationIdeaCreate(agent, user.id, topic.id, ideation.id, 'TEST2', 'TEST2')).body.data;
                     const ideas = (await ideationIdeaList(agent, user.id, topic.id, ideation.id)).body.data;
+                    assert.exists(ideas.rows[0], 'favourite');
+                    assert.exists(ideas.rows[1], 'favourite');
+                    delete ideas.rows[0].favourite;
+                    delete ideas.rows[1].favourite;
+                    assert.deepEqual(ideas.rows[0].replies, { count: 0 });
+                    assert.deepEqual(ideas.rows[1].replies, { count: 0 });
+                    delete ideas.rows[0].replies;
+                    delete ideas.rows[1].replies;
+                    assert.deepEqual(ideas.rows[0].votes, { up: { count: 0, selected: false }, down: { count: 0, selected: false } });
+                    assert.deepEqual(ideas.rows[1].votes, { up: { count: 0, selected: false }, down: { count: 0, selected: false } });
+                    delete ideas.rows[0].votes;
+                    delete ideas.rows[1].votes;
+
+                    assert.deepEqual(ideas, { count: 2, rows: [idea2, idea] });
+                });
+
+                test('Success - exlude other users draft', async function () {
+                    const idea = (await ideationIdeaCreate(agent, user.id, topic.id, ideation.id, 'TEST', 'TEST', null, 'published')).body.data;
+                    const idea2 = (await ideationIdeaCreate(agent, user.id, topic.id, ideation.id, 'TEST2', 'TEST2')).body.data;
+                    assert.exists(idea2, 'id');
+                    assert.equal(idea2.status, 'draft');
+                    const ideas = (await ideationIdeaList(agent2, user2.id, topic.id, ideation.id)).body.data;
                     assert.exists(ideas.rows[0], 'favourite');
                     delete ideas.rows[0].favourite;
                     assert.deepEqual(ideas.rows[0].replies, { count: 0 });
                     delete ideas.rows[0].replies;
                     assert.deepEqual(ideas.rows[0].votes, { up: { count: 0, selected: false }, down: { count: 0, selected: false } });
                     delete ideas.rows[0].votes;
-
                     assert.deepEqual(ideas, { count: 1, rows: [idea] });
                 });
 
                 test('Success - unauth', async function () {
-                    const idea = (await ideationIdeaCreate(agent, user.id, topic.id, ideation.id, 'TEST', 'TEST')).body.data;
+                    const idea = (await ideationIdeaCreate(agent, user.id, topic.id, ideation.id, 'TEST', 'TEST', null, 'published')).body.data;
+                    const idea2 = (await ideationIdeaCreate(agent, user.id, topic.id, ideation.id, 'TEST2', 'TEST2')).body.data;
+                    assert.exists(idea2, 'id');
+                    assert.equal(idea2.status, 'draft');
                     await topicLib.topicUpdate(agent, user.id, topic.id, null, Topic.VISIBILITY.public);
                     const ideas = (await ideationIdeaListUnauth(request.agent(app), topic.id, ideation.id)).body.data;
                     assert.exists(ideas.rows[0], 'favourite');
@@ -1540,7 +1600,7 @@ suite('Users', function () {
                 });
 
                 test('Success - query - showModerated', async function () {
-                    const idea = (await ideationIdeaCreate(agent, user.id, topic.id, ideation.id, 'TEST', 'TEST')).body.data;
+                    const idea = (await ideationIdeaCreate(agent, user.id, topic.id, ideation.id, 'TEST', 'TEST', null, 'published')).body.data;
                     await topicLib.topicUpdate(agent, user.id, topic.id, null, Topic.VISIBILITY.public);
                     const agentModerator = request.agent(app);
                     const userModerator = await userLib.createUser(agentModerator, 'moderator@test.com', null, null);
@@ -1596,7 +1656,7 @@ suite('Users', function () {
                 });
 
                 test('Fail - Unauthorized', async function () {
-                    await ideationIdeaCreate(agent, user.id, topic.id, ideation.id, 'TEST', 'TEST');
+                    await ideationIdeaCreate(agent, user.id, topic.id, ideation.id, 'TEST', 'TEST', null, 'published');
                     await _ideationIdeaList(request.agent(app), user.id, topic.id, ideation.id, null, 401);
                 });
             });
@@ -1628,7 +1688,7 @@ suite('Users', function () {
                         topic = (await topicLib.topicCreate(agentCreator, userCreator.id, null, Topic.STATUSES.draft, null, Topic.VISIBILITY.public)).body.data;
                         ideation = (await ideationCreate(agentCreator, userCreator.id, topic.id, 'TEST ideation')).body.data;
                         await topicLib.topicUpdate(agentCreator, userCreator.id, topic.id, Topic.STATUSES.ideation);
-                        idea = (await ideationIdeaCreate(agentCreator, userCreator.id, topic.id, ideation.id, 'TEST abusive', 'TEST inapropriate')).body.data;
+                        idea = (await ideationIdeaCreate(agentCreator, userCreator.id, topic.id, ideation.id, 'TEST abusive', 'TEST inapropriate', null, 'published')).body.data;
                         partner = await Partner.create({
                             website: 'notimportant',
                             redirectUriRegexp: 'notimportant'
@@ -1689,7 +1749,7 @@ suite('Users', function () {
                         topic = (await topicLib.topicCreate(agentCreator, userCreator.id, null, Topic.STATUSES.draft, null, Topic.VISIBILITY.public)).body.data;
                         ideation = (await ideationCreate(agentCreator, userCreator.id, topic.id, 'TEST ideation')).body.data;
                         await topicLib.topicUpdate(agentCreator, userCreator.id, topic.id, Topic.STATUSES.ideation);
-                        idea = (await ideationIdeaCreate(agentCreator, userCreator.id, topic.id, ideation.id, 'TEST', 'TEST')).body.data;
+                        idea = (await ideationIdeaCreate(agentCreator, userCreator.id, topic.id, ideation.id, 'TEST', 'TEST', null, 'published')).body.data;
 
                         partner = await Partner.create({
                             website: 'notimportant',
@@ -1795,7 +1855,7 @@ suite('Users', function () {
                         topic = (await topicLib.topicCreate(agentCreator, userCreator.id, null, Topic.STATUSES.draft, null, Topic.VISIBILITY.private)).body.data;
                         ideation = (await ideationCreate(agentCreator, userCreator.id, topic.id, 'TEST ideation')).body.data;
                         await topicLib.topicUpdate(agentCreator, userCreator.id, topic.id, Topic.STATUSES.ideation);
-                        idea = (await ideationIdeaCreate(agentCreator, userCreator.id, topic.id, ideation.id, 'TEST', 'TEST')).body.data;
+                        idea = (await ideationIdeaCreate(agentCreator, userCreator.id, topic.id, ideation.id, 'TEST', 'TEST', null, 'published')).body.data;
 
                         partner = await Partner.create({
                             website: 'notimportant',
@@ -1956,7 +2016,7 @@ suite('Users', function () {
                         topic = (await topicLib.topicCreate(creatorAgent, creator.id, null, Topic.STATUSES.draft, null, Topic.VISIBILITY.public, [Topic.CATEGORIES.agriculture, Topic.CATEGORIES.business])).body.data;
                         ideation = (await ideationCreate(creatorAgent, creator.id, topic.id, 'TEST ideation')).body.data;
                         await topicLib.topicUpdate(creatorAgent, creator.id, topic.id, Topic.STATUSES.ideation);
-                        idea = (await ideationIdeaCreate(creatorAgent, creator.id, topic.id, ideation.id, 'TEST', 'TEST')).body.data;
+                        idea = (await ideationIdeaCreate(creatorAgent, creator.id, topic.id, ideation.id, 'TEST', 'TEST', null, 'published')).body.data;
                     });
 
                     test('Success - 20100 - Upvote', async function () {
@@ -2093,7 +2153,7 @@ suite('Users', function () {
                         topic = (await topicLib.topicCreate(creatorAgent, creator.id, null, Topic.STATUSES.draft, null, Topic.VISIBILITY.public, [Topic.CATEGORIES.agriculture, Topic.CATEGORIES.business])).body.data;
                         ideation = (await ideationCreate(creatorAgent, creator.id, topic.id, 'TEST ideation')).body.data;
                         await topicLib.topicUpdate(creatorAgent, creator.id, topic.id, Topic.STATUSES.ideation);
-                        idea = (await ideationIdeaCreate(creatorAgent, creator.id, topic.id, ideation.id, 'TEST', 'TEST')).body.data;
+                        idea = (await ideationIdeaCreate(creatorAgent, creator.id, topic.id, ideation.id, 'TEST', 'TEST', null, 'published')).body.data;
                     });
 
                     test('Success', async function () {
@@ -2144,7 +2204,7 @@ suite('Users', function () {
                         userId: user2.id,
                         level: TopicMemberUser.LEVELS.edit
                     }]);
-                    idea = (await ideationIdeaCreate(creatorAgent, creator.id, topic.id, ideation.id, 'TEST', 'TEST')).body.data;
+                    idea = (await ideationIdeaCreate(creatorAgent, creator.id, topic.id, ideation.id, 'TEST', 'TEST', null, 'published')).body.data;
                 });
 
                 suite('Create', function () {
@@ -2201,7 +2261,7 @@ suite('Users', function () {
                         topic = (await topicLib.topicCreate(agent, user.id, null)).body.data;
                         ideation = (await ideationCreate(agent, user.id, topic.id, 'TEST ideation')).body.data;
                         await topicLib.topicUpdate(agent, user.id, topic.id, Topic.STATUSES.ideation);
-                        idea = (await ideationIdeaCreate(agent, user.id, topic.id, ideation.id, 'TEST', 'TEST')).body.data;
+                        idea = (await ideationIdeaCreate(agent, user.id, topic.id, ideation.id, 'TEST', 'TEST', null, 'published')).body.data;
                     });
 
                     test('Success - type=pro with reply', async function () {
@@ -2357,7 +2417,7 @@ suite('Users', function () {
                         topic = (await topicLib.topicCreate(agent2, user2.id, null, Topic.STATUSES.draft, null, Topic.VISIBILITY.public)).body.data;
                         ideation = (await ideationCreate(agent2, user2.id, topic.id, 'TEST ideation')).body.data;
                         await topicLib.topicUpdate(agent2, user2.id, topic.id, Topic.STATUSES.ideation);
-                        idea = (await ideationIdeaCreate(agent2, user2.id, topic.id, ideation.id, 'TEST', 'TEST')).body.data;
+                        idea = (await ideationIdeaCreate(agent2, user2.id, topic.id, ideation.id, 'TEST', 'TEST', null, 'published')).body.data;
                     });
 
                     test('Success - edit comment by user', async function () {
@@ -2440,7 +2500,7 @@ suite('Users', function () {
                         topic = (await topicLib.topicCreate(agent, user.id)).body.data;
                         ideation = (await ideationCreate(agent, user.id, topic.id, 'TEST ideation')).body.data;
                         await topicLib.topicUpdate(agent, user.id, topic.id, Topic.STATUSES.ideation);
-                        idea = (await ideationIdeaCreate(agent, user.id, topic.id, ideation.id, 'TEST', 'TEST')).body.data;
+                        idea = (await ideationIdeaCreate(agent, user.id, topic.id, ideation.id, 'TEST', 'TEST', null, 'published')).body.data;
                         comment1 = (await ideationIdeaCommentCreate(agent, user.id, topic.id, ideation.id, idea.id, null, null, commentType1, commentSubj1, commentText1)).body.data;
                         comment2 = (await ideationIdeaCommentCreate(agent, user.id, topic.id, ideation.id, idea.id, null, null, commentType2, commentSubj2, commentText2)).body.data;
                         comment3 = (await ideationIdeaCommentCreate(agent, user.id, topic.id, ideation.id, idea.id, null, null, commentType3, commentSubj3, commentText3)).body.data;
@@ -2748,7 +2808,7 @@ suite('Users', function () {
 
                         ideation = (await ideationCreate(agent, user.id, topic.id, 'TEST ideation')).body.data;
                         await topicLib.topicUpdate(agent, user.id, topic.id, Topic.STATUSES.ideation);
-                        idea = (await ideationIdeaCreate(agent, user.id, topic.id, ideation.id, 'TEST', 'TEST')).body.data;
+                        idea = (await ideationIdeaCreate(agent, user.id, topic.id, ideation.id, 'TEST', 'TEST', null, 'published')).body.data;
 
                         comment = (await ideationIdeaCommentCreate(agent, user.id, topic.id, ideation.id, idea.id, null, null, commentType, commentSubject, commentText)).body.data;
                     });
@@ -2828,7 +2888,7 @@ suite('Users', function () {
                             topic = (await topicLib.topicCreate(creatorAgent, creator.id, null, Topic.STATUSES.draft, null, Topic.VISIBILITY.public, [Topic.CATEGORIES.communities, Topic.CATEGORIES.culture])).body.data;
                             ideation = (await ideationCreate(creatorAgent, creator.id, topic.id, 'TEST ideation')).body.data;
                             await topicLib.topicUpdate(creatorAgent, creator.id, topic.id, Topic.STATUSES.ideation);
-                            idea = (await ideationIdeaCreate(creatorAgent, creator.id, topic.id, ideation.id, 'TEST', 'TEST')).body.data;
+                            idea = (await ideationIdeaCreate(creatorAgent, creator.id, topic.id, ideation.id, 'TEST', 'TEST', null, 'published')).body.data;
                             comment1 = (await ideationIdeaCommentCreate(creatorAgent, creator.id, topic.id, ideation.id, idea.id, null, null, commentType1, commentSubj1, commentText1)).body.data;
                             comment2 = (await ideationIdeaCommentCreate(creatorAgent, creator.id, topic.id, ideation.id, idea.id, null, null, commentType2, commentSubj2, commentText2)).body.data;
                             comment3 = (await ideationIdeaCommentCreate(creatorAgent, creator.id, topic.id, ideation.id, idea.id, null, null, commentType1, commentSubj3, commentText3)).body.data;
@@ -2933,7 +2993,7 @@ suite('Users', function () {
                             const topic = (await topicLib.topicCreate(creatorAgent, creator.id, null, Topic.STATUSES.draft, null, Topic.VISIBILITY.public, [Topic.CATEGORIES.communities, Topic.CATEGORIES.culture])).body.data;
                             const ideation = (await ideationCreate(creatorAgent, creator.id, topic.id, 'TEST ideation')).body.data;
                             await topicLib.topicUpdate(creatorAgent, creator.id, topic.id, Topic.STATUSES.ideation);
-                            const idea = (await ideationIdeaCreate(creatorAgent, creator.id, topic.id, ideation.id, 'TEST', 'TEST')).body.data;
+                            const idea = (await ideationIdeaCreate(creatorAgent, creator.id, topic.id, ideation.id, 'TEST', 'TEST', null, 'published')).body.data;
                             await ideationIdeaCommentCreate(creatorAgent, creator.id, topic.id, ideation.id, idea.id, null, null, Comment.TYPES.pro, 'Subject', 'WOHOO! This is my comment.');
 
                             // Verify that the comments output is the same for unauthenticated and authenticated comment list API
@@ -2948,7 +3008,7 @@ suite('Users', function () {
                             // Verify that the comments output is the same for unauthenticated and authenticated comment list API
                             const ideation = (await ideationCreate(creatorAgent, creator.id, topic.id, 'TEST ideation')).body.data;
                             await topicLib.topicUpdate(creatorAgent, creator.id, topic.id, Topic.STATUSES.ideation);
-                            const idea = (await ideationIdeaCreate(creatorAgent, creator.id, topic.id, ideation.id, 'TEST', 'TEST')).body.data;
+                            const idea = (await ideationIdeaCreate(creatorAgent, creator.id, topic.id, ideation.id, 'TEST', 'TEST', null, 'published')).body.data;
                             const creatorCommentList = (await ideationIdeaCommentList(creatorAgent, creator.id, topic.id, ideation.id, idea.id, null)).body;
                             const userCommentList = (await ideationIdeaCommentListUnauth(userAgent, topic.id, ideation.id, idea.id, null)).body;
 
@@ -3236,7 +3296,7 @@ suite('Users', function () {
                             const topic = (await topicLib.topicCreate(creatorAgent, creator.id, null, Topic.STATUSES.draft, null, Topic.VISIBILITY.private)).body.data;
                             ideation = (await ideationCreate(creatorAgent, creator.id, topic.id, 'TEST ideation')).body.data;
                             await topicLib.topicUpdate(creatorAgent, creator.id, topic.id, Topic.STATUSES.ideation);
-                            idea = (await ideationIdeaCreate(creatorAgent, creator.id, topic.id, ideation.id, 'TEST', 'TEST')).body.data;
+                            idea = (await ideationIdeaCreate(creatorAgent, creator.id, topic.id, ideation.id, 'TEST', 'TEST', null, 'published')).body.data;
 
                             return _ideationIdeaCommentListUnauth(userAgent, topic.id, ideation.id, idea.id, null, 404);
                         });
@@ -3267,7 +3327,7 @@ suite('Users', function () {
                                 topic = (await topicLib.topicCreate(creatorAgent, creator.id, null, Topic.STATUSES.draft, null, Topic.VISIBILITY.public, [Topic.CATEGORIES.agriculture, Topic.CATEGORIES.business])).body.data;
                                 ideation = (await ideationCreate(creatorAgent, creator.id, topic.id, 'TEST ideation')).body.data;
                                 await topicLib.topicUpdate(creatorAgent, creator.id, topic.id, Topic.STATUSES.ideation);
-                                idea = (await ideationIdeaCreate(creatorAgent, creator.id, topic.id, ideation.id, 'TEST', 'TEST')).body.data;
+                                idea = (await ideationIdeaCreate(creatorAgent, creator.id, topic.id, ideation.id, 'TEST', 'TEST', null, 'published')).body.data;
                                 comment = (await ideationIdeaCommentCreate(creatorAgent, creator.id, topic.id, ideation.id, idea.id, null, null, Comment.TYPES.pro, 'Subj', 'Text')).body.data;
                             });
 
@@ -3404,7 +3464,7 @@ suite('Users', function () {
                                 topic = (await topicLib.topicCreate(creatorAgent, creator.id, null, Topic.STATUSES.draft, null, Topic.VISIBILITY.public, [Topic.CATEGORIES.agriculture, Topic.CATEGORIES.business])).body.data;
                                 ideation = (await ideationCreate(creatorAgent, creator.id, topic.id, 'TEST ideation')).body.data;
                                 await topicLib.topicUpdate(creatorAgent, creator.id, topic.id, Topic.STATUSES.ideation);
-                                idea = (await ideationIdeaCreate(creatorAgent, creator.id, topic.id, ideation.id, 'TEST', 'TEST')).body.data;
+                                idea = (await ideationIdeaCreate(creatorAgent, creator.id, topic.id, ideation.id, 'TEST', 'TEST', null, 'published')).body.data;
                                 comment = (await ideationIdeaCommentCreate(creatorAgent, creator.id, topic.id, ideation.id, idea.id, null, null, Comment.TYPES.pro, 'Subj', 'Text')).body.data
                             });
 
@@ -3462,7 +3522,7 @@ suite('Users', function () {
                                 topic = (await topicLib.topicCreate(agentCreator, userCreator.id, null, Topic.STATUSES.draft, null, Topic.VISIBILITY.public)).body.data;
                                 ideation = (await ideationCreate(agentCreator, userCreator.id, topic.id, 'TEST ideation')).body.data;
                                 await topicLib.topicUpdate(agentCreator, userCreator.id, topic.id, Topic.STATUSES.ideation);
-                                idea = (await ideationIdeaCreate(agentCreator, userCreator.id, topic.id, ideation.id, 'TEST', 'TEST')).body.data;
+                                idea = (await ideationIdeaCreate(agentCreator, userCreator.id, topic.id, ideation.id, 'TEST', 'TEST', null, 'published')).body.data;
                                 comment = (await ideationIdeaCommentCreate(agentCreator, userCreator.id, topic.id, ideation.id, idea.id, null, null, Comment.TYPES.pro, 'test abuse report', 'test abuse report')).body.data;
                                 partner = await Partner.create({
                                     website: 'notimportant',
@@ -3525,7 +3585,7 @@ suite('Users', function () {
                                 topic = (await topicLib.topicCreate(agentCreator, userCreator.id, null, Topic.STATUSES.draft, null, Topic.VISIBILITY.public)).body.data;
                                 ideation = (await ideationCreate(agentCreator, userCreator.id, topic.id, 'TEST ideation')).body.data;
                                 await topicLib.topicUpdate(agentCreator, userCreator.id, topic.id, Topic.STATUSES.ideation);
-                                idea = (await ideationIdeaCreate(agentCreator, userCreator.id, topic.id, ideation.id, 'TEST', 'TEST')).body.data;
+                                idea = (await ideationIdeaCreate(agentCreator, userCreator.id, topic.id, ideation.id, 'TEST', 'TEST', null, 'published')).body.data;
 
                                 partner = await Partner.create({
                                     website: 'notimportant',
@@ -3633,7 +3693,7 @@ suite('Users', function () {
                                 topic = (await topicLib.topicCreate(agentCreator, userCreator.id, null, Topic.STATUSES.draft, null, Topic.VISIBILITY.private)).body.data;
                                 ideation = (await ideationCreate(agentCreator, userCreator.id, topic.id, 'TEST ideation')).body.data;
                                 await topicLib.topicUpdate(agentCreator, userCreator.id, topic.id, Topic.STATUSES.ideation);
-                                idea = (await ideationIdeaCreate(agentCreator, userCreator.id, topic.id, ideation.id, 'TEST', 'TEST')).body.data;
+                                idea = (await ideationIdeaCreate(agentCreator, userCreator.id, topic.id, ideation.id, 'TEST', 'TEST', null, 'published')).body.data;
 
                                 partner = await Partner.create({
                                     website: 'notimportant',
@@ -3796,11 +3856,11 @@ suite('Users', function () {
                     topic = (await topicLib.topicCreate(creatorAgent, creator.id, null, Topic.STATUSES.draft, null, Topic.VISIBILITY.public)).body.data;
                     ideation = (await ideationCreate(creatorAgent, creator.id, topic.id, 'TEST ideation')).body.data;
                     await topicLib.topicUpdate(creatorAgent, creator.id, topic.id, Topic.STATUSES.ideation);
-                    idea = (await ideationIdeaCreate(creatorAgent, creator.id, topic.id, ideation.id, 'TEST', 'TEST')).body.data;
+                    idea = (await ideationIdeaCreate(creatorAgent, creator.id, topic.id, ideation.id, 'TEST', 'TEST', null, 'published')).body.data;
                     topic2 = (await topicLib.topicCreate(creatorAgent, creator.id, null, Topic.STATUSES.draft, null, Topic.VISIBILITY.private)).body.data;
                     ideation2 = (await ideationCreate(creatorAgent, creator.id, topic2.id, 'TEST ideation')).body.data;
                     await topicLib.topicUpdate(creatorAgent, creator.id, topic2.id, Topic.STATUSES.ideation);
-                    idea2 = (await ideationIdeaCreate(creatorAgent, creator.id, topic2.id, ideation2.id, 'TEST', 'TEST')).body.data;
+                    idea2 = (await ideationIdeaCreate(creatorAgent, creator.id, topic2.id, ideation2.id, 'TEST', 'TEST', null, 'published')).body.data;
                 });
 
                 suite('Create', function () {
@@ -4234,7 +4294,7 @@ suite('Users', function () {
                 const folderName = 'TEST folder';
                 const description = 'This folder is just for testing';
                 setup(async function () {
-                    idea = (await ideationIdeaCreate(agent, user.id, topic.id, ideation.id, 'TEST', 'TEST')).body.data;
+                    idea = (await ideationIdeaCreate(agent, user.id, topic.id, ideation.id, 'TEST', 'TEST', null, 'published')).body.data;
                     folder = (await ideationFolderCreate(agent, user.id, topic.id, ideation.id, folderName, description)).body.data;
                     folder.ideas = {
                         count: 1,
@@ -4286,8 +4346,8 @@ suite('Users', function () {
                             userId: user2.id,
                             level: TopicMemberUser.LEVELS.edit
                         }]);
-                        idea = (await ideationIdeaCreate(agent, user.id, topic.id, ideation.id, 'TEST', 'TEST')).body.data;
-                        idea2 = (await ideationIdeaCreate(agent, user.id, topic.id, ideation.id, 'TEST', 'TEST')).body.data;
+                        idea = (await ideationIdeaCreate(agent, user.id, topic.id, ideation.id, 'TEST', 'TEST', null, 'published')).body.data;
+                        idea2 = (await ideationIdeaCreate(agent, user.id, topic.id, ideation.id, 'TEST', 'TEST', null, 'published')).body.data;
                     });
 
                     test('Success', async function () {
@@ -4341,8 +4401,8 @@ suite('Users', function () {
                     });
 
                     setup(async function () {
-                        idea = (await ideationIdeaCreate(agent, user.id, topic.id, ideation.id, 'TEST', 'TEST')).body.data;
-                        idea2 = (await ideationIdeaCreate(agent, user.id, topic.id, ideation.id, 'TEST2', 'TEST2')).body.data;
+                        idea = (await ideationIdeaCreate(agent, user.id, topic.id, ideation.id, 'TEST', 'TEST', null, 'published')).body.data;
+                        idea2 = (await ideationIdeaCreate(agent, user.id, topic.id, ideation.id, 'TEST2', 'TEST2', null, 'published')).body.data;
                     })
 
                     test('Success', async function () {
@@ -4425,8 +4485,8 @@ suite('Users', function () {
                             userId: user2.id,
                             level: TopicMemberUser.LEVELS.edit
                         }]);
-                        idea = (await ideationIdeaCreate(agent, user.id, topic.id, ideation.id, 'TEST', 'TEST')).body.data;
-                        idea2 = (await ideationIdeaCreate(agent, user.id, topic.id, ideation.id, 'TEST', 'TEST')).body.data;
+                        idea = (await ideationIdeaCreate(agent, user.id, topic.id, ideation.id, 'TEST', 'TEST', null, 'published')).body.data;
+                        idea2 = (await ideationIdeaCreate(agent, user.id, topic.id, ideation.id, 'TEST', 'TEST', null, 'published')).body.data;
                     });
 
                     test('Success', async function () {

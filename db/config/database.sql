@@ -2,8 +2,8 @@
 -- PostgreSQL database dump
 --
 
--- Dumped from database version 14.13 (Ubuntu 14.13-0ubuntu0.22.04.1)
--- Dumped by pg_dump version 14.13 (Ubuntu 14.13-0ubuntu0.22.04.1)
+-- Dumped from database version 16.6 (Ubuntu 16.6-0ubuntu0.24.04.1)
+-- Dumped by pg_dump version 16.6 (Ubuntu 16.6-0ubuntu0.24.04.1)
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -167,6 +167,16 @@ CREATE TYPE public."enum_Ideas_deletedReasonType" AS ENUM (
     'hate',
     'netiquette',
     'duplicate'
+);
+
+
+--
+-- Name: enum_Ideas_status; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public."enum_Ideas_status" AS ENUM (
+    'draft',
+    'published'
 );
 
 
@@ -1118,6 +1128,7 @@ CREATE TABLE public."Ideas" (
     statement character varying(2048) NOT NULL,
     description text NOT NULL,
     "imageUrl" text,
+    status public."enum_Ideas_status" DEFAULT 'draft'::public."enum_Ideas_status" NOT NULL,
     "deletedById" uuid,
     "deletedReasonType" public."enum_Ideas_deletedReasonType",
     "deletedReasonText" character varying(2048),
@@ -1161,6 +1172,13 @@ COMMENT ON COLUMN public."Ideas".description IS 'Idea description';
 --
 
 COMMENT ON COLUMN public."Ideas"."imageUrl" IS 'Image for the idea';
+
+
+--
+-- Name: COLUMN "Ideas".status; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."Ideas".status IS 'Idea status';
 
 
 --
@@ -4119,4 +4137,7 @@ COPY public."SequelizeMeta" (name) FROM stdin;
 20240618064610-create-discussion.js
 20240702054643-alter-vote-container-files.js
 20240829073146-argument-idea-attachments.js
+20250108215519-alter-ideation-disable-replies.js
+20250119150407-alter-ideation-allow-anonymous-ideas.js
+20250131193905-draft-ideas.js
 \.

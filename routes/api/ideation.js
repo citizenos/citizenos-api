@@ -520,6 +520,7 @@ module.exports = function (app) {
         const statement = req.body.statement;
         const description = req.body.description;
         const imageUrl = req.body.imageUrl;
+        const status = req.body.status || 'draft';
         try {
 
             const ideation = await Ideation.findOne({
@@ -548,7 +549,8 @@ module.exports = function (app) {
                         statement,
                         description,
                         imageUrl,
-                        ideationId
+                        ideationId,
+                        status
                     });
                     idea.topicId = topicId;
                     await idea.save({ transaction: t });
@@ -667,6 +669,7 @@ module.exports = function (app) {
                 "Idea"."description",
                 "Idea"."createdAt",
                 "Idea"."imageUrl",
+                "Idea"."status",
                 "Idea"."updatedAt",
                 "Idea"."deletedAt",
                 "author"."id" AS "author.id",
@@ -753,7 +756,7 @@ module.exports = function (app) {
             const topicId = req.params.topicId;
             const ideationId = req.params.ideationId;
             const ideaId = req.params.ideaId;
-            let fields = ['statement', 'description', 'imageUrl'];
+            let fields = ['statement', 'description', 'imageUrl', 'status'];
 
             const idea = await Idea.findOne({
                 where: {
@@ -893,6 +896,10 @@ module.exports = function (app) {
         const favourite = req.query.favourite;
         const folderId = req.query.folderId;
         const showModerated = req.query.showModerated || false;
+        let status = req.query.status || null;
+        if (!req.user?.id || !req.user?.userId) {
+            status = 'published';
+        }
         let groupBySql = ``;
         let joinSql = `
         LEFT JOIN (
@@ -917,6 +924,16 @@ module.exports = function (app) {
         let returncolumns = ``;
         if (authorId) {
             where += ` AND "Idea"."authorId" = :authorId `;
+        }
+        if (status) {
+            if (status === 'draft') {
+                where += ` AND "Idea"."status" = :status `;
+                where += ` AND "Idea"."authorId" = :userId `;
+            } else {
+                where += ` AND "Idea"."status" = 'published' `;
+            }
+        } else {
+            where += ` AND ("Idea"."status" = 'published' OR "Idea"."status" = 'draft' AND "Idea"."authorId"=:userId) `;
         }
         let orderSql = ' iv."up.count" DESC, "replies.count" DESC, "Idea"."createdAt" DESC ';
         if (!showModerated || showModerated == "false") {
@@ -988,6 +1005,7 @@ module.exports = function (app) {
                 "Idea"."description",
                 "Idea"."createdAt",
                 "Idea"."imageUrl",
+                "Idea"."status",
                 "Idea"."updatedAt",
                 "Idea"."deletedAt",
                 "author"."id" AS "author.id",
@@ -1028,6 +1046,7 @@ module.exports = function (app) {
                     userId: req.user?.id || req.user?.userId,
                     ideationId,
                     authorId,
+                    status,
                     favourite,
                     folderId,
                     limit,
@@ -2792,9 +2811,9 @@ module.exports = function (app) {
     app.get('/api/topics/:topicId/ideations/:ideationId/ideas/:ideaId/comments', topicLib.hasVisibility(Topic.VISIBILITY.public), topicLib.isModerator(), ideaCommentsList);
 
     /**
-     * Delete Topic Comment
+     * Delete Idea Comment
      */
-    app.delete('/api/users/:userId/topics/:topicId/ideations/:ideationId/ideas/:ideaId/comments/:commentId', loginCheck(['partner']), discussionLib.isCommentCreator(), topicLib.hasPermission(TopicMemberUser.LEVELS.admin, false, null, true));
+    app.delete('/api/users/:userId/topics/:topicId/ideations/:ideationId/ideas/:ideaId/comments/:commentId', loginCheck(['partner']), discussionLib.isCommentCreator(), topicLib.hasPermission(TopicMemberUser.LEVELS.read, false, null, true));
 
     //WARNING: Don't mess up with order here! In order to use "next('route')" in the isCommentCreator, we have to have separate route definition
     //NOTE: If you have good ideas how to keep one route definition with several middlewares, feel free to share!
