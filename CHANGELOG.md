@@ -1,3 +1,6 @@
+## 2025-01-31 - v5.0.9
+  * Fix: Issue FE #1839 - TOPICS: Partially hide email addresses shown to topic admins in the 'Invited' tab
+
 ## 2025-01-29 - v5.0.8
   * Fix: Issue FE #1361 - IDEATION: Insufficient permissions when editing own idea
 
