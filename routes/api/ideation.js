@@ -47,9 +47,9 @@ module.exports = function (app) {
         const question = req.body.question;
         const deadline = req.body.deadline;
         const topicId = req.params.topicId;
-        const disableReplies = req.body.disableReplies;
-
         const allowAnonymous = req.body.allowAnonymous || false;
+        const disableReplies = (allowAnonymous) ? true : (req.body.disableReplies || false);
+
         try {
             if (!question) {
                 return res.badRequest('Ideation question is missing', 1);
@@ -58,9 +58,9 @@ module.exports = function (app) {
             const ideation = Ideation.build({
                 question,
                 deadline,
-                disableReplies,
                 creatorId: req.user.id,
-                allowAnonymous
+                allowAnonymous,
+                disableReplies
             });
 
 
@@ -144,6 +144,7 @@ module.exports = function (app) {
                     i."creatorId",
                     i."createdAt",
                     i."updatedAt",
+                    i."allowAnonymous",
                     COALESCE(ii.count, 0) as "ideas.count",
                     COALESCE(fi.count, 0) as "folders.count"
                 FROM "Ideations" i
@@ -390,7 +391,7 @@ module.exports = function (app) {
         try {
             const topicId = req.params.topicId;
             const ideationId = req.params.ideationId;
-            let fields = ['deadline', 'question', 'disableReplies'];
+            let fields = ['deadline', 'disableReplies'];
 
             const topic = await Topic.findOne({
                 where: {
@@ -409,7 +410,7 @@ module.exports = function (app) {
                 return res.notFound();
             }
             if (topic.status === Topic.STATUSES.draft) {
-                fields = fields.concat(['question']);
+                fields = fields.concat(['question', 'allowAnonymous']);
             }
             const ideation = topic.Ideations[0];
             await db.transaction(async function (t) {
@@ -417,6 +418,12 @@ module.exports = function (app) {
                     if (Object.keys(req.body).indexOf(field) > -1)
                         ideation[field] = req.body[field];
                 });
+                if (!ideation.disableReplies) {
+                    ideation.disableReplies = false;
+                }
+                if (ideation.allowAnonymous) {
+                    ideation.disableReplies = true;
+                }
                 await cosActivities
                     .updateActivity(
                         ideation,
@@ -440,6 +447,7 @@ module.exports = function (app) {
                         i.question,
                         i.deadline,
                         i."disableReplies",
+                        i."allowAnonymous",
                         i."creatorId",
                         i."createdAt",
                         i."updatedAt",
@@ -547,6 +555,7 @@ module.exports = function (app) {
                 return res.notFound();
             }
             if (ideation.deadline && new Date(ideation.deadline) < new Date()) return res.forbidden();
+
             await db
                 .transaction(async function (t) {
 
@@ -571,7 +580,7 @@ module.exports = function (app) {
                             ideation,
                             {
                                 type: 'User',
-                                id: req.user.id,
+                                id: (ideation.allowAnonymous) ? null : req.user.id,
                                 ip: req.ip
                             },
                             req.method + ' ' + req.path,
@@ -588,7 +597,7 @@ module.exports = function (app) {
                                     model: User,
                                     attributes: ['id', 'name', 'email', 'imageUrl'],
                                     as: 'author',
-                                    required: true
+                                    required: false
                                 }
                             ]
                         });
@@ -697,7 +706,7 @@ module.exports = function (app) {
                 ${returncolumns}
                 COALESCE(ic.count, 0) AS "replies.count"
                 FROM "Ideas" AS "Idea"
-                INNER JOIN "Users" AS "author" ON "Idea"."authorId" = "author"."id"
+                LEFT JOIN "Users" AS "author" ON "Idea"."authorId" = "author"."id"
                 LEFT JOIN "Users" dbu ON (dbu.id = "Idea"."deletedById")
                 LEFT JOIN (
                     SELECT
@@ -721,6 +730,16 @@ module.exports = function (app) {
                 raw: true,
                 nest: true
             });
+
+            const ideation = await Ideation.findOne({
+                where: {
+                    id: req.params.ideationId
+                },
+                attributes: ['allowAnonymous']
+            });
+            if (ideation.allowAnonymous) {
+                delete idea[0].author;
+            }
             return res.ok(idea[0]);
 
         } catch (err) {
@@ -1023,7 +1042,7 @@ module.exports = function (app) {
                 ${returncolumns}
                 COALESCE(ic.count, 0) AS "replies.count"
                 FROM "Ideas" AS "Idea"
-                INNER JOIN "Users" AS "author" ON "Idea"."authorId" = "author"."id"
+                LEFT JOIN "Users" AS "author" ON "Idea"."authorId" = "author"."id"
                 LEFT JOIN "Users" dbu ON (dbu.id = "Idea"."deletedById")
                 LEFT JOIN (
                     SELECT
@@ -1055,7 +1074,20 @@ module.exports = function (app) {
             });
 
             const count = ideas[0]?.countTotal || 0;
-            ideas.forEach((idea) => delete idea.countTotal);
+
+            const ideation = await Ideation.findOne({
+                where: {
+                    id: req.params.ideationId
+                },
+                attributes: ['allowAnonymous']
+            });
+
+            ideas.forEach((idea) => {
+                if (!idea.author.id || ideation.allowAnonymous) {
+                    delete idea.author;
+                }
+                delete idea.countTotal
+            });
 
             return res.ok({
                 count,
@@ -3592,6 +3624,12 @@ module.exports = function (app) {
 
         try {
 
+            const ideation = await Ideation.findOne({
+                where: {
+                    id: req.params.ideationId
+                },
+                attributes: ['allowAnonymous']
+            });
             const idea = await Idea.findOne({
                 where: {
                     id: ideaId
@@ -3637,7 +3675,7 @@ module.exports = function (app) {
                     attachment,
                     {
                         type: 'User',
-                        id: req.user.id,
+                        id: (ideation.allowAnonymous) ? null : req.user.id,
                         ip: req.ip
                     },
                     null,
@@ -3750,7 +3788,7 @@ module.exports = function (app) {
                 type: type,
                 size: size,
                 source: source,
-                creatorId: req.user.userId,
+                creatorId: (ideation.allowAnonymous) ? null : req.user.userId,
                 link: link
             });
 
@@ -3770,7 +3808,7 @@ module.exports = function (app) {
                     attachment,
                     {
                         type: 'User',
-                        id: req.user.userId,
+                        id: (ideation.allowAnonymous) ? null : req.user.userId,
                         ip: req.ip
                     },
                     null,
@@ -3834,7 +3872,7 @@ module.exports = function (app) {
                         idea,
                         {
                             type: 'User',
-                            id: req.user.userId,
+                            id: (ideation.allowAnonymous) ? null : req.user.userId,
                             ip: req.ip
                         },
                         req.method + ' ' + req.path,
@@ -3887,7 +3925,7 @@ module.exports = function (app) {
                     }
                     await cosActivities.deleteActivity(attachment, attachment.Ideas[0], {
                         type: 'User',
-                        id: req.user.userId,
+                        id: (ideation.allowAnonymous) ? null : req.user.userId,
                         ip: req.ip
                     }, req.method + ' ' + req.path, t);
 

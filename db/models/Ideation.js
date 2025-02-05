@@ -53,6 +53,12 @@ module.exports = function (sequelize, Sequelize) {
                 defaultValue: false,
                 comment: 'Disable replies'
             },
+            allowAnonymous: {
+                type: Sequelize.BOOLEAN,
+                allowNull: false,
+                defaultValue: false,
+                comment: 'Allow anonymous ideas'
+            },
             createdAt: {
                 allowNull: false,
                 type: Sequelize.DATE
@@ -96,6 +102,7 @@ module.exports = function (sequelize, Sequelize) {
             creatorId: this.dataValues.creatorId,
             deadline: this.dataValues.deadline,
             disableReplies: this.dataValues.disableReplies,
+            allowAnonymous: this.dataValues.allowAnonymous,
             createdAt: this.dataValues.createdAt,
             updatedAt: this.dataValues.updatedAt
         };

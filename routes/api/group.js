@@ -1468,7 +1468,7 @@ module.exports = function (app) {
             });
     }));
 
-    app.get('/api/groups/join/:token', loginCheck(), async (req, res, next) => {
+    app.get('/api/groups/join/:token', async (req, res, next) => {
         try {
             const token = req.params.token;
 
@@ -1981,7 +1981,7 @@ module.exports = function (app) {
                     include: [
                         {
                             model: Group,
-                            attributes: ['id', 'name', 'creatorId'],
+                            attributes: ['id', 'name', 'creatorId', 'visibility'],
                             as: 'group',
                             required: true
                         },
@@ -2036,7 +2036,7 @@ module.exports = function (app) {
                     include: [
                         {
                             model: Group,
-                            attributes: ['id', 'name', 'creatorId'],
+                            attributes: ['id', 'name', 'creatorId', 'visibility'],
                             as: 'group',
                             required: true
                         },

@@ -144,9 +144,10 @@ module.exports = function (sequelize, DataTypes) {
 
         if (this.dataValues.author) {
             data.author = this.dataValues.author;
-        } else {
-            data.author = {};
-            data.author.id = this.dataValues.authorId;
+        }
+
+        if(this.dataValues.sessionId) {
+            data.sessionId = this.dataValues.sessionId;
         }
 
         if(this.dataValues.sessionId) {
@@ -174,7 +175,7 @@ module.exports = function (sequelize, DataTypes) {
         Idea.belongsTo(models.User, {
             as:'author',
             foreignKey: 'authorId',
-            constraints: true
+            allowNull: true
         });
 
         Idea.belongsTo(models.Ideation, {

@@ -223,7 +223,10 @@ module.exports = function (sequelize, DataTypes) {
         });
 
         User.hasMany(models.Idea, {
-            foreignKey: 'authorId'
+            foreignKey: {
+                name: 'authorId',
+                allowNull: true
+            }
         });
     };
 
