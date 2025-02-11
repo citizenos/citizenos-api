@@ -59,6 +59,12 @@ module.exports = function (sequelize, Sequelize) {
                 defaultValue: false,
                 comment: 'Allow anonymous ideas'
             },
+            template: {
+                type: Sequelize.TEXT,
+                allowNull: true,
+                defaultValue: null,
+                comment: 'Allow idea template'
+            },
             createdAt: {
                 allowNull: false,
                 type: Sequelize.DATE
@@ -103,6 +109,7 @@ module.exports = function (sequelize, Sequelize) {
             deadline: this.dataValues.deadline,
             disableReplies: this.dataValues.disableReplies,
             allowAnonymous: this.dataValues.allowAnonymous,
+            template: this.dataValues.template,
             createdAt: this.dataValues.createdAt,
             updatedAt: this.dataValues.updatedAt
         };
