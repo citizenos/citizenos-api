@@ -60,8 +60,7 @@ module.exports = function (app) {
                 deadline,
                 creatorId: req.user.id,
                 allowAnonymous,
-                disableReplies,
-                template: req.body.template,
+                disableReplies
             });
 
 
@@ -146,7 +145,6 @@ module.exports = function (app) {
                     i."createdAt",
                     i."updatedAt",
                     i."allowAnonymous",
-                    i."template",
                     COALESCE(ii.count, 0) as "ideas.count",
                     COALESCE(fi.count, 0) as "folders.count"
                 FROM "Ideations" i
@@ -393,7 +391,7 @@ module.exports = function (app) {
         try {
             const topicId = req.params.topicId;
             const ideationId = req.params.ideationId;
-            let fields = ['deadline', 'disableReplies', 'template'];
+            let fields = ['deadline', 'disableReplies'];
 
             const topic = await Topic.findOne({
                 where: {
@@ -450,7 +448,6 @@ module.exports = function (app) {
                         i.deadline,
                         i."disableReplies",
                         i."allowAnonymous",
-                        i."template",
                         i."creatorId",
                         i."createdAt",
                         i."updatedAt",
