@@ -1,6 +1,6 @@
 'use strict';
 
-const _ideationCreate = async function (agent, userId, topicId, question, deadline, disableReplies, allowAnonymous, template, expectedHttpCode) {
+const _ideationCreate = async function (agent, userId, topicId, question, deadline, disableReplies, allowAnonymous, template, demographicsConfig, expectedHttpCode) {
     const path = '/api/users/:userId/topics/:topicId/ideations'
         .replace(':userId', userId)
         .replace(':topicId', topicId);
@@ -13,14 +13,15 @@ const _ideationCreate = async function (agent, userId, topicId, question, deadli
             deadline,
             disableReplies,
             allowAnonymous,
-            template
+            template,
+            demographicsConfig
         })
         .expect(expectedHttpCode)
         .expect('Content-Type', /json/)
 };
 
-const ideationCreate = async function (agent, userId, topicId, question, deadline, disableReplies, allowAnonymous, template) {
-    return _ideationCreate(agent, userId, topicId, question, deadline, disableReplies, allowAnonymous, template, 201);
+const ideationCreate = async function (agent, userId, topicId, question, deadline, disableReplies, allowAnonymous, template, demographicsConfig) {
+    return _ideationCreate(agent, userId, topicId, question, deadline, disableReplies, allowAnonymous, template, demographicsConfig, 201);
 };
 
 const _ideationRead = async function (agent, userId, topicId, ideationId, expectedHttpCode) {
@@ -56,7 +57,7 @@ const ideationReadUnauth = async function (agent, topicId, ideationId) {
     return _ideationReadUnauth(agent, topicId, ideationId, 200);
 };
 
-const _ideationUpdate = async function (agent, userId, topicId, ideationId, question, deadline, disableReplies, allowAnonymous, template, expectedHttpCode) {
+const _ideationUpdate = async function (agent, userId, topicId, ideationId, question, deadline, disableReplies, allowAnonymous, template, demographicsConfig, expectedHttpCode) {
     const path = '/api/users/:userId/topics/:topicId/ideations/:ideationId'
         .replace(':userId', userId)
         .replace(':topicId', topicId)
@@ -67,13 +68,15 @@ const _ideationUpdate = async function (agent, userId, topicId, ideationId, ques
         question,
         disableReplies,
         allowAnonymous,
-        template
+        template,
+        demographicsConfig
     };
     if (deadline === undefined) delete body.deadline;
     if (question === undefined) delete body.question;
     if (disableReplies === undefined) delete body.disableReplies;
     if (allowAnonymous === undefined) delete body.allowAnonymous;
     if (template === undefined) delete body.template;
+    if (demographicsConfig === undefined) delete body.demographicsConfig;
     return agent
         .put(path)
         .send(body)
@@ -82,8 +85,8 @@ const _ideationUpdate = async function (agent, userId, topicId, ideationId, ques
         .expect('Content-Type', /json/)
 };
 
-const ideationUpdate = async function (agent, userId, topicId, ideationId, question, deadline, disableReplies, allowAnonymous, template) {
-    return _ideationUpdate(agent, userId, topicId, ideationId, question, deadline, disableReplies, allowAnonymous, template, 200);
+const ideationUpdate = async function (agent, userId, topicId, ideationId, question, deadline, disableReplies, allowAnonymous, template, demographicsConfig) {
+    return _ideationUpdate(agent, userId, topicId, ideationId, question, deadline, disableReplies, allowAnonymous, template, demographicsConfig, 200);
 };
 
 const _ideationDelete = async function (agent, userId, topicId, ideationId, expectedHttpCode) {
@@ -1085,9 +1088,18 @@ suite('Users', function () {
                 assert.equal(ideation.template, template);
             });
 
+            test('Success - demographicsConfig', async function () {
+                const question = 'Test ideation?';
+                const deadline = new Date(new Date().getTime() + 24 * 60 * 60 * 1000);
+                const demographicsConfig = { age: { required: true } };
+                const ideation = (await ideationCreate(agent, user.id, topic.id, question, deadline, null, null, null, demographicsConfig)).body.data;
+                assert.property(ideation, 'id');
+                assert.equal(ideation.demographicsConfig, demographicsConfig);
+            });
+
             test('Fail - Bad Request - deadline wrong format', async function () {
                 const question = 'Test ideation?';
-                const errors = (await _ideationCreate(agent, user.id, topic.id, question, 'TEST', null, null, null, 400)).body.errors;
+                const errors = (await _ideationCreate(agent, user.id, topic.id, question, 'TEST', null, null, null, null, 400)).body.errors;
 
                 assert.equal(errors.deadline, 'Ideation deadline must be in the future.');
             });
@@ -1096,7 +1108,7 @@ suite('Users', function () {
             test('Fail - Bad Request - deadline is in the past', async function () {
                 const question = 'Test ideation?';
                 const deadlineInPast = new Date(new Date().getTime() - 24 * 60 * 60 * 1000);
-                const errors = (await _ideationCreate(agent, user.id, topic.id, question, deadlineInPast, null, null, null, 400)).body.errors;
+                const errors = (await _ideationCreate(agent, user.id, topic.id, question, deadlineInPast, null, null, null, null, 400)).body.errors;
 
                 assert.equal(errors.deadline, 'Ideation deadline must be in the future.');
             });
