@@ -62,6 +62,7 @@ module.exports = function (app) {
                 allowAnonymous,
                 disableReplies,
                 template: req.body.template,
+                demographics: req.body.demographicsConfig,
             });
 
 
@@ -147,6 +148,7 @@ module.exports = function (app) {
                     i."updatedAt",
                     i."allowAnonymous",
                     i."template",
+                    i."demographicsConfig",
                     COALESCE(ii.count, 0) as "ideas.count",
                     COALESCE(fi.count, 0) as "folders.count"
                 FROM "Ideations" i
@@ -393,7 +395,7 @@ module.exports = function (app) {
         try {
             const topicId = req.params.topicId;
             const ideationId = req.params.ideationId;
-            let fields = ['deadline', 'disableReplies', 'template'];
+            let fields = ['deadline', 'disableReplies', 'template', 'demographicsConfig'];
 
             const topic = await Topic.findOne({
                 where: {
@@ -451,6 +453,7 @@ module.exports = function (app) {
                         i."disableReplies",
                         i."allowAnonymous",
                         i."template",
+                        i."demographicsConfig",
                         i."creatorId",
                         i."createdAt",
                         i."updatedAt",
@@ -539,6 +542,7 @@ module.exports = function (app) {
         const statement = req.body.statement;
         const description = req.body.description;
         const imageUrl = req.body.imageUrl;
+        const demographicsConfig = req.body.demographicsConfig;
 
         try {
 
@@ -572,7 +576,8 @@ module.exports = function (app) {
                         statement,
                         description,
                         imageUrl,
-                        ideationId
+                        ideationId,
+                        demographicsConfig
                     });
                     idea.topicId = topicId;
                     await idea.save({ transaction: t });
