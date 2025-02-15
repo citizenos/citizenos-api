@@ -579,7 +579,6 @@ module.exports = function (app) {
                         ideationId,
                         demographics
                     });
-                    console.log(idea, "hdsgahgdfashgdfashgdfasgdfg")
                     idea.topicId = topicId;
                     await idea.save({ transaction: t });
 
