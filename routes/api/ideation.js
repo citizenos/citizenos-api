@@ -542,7 +542,7 @@ module.exports = function (app) {
         const statement = req.body.statement;
         const description = req.body.description;
         const imageUrl = req.body.imageUrl;
-        const demographicsConfig = req.body.demographicsConfig;
+        const demographics = req.body.demographics;
 
         try {
 
@@ -577,8 +577,9 @@ module.exports = function (app) {
                         description,
                         imageUrl,
                         ideationId,
-                        demographicsConfig
+                        demographics
                     });
+                    console.log(idea, "hdsgahgdfashgdfashgdfasgdfg")
                     idea.topicId = topicId;
                     await idea.save({ transaction: t });
 
