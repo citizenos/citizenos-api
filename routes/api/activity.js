@@ -194,7 +194,16 @@ module.exports = function (app) {
         return includedSql.join(' UNION ');
     };
 
-    const parseActivitiesResults = function (activities) {
+    const parseActivitiesResults = function (allActivities) {
+        /**
+         * @note Since we have no anonymous ideas, there are nullable values about actor.
+         * We should be aware of it and filter out the null values.
+         *
+         * @todo Think of how to handle anonymous ideas.
+         * @todo Think of how to move this to the SQL query.
+        */
+        const activities = allActivities.filter((it) => it.data.actor.id !== null)
+
         const returnList = [];
         activities.forEach(function (activity) {
             const returnActivity = _.cloneDeep(activity);
@@ -1174,7 +1183,7 @@ module.exports = function (app) {
                             }
                         });
                     }
-                    //              console.log(`${query} ${selectSql}`)
+
                     const results = await db
                         .query(`${query} ${selectSql}`,
                             {
@@ -1198,7 +1207,7 @@ module.exports = function (app) {
                                 t
                             );
                     }
-                    //          console.log(results);
+                    
                     const finalResults = parseActivitiesResults(results);
 
                     t.afterCommit(() => {

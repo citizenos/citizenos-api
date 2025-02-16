@@ -110,6 +110,12 @@ module.exports = function (sequelize, DataTypes) {
                 onUpdate: 'CASCADE',
                 onDelete: 'CASCADE'
             },
+            demographics: {
+                type: DataTypes.JSONB,
+                allowNull: true,
+                defaultValue: null,
+                comment: 'Demographics fields'
+            },
             createdAt: {
                 allowNull: false,
                 type: DataTypes.DATE
@@ -138,7 +144,7 @@ module.exports = function (sequelize, DataTypes) {
             updatedAt: this.dataValues.updatedAt,
             deletedAt: this.dataValues.deletedAt,
             deletedReasonType: this.dataValues.deletedReasonType,
-            deletedReasonText: this.dataValues.deletedReasonText
+            deletedReasonText: this.dataValues.deletedReasonText,
         };
 
 
@@ -162,6 +168,10 @@ module.exports = function (sequelize, DataTypes) {
         } else {
             data.report = {};
             data.report.id = this.dataValues.deletedByReportId;
+        }
+
+        if(this.dataValues.demographics) {
+            data.demographics = this.dataValues.demographics;
         }
 
         return data;
