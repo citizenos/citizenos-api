@@ -64,9 +64,8 @@ module.exports = function (app) {
                 allowAnonymous,
                 disableReplies,
                 template: req.body.template,
-                demographics: req.body.demographicsConfig,
+                demographicsConfig: req.body.demographicsConfig,
             });
-
 
             // TODO: Some of these queries can be done in parallel
             const topic = await Topic.findOne({
