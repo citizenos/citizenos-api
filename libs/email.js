@@ -1313,7 +1313,7 @@ module.exports = function (app) {
                     FROM "Ideas" i
                         JOIN "TopicIdeations" ti ON ti."ideationId" = i."ideationId"
                         JOIN "Topics" t ON (t.id = ti."topicId")
-                        JOIN "Users" u ON (u.id = i."authorId")
+                        LEFT JOIN "Users" u ON (u.id = i."authorId")
                     WHERE i."id" = :ideaId
                 `,
                 {
@@ -1340,7 +1340,7 @@ module.exports = function (app) {
 
         // Comment creator e-mail - TODO: Comment back in when comment editing goes live!
         let ideaAuthorInformed = true;
-        if (ideaInfo.idea.author.email) {
+        if (ideaInfo.idea.author?.email) {
             const template = resolveTemplate('reportIdeaCreator', ideaInfo.idea.author.language);
             const linkViewTopic = urlLib.getFe('/topics/:topicId', { topicId: ideaInfo.topic.id });
 

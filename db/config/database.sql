@@ -409,7 +409,8 @@ CREATE TABLE public."Attachments" (
     source public."enum_Attachments_source" NOT NULL,
     size bigint,
     link character varying(255) NOT NULL,
-    "creatorId" uuid NOT NULL,
+    "sessionId" character varying(255),
+    "creatorId" uuid,
     "createdAt" timestamp with time zone NOT NULL,
     "updatedAt" timestamp with time zone NOT NULL,
     "deletedAt" timestamp with time zone
@@ -442,6 +443,13 @@ COMMENT ON COLUMN public."Attachments".size IS 'file size in bytes';
 --
 
 COMMENT ON COLUMN public."Attachments".link IS 'files location';
+
+
+--
+-- Name: COLUMN "Attachments"."sessionId"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."Attachments"."sessionId" IS 'Encrypted Session ID when the idea was created';
 
 
 --
@@ -1124,7 +1132,8 @@ COMMENT ON COLUMN public."IdeaVotes".value IS 'Vote value. Numeric, can be negat
 CREATE TABLE public."Ideas" (
     id uuid NOT NULL,
     "ideationId" uuid NOT NULL,
-    "authorId" uuid NOT NULL,
+    "authorId" uuid,
+    "sessionId" character varying(255) DEFAULT NULL::character varying,
     statement character varying(2048) NOT NULL,
     description text NOT NULL,
     "imageUrl" text,
@@ -1151,6 +1160,13 @@ COMMENT ON COLUMN public."Ideas"."ideationId" IS 'To what ideation the idea belo
 --
 
 COMMENT ON COLUMN public."Ideas"."authorId" IS 'Author of the idea';
+
+
+--
+-- Name: COLUMN "Ideas"."sessionId"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."Ideas"."sessionId" IS 'Encrypted Session ID when the idea was created';
 
 
 --
@@ -1218,6 +1234,8 @@ CREATE TABLE public."Ideations" (
     "creatorId" uuid NOT NULL,
     question character varying(2048),
     deadline timestamp with time zone,
+    "disableReplies" boolean DEFAULT false NOT NULL,
+    "allowAnonymous" boolean DEFAULT false NOT NULL,
     "createdAt" timestamp with time zone NOT NULL,
     "updatedAt" timestamp with time zone NOT NULL,
     "deletedAt" timestamp with time zone
@@ -1243,6 +1261,20 @@ COMMENT ON COLUMN public."Ideations".question IS 'Question the ideation is gathe
 --
 
 COMMENT ON COLUMN public."Ideations".deadline IS 'Deadline for the ideation. If NULL then no deadline at all.';
+
+
+--
+-- Name: COLUMN "Ideations"."disableReplies"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."Ideations"."disableReplies" IS 'Disable replies';
+
+
+--
+-- Name: COLUMN "Ideations"."allowAnonymous"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."Ideations"."allowAnonymous" IS 'Allow anonymous ideas';
 
 
 --

@@ -124,6 +124,21 @@
         ],
         "issuers": [
           {
+            "CN": "DigiCert Global G2 TLS RSA SHA256 2020 CA1",
+            "O": "DigiCert Inc",
+            "C": "US"
+          },
+          {
+            "C": "EE",
+            "O": "SK ID Solutions AS",
+            "CN": "tsp.demo.sk.ee"
+          },
+          {
+            "C":	"EE",
+            "O":	"SK ID Solutions AS",
+            "CN":	"mid.sk.ee"
+          },
+          {
             "C":	"EE",
             "O":	"SK ID Solutions AS",
             "OID": "NTREE-10747013",
