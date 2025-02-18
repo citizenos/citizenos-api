@@ -1484,7 +1484,15 @@ module.exports = function (app) {
             const group = await Group.findOne({
                 where: {
                     id: groupJoin.groupId
-                }
+                },
+                include: [
+                    {
+                        model: User,
+                        attributes: ['id', 'name', 'company', 'imageUrl'],
+                        as: 'creator',
+                        required: true
+                    },
+                ],
             });
 
             return res.ok(group.toJSON());
@@ -2036,7 +2044,7 @@ module.exports = function (app) {
                     include: [
                         {
                             model: Group,
-                            attributes: ['id', 'name', 'creatorId', 'visibility'],
+                            attributes: ['id', 'name', 'creatorId', 'visibility', 'description', 'imageUrl'],
                             as: 'group',
                             required: true
                         },

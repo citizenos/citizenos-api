@@ -1,5 +1,7 @@
 'use strict';
 
+const { capitalizeFirstLetter } = require('../../libs/util');
+
 
 
 module.exports = function (app) {
@@ -60,9 +62,10 @@ module.exports = function (app) {
                 deadline,
                 creatorId: req.user.id,
                 allowAnonymous,
-                disableReplies
+                disableReplies,
+                template: req.body.template,
+                demographicsConfig: req.body.demographicsConfig,
             });
-
 
             // TODO: Some of these queries can be done in parallel
             const topic = await Topic.findOne({
@@ -145,6 +148,8 @@ module.exports = function (app) {
                     i."createdAt",
                     i."updatedAt",
                     i."allowAnonymous",
+                    i."template",
+                    i."demographicsConfig",
                     COALESCE(ii.count, 0) as "ideas.count",
                     COALESCE(fi.count, 0) as "folders.count"
                 FROM "Ideations" i
@@ -315,10 +320,11 @@ module.exports = function (app) {
                     to_char(i."createdAt", 'HH24:MI') as "Time",
                     i.statement as "Idea heading",
                     i.description as "Idea",
+                    i.demographics as "Demographics",
                     iv."count" as "Likes",
                     f.folders as "Folders"
                 FROM "Ideas" i
-                JOIN "Users" u ON u.id = i."authorId"
+                LEFT JOIN "Users" u ON u.id = i."authorId"
                 LEFT JOIN (
                     SELECT
                         ii."ideaId",
@@ -353,8 +359,21 @@ module.exports = function (app) {
                 rowDelimiter: '\r\n'
             });
 
-            stream.on('data', function (voteResult) {
-                csvStream.write(voteResult);
+            stream.on('data', function (ideaResult) {
+                const demographics = ideaResult.Demographics || {};
+
+                delete ideaResult.Demographics;
+                const parsedDemographics = Object.keys(demographics).reduce((acc, key) => ({
+                    ...acc,
+                    [capitalizeFirstLetter(key)]: demographics[key]
+                }), {})
+
+                const csvData = {
+                    ...ideaResult,
+                    ...parsedDemographics
+                };
+
+                csvStream.write(csvData);
             });
 
             stream.on('error', function (err) {
@@ -391,7 +410,7 @@ module.exports = function (app) {
         try {
             const topicId = req.params.topicId;
             const ideationId = req.params.ideationId;
-            let fields = ['deadline', 'disableReplies'];
+            let fields = ['deadline', 'disableReplies', 'template', 'demographicsConfig'];
 
             const topic = await Topic.findOne({
                 where: {
@@ -448,6 +467,8 @@ module.exports = function (app) {
                         i.deadline,
                         i."disableReplies",
                         i."allowAnonymous",
+                        i."template",
+                        i."demographicsConfig",
                         i."creatorId",
                         i."createdAt",
                         i."updatedAt",
@@ -536,6 +557,7 @@ module.exports = function (app) {
         const statement = req.body.statement;
         const description = req.body.description;
         const imageUrl = req.body.imageUrl;
+        const demographics = req.body.demographics;
 
         try {
 
@@ -569,7 +591,8 @@ module.exports = function (app) {
                         statement,
                         description,
                         imageUrl,
-                        ideationId
+                        ideationId,
+                        demographics
                     });
                     idea.topicId = topicId;
                     await idea.save({ transaction: t });
