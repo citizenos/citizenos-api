@@ -1,5 +1,7 @@
 'use strict';
 
+const { capitalizeFirstLetter } = require('../../libs/util');
+
 
 
 module.exports = function (app) {
@@ -319,10 +321,11 @@ module.exports = function (app) {
                     to_char(i."createdAt", 'HH24:MI') as "Time",
                     i.statement as "Idea heading",
                     i.description as "Idea",
+                    i.demographics as "Demographics",
                     iv."count" as "Likes",
                     f.folders as "Folders"
                 FROM "Ideas" i
-                JOIN "Users" u ON u.id = i."authorId"
+                LEFT JOIN "Users" u ON u.id = i."authorId"
                 LEFT JOIN (
                     SELECT
                         ii."ideaId",
@@ -357,8 +360,21 @@ module.exports = function (app) {
                 rowDelimiter: '\r\n'
             });
 
-            stream.on('data', function (voteResult) {
-                csvStream.write(voteResult);
+            stream.on('data', function (ideaResult) {
+                const demographics = ideaResult.Demographics || {};
+
+                delete ideaResult.Demographics;
+                const parsedDemographics = Object.keys(demographics).reduce((acc, key) => ({
+                    ...acc,
+                    [capitalizeFirstLetter(key)]: demographics[key]
+                }), {})
+
+                const csvData = {
+                    ...ideaResult,
+                    ...parsedDemographics
+                };
+
+                csvStream.write(csvData);
             });
 
             stream.on('error', function (err) {
