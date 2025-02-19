@@ -4957,8 +4957,6 @@ module.exports = function (app) {
 
         if (!topic) {
             return res.notFound();
-        } else if (topic.visibility === Topic.VISIBILITY.private && !topicMember) {
-            return res.ok({ title: topic.title });
         }
         topic = topic.toJSON();
         if (topicMember && topicMember.length) {
