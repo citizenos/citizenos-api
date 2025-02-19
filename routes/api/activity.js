@@ -194,7 +194,16 @@ module.exports = function (app) {
         return includedSql.join(' UNION ');
     };
 
-    const parseActivitiesResults = function (activities) {
+    const parseActivitiesResults = function (allActivities) {
+        /**
+         * @note Since we have no anonymous ideas, there are nullable values about actor.
+         * We should be aware of it and filter out the null values.
+         *
+         * @todo Think of how to handle anonymous ideas.
+         * @todo Think of how to move this to the SQL query.
+        */
+        const activities = allActivities.filter((it) => it.data.actor.id !== null)
+
         const returnList = [];
         activities.forEach(function (activity) {
             const returnActivity = _.cloneDeep(activity);
@@ -1174,7 +1183,7 @@ module.exports = function (app) {
                             }
                         });
                     }
-                    //              console.log(`${query} ${selectSql}`)
+
                     const results = await db
                         .query(`${query} ${selectSql}`,
                             {
@@ -1198,7 +1207,7 @@ module.exports = function (app) {
                                 t
                             );
                     }
-                    //          console.log(results);
+                    
                     const finalResults = parseActivitiesResults(results);
 
                     t.afterCommit(() => {
@@ -1410,51 +1419,4 @@ module.exports = function (app) {
     app.get('/api/users/:userId/groups/:groupId/activities/unread', loginCheck(['partner']), groupLib.hasPermission(GroupMemberUser.LEVELS.read, true), async (req, res, next) => {
         return groupUnreadActivitiesCount(req, res, next);
     });
-    /* app.get('/api/acitivites/strings', async (req, res, next) => {
-         const strings = [];
-
-         try {
-             const activities = await db
-             .query(`
-                 ${activitiesDataFunction}
-                 SELECT DISTINCT
-                     a.id,
-                     a.data,
-                     a."createdAt",
-                     a."updatedAt",
-                     a."deletedAt",
-                     a."topicIds",
-                     a."userIds",
-                     a."groupIds",
-                     jsonb_agg(t.*) AS topics,
-                     jsonb_agg(g.*) AS groups,
-                     jsonb_agg(u.*) AS users
-                 FROM
-                 "Activities" a
-                 LEFT JOIN
-                     "Topics" t ON ARRAY[t.id::text] <@ string_to_array(array_to_string(a."topicIds", ','), ',')
-                 LEFT JOIN
-                     "Groups" g ON ARRAY[g.id::text] <@ string_to_array(array_to_string(a."groupIds", ','), ',')
-                 LEFT JOIN
-                     "Users" u ON ARRAY[u.id::text] <@ string_to_array(array_to_string(a."userIds", ','), ',')
-                 GROUP BY a.id
-                 ORDER BY a."updatedAt" DESC
-             ;`, {
-                 type: db.QueryTypes.SELECT,
-                 nest: true,
-                 raw: true
-             });
-             activities.forEach(async (activity) => {
-                 /*notifications.buildActivityString(activity);
-                 notifications.getActivityValues(activity);
-                 strings.push(activity.data.type + ' ' + (activity.data.object['@type'] || activity.data.object.type));
-                 const users = await notifications.getRelatedUsers(activity);
-                 console.log(users);
-             });
-             return res.ok(Array.from(new Set(strings)));
-         } catch (err) {
-             console.log(err);
-             next(err)
-         }
-     })*/
 };

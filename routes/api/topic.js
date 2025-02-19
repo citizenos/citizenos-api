@@ -3537,10 +3537,7 @@ module.exports = function (app) {
                     SELECT mg.*,count(*) OVER()::integer AS "countTotal" FROM (
                         SELECT
                             g.id,
-                            CASE
-                                WHEN gmu.level IS NOT NULL THEN g.name
-                                ELSE NULL
-                            END as "name",
+                            g.name,
                             g."createdAt",
                             g."updatedAt",
                             tmg.level,
@@ -4536,7 +4533,7 @@ module.exports = function (app) {
                 include: [
                     {
                         model: Topic,
-                        attributes: ['id', 'title', 'visibility', 'creatorId'],
+                        attributes: ['id', 'title', 'visibility', 'creatorId', 'imageUrl', 'intro', 'description'],
                         as: 'topic',
                         required: true
                     },
@@ -4952,7 +4949,15 @@ module.exports = function (app) {
             where: {
                 id: topicJoin.topicId
             },
-            attributes: ['id', 'visibility', 'title']
+            include: [
+                {
+                    model: User,
+                    attributes: ['id', 'name', 'company', 'imageUrl'],
+                    as: 'creator',
+                    required: true
+                },
+            ],
+            attributes: ['id', 'visibility', 'title', 'intro', 'description', 'imageUrl', 'visibility']
         });
 
         if (!topic) {
@@ -4964,7 +4969,6 @@ module.exports = function (app) {
         if (topicMember && topicMember.length) {
             topic.permission = { level: topicMember[0].level };
         }
-        delete topic.creator;
 
         return res.ok(topic);
     });
