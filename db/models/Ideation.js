@@ -119,7 +119,7 @@ module.exports = function (sequelize, Sequelize) {
             disableReplies: this.dataValues.disableReplies,
             allowAnonymous: this.dataValues.allowAnonymous,
             template: this.dataValues.template,
-            demographics: this.dataValues.demographics,
+            demographicsConfig: this.dataValues.demographicsConfig,
             createdAt: this.dataValues.createdAt,
             updatedAt: this.dataValues.updatedAt
         };

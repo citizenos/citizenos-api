@@ -171,6 +171,16 @@ CREATE TYPE public."enum_Ideas_deletedReasonType" AS ENUM (
 
 
 --
+-- Name: enum_Ideas_status; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public."enum_Ideas_status" AS ENUM (
+    'draft',
+    'published'
+);
+
+
+--
 -- Name: enum_Reports_type; Type: TYPE; Schema: public; Owner: -
 --
 
@@ -1127,6 +1137,7 @@ CREATE TABLE public."Ideas" (
     statement character varying(2048) NOT NULL,
     description text NOT NULL,
     "imageUrl" text,
+    status public."enum_Ideas_status" DEFAULT 'draft'::public."enum_Ideas_status" NOT NULL,
     "deletedById" uuid,
     "deletedReasonType" public."enum_Ideas_deletedReasonType",
     "deletedReasonText" character varying(2048),
@@ -1177,6 +1188,13 @@ COMMENT ON COLUMN public."Ideas".description IS 'Idea description';
 --
 
 COMMENT ON COLUMN public."Ideas"."imageUrl" IS 'Image for the idea';
+
+
+--
+-- Name: COLUMN "Ideas".status; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."Ideas".status IS 'Idea status';
 
 
 --
@@ -4153,4 +4171,5 @@ COPY public."SequelizeMeta" (name) FROM stdin;
 20240829073146-argument-idea-attachments.js
 20250108215519-alter-ideation-disable-replies.js
 20250119150407-alter-ideation-allow-anonymous-ideas.js
+20250131193905-draft-ideas.js
 \.
