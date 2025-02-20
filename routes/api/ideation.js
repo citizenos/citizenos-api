@@ -53,7 +53,6 @@ module.exports = function (app) {
         const allowAnonymous = req.body.allowAnonymous || false;
         const disableReplies = (allowAnonymous) ? true : (req.body.disableReplies || false);
 
-        const allowAnonymous = req.body.allowAnonymous || false;
         try {
             if (!question) {
                 return res.badRequest('Ideation question is missing', 1);
