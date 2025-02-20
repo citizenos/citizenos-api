@@ -558,6 +558,7 @@ module.exports = function (app) {
         const description = req.body.description;
         const imageUrl = req.body.imageUrl;
         const demographics = req.body.demographics;
+        const status = req.body.status || 'draft';
 
         try {
 
@@ -592,7 +593,8 @@ module.exports = function (app) {
                         description,
                         imageUrl,
                         ideationId,
-                        demographics
+                        demographics,
+                        status
                     });
                     idea.topicId = topicId;
                     await idea.save({ transaction: t });
@@ -810,7 +812,7 @@ module.exports = function (app) {
             const ideaId = req.params.ideaId;
             const sessToken = createHash('sha256').update(req.cookies[config.session.name]).digest('base64');
 
-            let fields = ['statement', 'description', 'imageUrl'];
+            let fields = ['statement', 'description', 'imageUrl', 'status'];
 
             const idea = await Idea.findOne({
                 where: {
