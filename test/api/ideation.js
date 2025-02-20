@@ -1099,7 +1099,7 @@ suite('Users', function () {
                 const demographicsConfig = { age: { required: true } };
                 const ideation = (await ideationCreate(agent, user.id, topic.id, question, deadline, null, null, null, demographicsConfig)).body.data;
                 assert.property(ideation, 'id');
-                assert.equal(ideation.demographicsConfig, demographicsConfig);
+                assert.deepEqual(ideation.demographicsConfig, demographicsConfig);
             });
 
             test('Fail - Bad Request - deadline wrong format', async function () {
@@ -1260,7 +1260,7 @@ suite('Users', function () {
 
             test('Fail - deadline in the past', async function () {
                 const deadline = new Date(new Date().getTime() - 24 * 60 * 60 * 1000);
-                const errors = (await _ideationUpdate(agent, user.id, topic.id, ideation.id, undefined, deadline, null, null, 400)).body.errors;
+                const errors = (await _ideationUpdate(agent, user.id, topic.id, ideation.id, undefined, deadline, null, null, null, null, 400)).body.errors;
 
                 assert.equal(errors.deadline, 'Ideation deadline must be in the future.');
             });
@@ -4348,7 +4348,7 @@ suite('Users', function () {
 
                 test('Fail - missing statement', async function () {
                     const description = 'This idea is just for testing';
-                    const ideaRes = (await _ideationIdeaCreate(agent, user.id, topic.id, ideation.id, null, description, null, 400)).body;
+                    const ideaRes = (await _ideationIdeaCreate(agent, user.id, topic.id, ideation.id, null, description, null, 'draft', 400)).body;
                     const expectedRes = {
                         status: { code: 40000 },
                         errors: { statement: 'Idea.statement cannot be null' }
@@ -4359,7 +4359,7 @@ suite('Users', function () {
 
                 test('Fail - missing description', async function () {
                     const statement = 'This idea is just for testing';
-                    const ideaRes = (await _ideationIdeaCreate(agent, user.id, topic.id, ideation.id, statement, null, null, 400)).body;
+                    const ideaRes = (await _ideationIdeaCreate(agent, user.id, topic.id, ideation.id, statement, null, null, 'draft', 400)).body;
                     const expectedRes = {
                         status: { code: 40000 },
                         errors: { description: 'Idea.description cannot be null' }
@@ -4371,11 +4371,11 @@ suite('Users', function () {
                 test('Fail - topic status not ideation', async function () {
                     await discussionCreate(agent, user.id, topic.id, 'TEST?');
                     await topicLib.topicUpdate(agent, user.id, topic.id, Topic.STATUSES.followUp);
-                    await _ideationIdeaCreate(request.agent(app), user.id, topic.id, ideation.id, 'TEST idea', 'description', null, 401);
+                    await _ideationIdeaCreate(request.agent(app), user.id, topic.id, ideation.id, 'TEST idea', 'description', null, 'draft', 401);
                 });
 
                 test('Fail - Unauthorized', async function () {
-                    await _ideationIdeaCreate(request.agent(app), user.id, topic.id, ideation.id, 'TEST idea', 'description', null, 401);
+                    await _ideationIdeaCreate(request.agent(app), user.id, topic.id, ideation.id, 'TEST idea', 'description', null, 'draft', 401);
                 });
             });
 
@@ -4536,7 +4536,7 @@ suite('Users', function () {
                     const updatedDescription = 'Updated description';
                     const agent3 = request.agent(app);
                     const user3 = await userLib.loginUser(agent3, email, password);
-                    const ideaUpdate = (await _ideationIdeaUpdate(agent3, user3.id, topic.id, ideation.id, idea.id, updatedStatement, updatedDescription, null, 403)).body;
+                    const ideaUpdate = (await _ideationIdeaUpdate(agent3, user3.id, topic.id, ideation.id, idea.id, updatedStatement, updatedDescription, null, 'published', 403)).body;
                     assert.deepEqual(ideaUpdate, {
                         status: { code: 40300, message: 'Forbidden' },
                     });
@@ -4544,7 +4544,7 @@ suite('Users', function () {
 
                 test('Fail - Unauthorized', async function () {
                     const idea = (await ideationIdeaCreate(agent, user.id, topic.id, ideation.id, 'TEST', 'TEST')).body.data;
-                    await _ideationIdeaUpdate(request.agent(app), user.id, topic.id, ideation.id, idea.id, 'TEST idea', 'description', null, 401);
+                    await _ideationIdeaUpdate(request.agent(app), user.id, topic.id, ideation.id, idea.id, 'TEST idea', 'description', null, 'published', 401);
                 });
             });
 
@@ -4638,7 +4638,7 @@ suite('Users', function () {
                 });
 
                 test('Success', async function () {
-                    const idea = (await ideationIdeaCreate(agent, user.id, topic.id, ideation.id, 'TEST', 'TEST')).body.data;
+                    const idea = (await ideationIdeaCreate(agent, user.id, topic.id, ideation.id, 'TEST', 'TEST', null, 'published')).body.data;
                     assert.property(idea, 'sessionId');
                     delete idea.sessionId;
                     const ideas = (await ideationIdeaList(agent, user.id, topic.id, ideation.id)).body.data;
@@ -4655,7 +4655,7 @@ suite('Users', function () {
                 });
 
                 test('Success - unauth', async function () {
-                    const idea = (await ideationIdeaCreate(agent, user.id, topic.id, ideation.id, 'TEST', 'TEST')).body.data;
+                    const idea = (await ideationIdeaCreate(agent, user.id, topic.id, ideation.id, 'TEST', 'TEST', null, 'published')).body.data;
                     await topicLib.topicUpdate(agent, user.id, topic.id, null, Topic.VISIBILITY.public);
                     const ideas = (await ideationIdeaListUnauth(request.agent(app), topic.id, ideation.id)).body.data;
                     assert.property(idea, 'sessionId');
@@ -4673,7 +4673,7 @@ suite('Users', function () {
                 });
 
                 test('Success - query - showModerated', async function () {
-                    const idea = (await ideationIdeaCreate(agent, user.id, topic.id, ideation.id, 'TEST', 'TEST')).body.data;
+                    const idea = (await ideationIdeaCreate(agent, user.id, topic.id, ideation.id, 'TEST', 'TEST', null, 'published')).body.data;
                     await topicLib.topicUpdate(agent, user.id, topic.id, null, Topic.VISIBILITY.public);
                     const agentModerator = request.agent(app);
                     const userModerator = await userLib.createUser(agentModerator, 'moderator' + new Date().getTime() + '@test.com', null, null);
