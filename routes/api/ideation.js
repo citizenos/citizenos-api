@@ -587,8 +587,8 @@ module.exports = function (app) {
                     const sessToken = createHash('sha256').update(req.cookies[config.session.name]).digest('base64');
 
                     const idea = Idea.build({
-                        authorId: (ideation.allowAnonymous) ? null : req.user.id,
-                        sessionId: (ideation.allowAnonymous) ? sessToken : null,
+                        authorId: (ideation.allowAnonymous && status !== 'draft') ? null : req.user.id,
+                        sessionId: (ideation.allowAnonymous && status !== 'draft') ? sessToken : null,
                         statement,
                         description,
                         imageUrl,
@@ -848,13 +848,17 @@ module.exports = function (app) {
                 return res.notFound();
             }
 
-            if ((!ideation.allowAnonymous && idea.authorId !== req.user.id) || (ideation.allowAnonymous && idea.sessionId !== sessToken)) return res.forbidden();
+            if ((!ideation.allowAnonymous && idea.authorId !== req.user.id) || (ideation.allowAnonymous && idea.status !== 'draft' && idea.sessionId !== sessToken)) return res.forbidden();
 
             await db.transaction(async function (t) {
                 fields.forEach(function (field) {
                     if (Object.keys(req.body).indexOf(field) > -1)
                         idea[field] = req.body[field];
                 });
+                if (ideation.allowAnonymous && idea.status !== 'draft') {
+                    idea.authorId = null;
+                    idea.sessionId = sessToken;
+                }
                 idea.topicId = topicId;
                 await cosActivities
                     .updateActivity(
@@ -1125,7 +1129,7 @@ module.exports = function (app) {
             });
 
             ideas.forEach((idea) => {
-                if (!idea.author.id || ideation.allowAnonymous) {
+                if (!idea.author.id || (ideation.allowAnonymous && idea.status !== 'draft')) {
                     delete idea.author;
                 }
                 delete idea.countTotal
