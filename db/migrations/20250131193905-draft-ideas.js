@@ -11,6 +11,10 @@ module.exports = {
         comment: 'Idea status',
         transaction: t
       });
+
+      await queryInterface.sequelize.query(`UPDATE "Ideas" SET "status" = 'published';`, {
+        transaction: t
+      });
     });
   },
 
