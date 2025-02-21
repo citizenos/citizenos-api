@@ -557,9 +557,12 @@ module.exports = function (app) {
         const statement = req.body.statement;
         const description = req.body.description;
         const imageUrl = req.body.imageUrl;
-        const demographics = req.body.demographics;
+        let demographics = req.body.demographics;
         const status = req.body.status || 'draft';
 
+        if (status === 'draft') {
+            demographics = null
+        }
         try {
 
             const ideation = await Ideation.findOne({
@@ -812,7 +815,7 @@ module.exports = function (app) {
             const ideaId = req.params.ideaId;
             const sessToken = createHash('sha256').update(req.cookies[config.session.name]).digest('base64');
 
-            let fields = ['statement', 'description', 'imageUrl', 'status'];
+            let fields = ['statement', 'description', 'imageUrl', 'status', 'demographics'];
 
             const idea = await Idea.findOne({
                 where: {
@@ -855,18 +858,27 @@ module.exports = function (app) {
                     if (Object.keys(req.body).indexOf(field) > -1)
                         idea[field] = req.body[field];
                 });
+
+
                 if (ideation.allowAnonymous && idea.status !== 'draft') {
                     idea.authorId = null;
                     idea.sessionId = sessToken;
                 }
+
+                const activityIdea = Idea.build(idea);
+                if (idea.status === 'draft') {
+                    delete idea.demographics;
+                }
+
+                delete activityIdea.demographics;
                 idea.topicId = topicId;
                 await cosActivities
                     .updateActivity(
-                        idea,
+                        activityIdea,
                         null,
                         {
                             type: 'User',
-                            id: req.user.id,
+                            id: (ideation.allowAnonymous) ? null : req.user.id,
                             ip: req.ip
                         },
                         req.method + ' ' + req.path,
@@ -3778,7 +3790,7 @@ module.exports = function (app) {
         });
         const [ideation, idea] = await Promise.all([ideationPromise, ideaPromise]);
 
-        if ((ideation.allowAnonymous && idea.sessionId !== sessToken) || (!ideation.allowAnonymous && req.user.id !== req.params.userId) ) {
+        if ((ideation.allowAnonymous && idea.sessionId !== sessToken) || (!ideation.allowAnonymous && req.user.id !== req.params.userId)) {
             return res.forbidden();
         }
 
@@ -3899,7 +3911,7 @@ module.exports = function (app) {
 
             const idea = attachment.Ideas[0];
 
-            if ((ideation.allowAnonymous && idea.sessionId !== sessToken) || (!ideation.allowAnonymous && req.user.id !== req.params.userId) ) {
+            if ((ideation.allowAnonymous && idea.sessionId !== sessToken) || (!ideation.allowAnonymous && req.user.id !== req.params.userId)) {
                 return res.forbidden();
             }
 
@@ -3959,7 +3971,7 @@ module.exports = function (app) {
             const [attachment, ideation] = await Promise.all([attachmentPromise, ideationPromise]);
             const idea = attachment.Ideas[0];
 
-            if ((ideation.allowAnonymous && idea.sessionId !== sessToken) || (!ideation.allowAnonymous && req.user.id !== req.params.userId) ) {
+            if ((ideation.allowAnonymous && idea.sessionId !== sessToken) || (!ideation.allowAnonymous && req.user.id !== req.params.userId)) {
                 return res.forbidden();
             }
 
