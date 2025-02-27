@@ -4580,7 +4580,7 @@ module.exports = function (app) {
                     include: [
                         {
                             model: Topic,
-                            attributes: ['id', 'title', 'visibility', 'creatorId'],
+                            attributes: ['id', 'title', 'visibility', 'creatorId', 'imageUrl', 'intro', 'description'],
                             as: 'topic',
                             required: true
                         },
