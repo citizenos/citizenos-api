@@ -721,11 +721,14 @@ module.exports = function (app) {
     };
 
     const idCardAuth = async function (req, res, next) {
-        const cert = req.headers['x-ssl-client-cert'];
+        const headerCert = req.headers['x-ssl-client-cert'];
+        const bodyCert = req.body.unverifiedCertificate;
         const token = req.query.token || req.body.token; // Token to access the ID info service
         const userId = req.query.userId;
 
-        if (config.services.idCard && cert) {
+        const cert = headerCert || bodyCert;
+
+        if (config.services.idCard && headerCert) {
             logger.error('X-SSL-Client-Cert header is not allowed when ID-card service is enabled. IF you trust your proxy, sending the X-SSL-Client-Cert, delete the services.idCard from your configuration.');
             return res.badRequest('X-SSL-Client-Cert header is not allowed when ID-card proxy service is enabled.');
         }
@@ -761,6 +764,20 @@ module.exports = function (app) {
      * @see https://bugs.chromium.org/p/chromium/issues/detail?id=775438
      * @see https://bugzilla.mozilla.org/show_bug.cgi?id=1019603
      */
+
+    app.get('/api/auth/id/init', async function (req, res, next) {
+        try {
+            const crypto = require('crypto');
+            let nonce = crypto.randomBytes(32).toString('base64');
+
+            return res.ok({
+                nonce
+            });
+        } catch (error) {
+            return next(error);
+        }
+    });
+
     app.post('/api/auth/id', idCardAuth);
     app.get('/api/auth/id', idCardAuth);
 
