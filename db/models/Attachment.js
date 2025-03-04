@@ -15,14 +15,14 @@
  */
 module.exports = function (sequelize, DataTypes) {
 
-    var SOURCES = {
+    const SOURCES = {
         upload: 'upload',
         dropbox: 'dropbox',
         onedrive: 'onedrive',
         googledrive: 'googledrive'
     };
 
-    var Attachment = sequelize.define(
+    const Attachment = sequelize.define(
         'Attachment',
         {
             id: {
@@ -63,7 +63,7 @@ module.exports = function (sequelize, DataTypes) {
             },
             creatorId: {
                 type: DataTypes.UUID,
-                comment: 'User ID of the reporter.',
+                comment: 'User ID of the creator.',
                 allowNull: true,
                 references: {
                     model: 'Users',
