@@ -25,6 +25,17 @@ module.exports = {
           defaultValue: null,
           comment: 'Encrypted Session ID when the Attachment was created'
         }, { transaction: t }),
+        queryInterface.changeColumn('Attachments', 'creatorId', {
+          type: Sequelize.UUID,
+          comment: 'User ID of the creator.',
+          allowNull: true,
+          references: {
+            model: 'Users',
+            key: 'id'
+          },
+          onUpdate: 'CASCADE',
+          onDelete: 'CASCADE'
+        }, { transaction: t }),
         queryInterface.changeColumn('Ideas', 'authorId', {
           type: Sequelize.UUID,
           allowNull: true,
@@ -39,13 +50,24 @@ module.exports = {
         queryInterface.removeColumn('Ideations', 'allowAnonymous', { transaction: t }),
         queryInterface.removeColumn('Ideas', 'sessionId', { transaction: t }),
         queryInterface.removeColumn('Attachments', 'sessionId', { transaction: t }),
+        queryInterface.changeColumn('Attachments', 'creatorId', {
+          type: Sequelize.UUID,
+          comment: 'User ID of the creator.',
+          allowNull: false,
+          references: {
+            model: 'Users',
+            key: 'id'
+          },
+          onUpdate: 'CASCADE',
+          onDelete: 'CASCADE'
+        }, { transaction: t }),
         queryInterface.changeColumn('Ideas', 'authorId', {
           type: Sequelize.UUID,
           allowNull: false,
           comment: 'Author of the idea',
           references: {
-              model: 'Users',
-              key: 'id'
+            model: 'Users',
+            key: 'id'
           },
           onUpdate: 'CASCADE',
           onDelete: 'CASCADE'
