@@ -3707,16 +3707,21 @@ module.exports = function (app) {
             if (idea.Attachments && idea.Attachments.length >= attachmentLimit) {
                 return res.badRequest('Idea attachment limit reached', 2);
             }
-
-            let data = await cosUpload.upload(req, `${topicId}_${ideaId}`);
-            if (!ideation.allowAnonymous) {
-                data.creatorId = req.user.id;
-            } else {
-                data.creatorId = null;
-                data.sessionId = sessToken;
+            let attachment;
+            try {
+                let data = await cosUpload.upload(req, `${topicId}_${ideaId}`);
+                if (!ideation.allowAnonymous) {
+                    data.creatorId = req.user.id;
+                } else {
+                    data.creatorId = null;
+                    data.sessionId = sessToken;
+                }
+                data.source = Attachment.SOURCES.upload;
+                attachment = Attachment.build(data);
+            } catch (err) {
+                logger.error(err);
+                return res.badRequest('Failed to upload attachment', 1);
             }
-            data.source = Attachment.SOURCES.upload;
-            let attachment = Attachment.build(data);
             await db.transaction(async function (t) {
                 attachment = await attachment.save({ transaction: t });
                 await IdeaAttachment.create(
