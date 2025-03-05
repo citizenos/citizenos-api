@@ -3971,7 +3971,13 @@ module.exports = function (app) {
             const [attachment, ideation] = await Promise.all([attachmentPromise, ideationPromise]);
             const idea = attachment.Ideas[0];
 
-            if ((ideation.allowAnonymous && idea.sessionId !== sessToken) || (!ideation.allowAnonymous && req.user.id !== req.params.userId)) {
+            const user = await User.findOne({
+                where: {
+                    id: req.user.userId
+                }
+            });
+
+            if ((ideation.allowAnonymous && idea.sessionId !== sessToken) || (!ideation.allowAnonymous && req.user.id !== user.id)) {
                 return res.forbidden();
             }
 
