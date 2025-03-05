@@ -410,7 +410,7 @@ module.exports = function (app) {
         try {
             const topicId = req.params.topicId;
             const ideationId = req.params.ideationId;
-            let fields = ['deadline', 'disableReplies', 'template', 'demographicsConfig'];
+            let fields = ['deadline', 'disableReplies', 'template', 'question', 'demographicsConfig'];
 
             const topic = await Topic.findOne({
                 where: {
