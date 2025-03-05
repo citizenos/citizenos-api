@@ -1,4 +1,7 @@
 'use strict';
+
+const { DataTypes } = require("sequelize");
+
 /**
  * Ideation
  *
@@ -47,6 +50,30 @@ module.exports = function (sequelize, Sequelize) {
                     }
                 }
             },
+            disableReplies: {
+                type: Sequelize.BOOLEAN,
+                allowNull: false,
+                defaultValue: false,
+                comment: 'Disable replies'
+            },
+            allowAnonymous: {
+                type: Sequelize.BOOLEAN,
+                allowNull: false,
+                defaultValue: false,
+                comment: 'Allow anonymous ideas'
+            },
+            template: {
+                type: Sequelize.TEXT,
+                allowNull: true,
+                defaultValue: null,
+                comment: 'Allow idea template'
+            },
+            demographicsConfig: {
+                type: DataTypes.JSONB,
+                allowNull: true,
+                defaultValue: null,
+                comment: 'Configuration for demographics data fields'
+            },
             createdAt: {
                 allowNull: false,
                 type: Sequelize.DATE
@@ -89,6 +116,10 @@ module.exports = function (sequelize, Sequelize) {
             question: this.dataValues.question,
             creatorId: this.dataValues.creatorId,
             deadline: this.dataValues.deadline,
+            disableReplies: this.dataValues.disableReplies,
+            allowAnonymous: this.dataValues.allowAnonymous,
+            template: this.dataValues.template,
+            demographicsConfig: this.dataValues.demographicsConfig,
             createdAt: this.dataValues.createdAt,
             updatedAt: this.dataValues.updatedAt
         };

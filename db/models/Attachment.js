@@ -56,10 +56,15 @@ module.exports = function (sequelize, DataTypes) {
                 allowNull: false,
                 comment: 'files location'
             },
+            sessionId: {
+                type: DataTypes.STRING,
+                allowNull: true,
+                comment: 'Encrypted Session ID when the idea was created'
+            },
             creatorId: {
                 type: DataTypes.UUID,
                 comment: 'User ID of the reporter.',
-                allowNull: false,
+                allowNull: true,
                 references: {
                     model: 'Users',
                     key: 'id'

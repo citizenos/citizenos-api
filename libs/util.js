@@ -160,6 +160,10 @@ const streamToString = function (readableStream) {
         });
 };
 
+const capitalizeFirstLetter = (str) => {
+    return str[0].toUpperCase() + str.slice(1);
+  }
+
 module.exports.emailToDisplayName = emailToDisplayName;
 module.exports.emailToMaskedEmail = emailToMaskedEmail;
 module.exports.escapeHtml = escapeHtml;
@@ -169,3 +173,4 @@ module.exports.randomPid = randomPid;
 module.exports.streamToPromise = streamToPromise;
 module.exports.streamToBuffer = streamToBuffer;
 module.exports.streamToString = streamToString;
+module.exports.capitalizeFirstLetter = capitalizeFirstLetter;

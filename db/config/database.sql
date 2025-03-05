@@ -2,8 +2,8 @@
 -- PostgreSQL database dump
 --
 
--- Dumped from database version 14.13 (Ubuntu 14.13-0ubuntu0.22.04.1)
--- Dumped by pg_dump version 14.13 (Ubuntu 14.13-0ubuntu0.22.04.1)
+-- Dumped from database version 16.6 (Ubuntu 16.6-0ubuntu0.24.04.1)
+-- Dumped by pg_dump version 16.6 (Ubuntu 16.6-0ubuntu0.24.04.1)
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -167,6 +167,16 @@ CREATE TYPE public."enum_Ideas_deletedReasonType" AS ENUM (
     'hate',
     'netiquette',
     'duplicate'
+);
+
+
+--
+-- Name: enum_Ideas_status; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public."enum_Ideas_status" AS ENUM (
+    'draft',
+    'published'
 );
 
 
@@ -399,7 +409,8 @@ CREATE TABLE public."Attachments" (
     source public."enum_Attachments_source" NOT NULL,
     size bigint,
     link character varying(255) NOT NULL,
-    "creatorId" uuid NOT NULL,
+    "sessionId" character varying(255),
+    "creatorId" uuid,
     "createdAt" timestamp with time zone NOT NULL,
     "updatedAt" timestamp with time zone NOT NULL,
     "deletedAt" timestamp with time zone
@@ -432,6 +443,13 @@ COMMENT ON COLUMN public."Attachments".size IS 'file size in bytes';
 --
 
 COMMENT ON COLUMN public."Attachments".link IS 'files location';
+
+
+--
+-- Name: COLUMN "Attachments"."sessionId"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."Attachments"."sessionId" IS 'Encrypted Session ID when the idea was created';
 
 
 --
@@ -1114,10 +1132,12 @@ COMMENT ON COLUMN public."IdeaVotes".value IS 'Vote value. Numeric, can be negat
 CREATE TABLE public."Ideas" (
     id uuid NOT NULL,
     "ideationId" uuid NOT NULL,
-    "authorId" uuid NOT NULL,
+    "authorId" uuid,
+    "sessionId" character varying(255) DEFAULT NULL::character varying,
     statement character varying(2048) NOT NULL,
     description text NOT NULL,
     "imageUrl" text,
+    status public."enum_Ideas_status" DEFAULT 'draft'::public."enum_Ideas_status" NOT NULL,
     "deletedById" uuid,
     "deletedReasonType" public."enum_Ideas_deletedReasonType",
     "deletedReasonText" character varying(2048),
@@ -1143,6 +1163,13 @@ COMMENT ON COLUMN public."Ideas"."authorId" IS 'Author of the idea';
 
 
 --
+-- Name: COLUMN "Ideas"."sessionId"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."Ideas"."sessionId" IS 'Encrypted Session ID when the idea was created';
+
+
+--
 -- Name: COLUMN "Ideas".statement; Type: COMMENT; Schema: public; Owner: -
 --
 
@@ -1161,6 +1188,13 @@ COMMENT ON COLUMN public."Ideas".description IS 'Idea description';
 --
 
 COMMENT ON COLUMN public."Ideas"."imageUrl" IS 'Image for the idea';
+
+
+--
+-- Name: COLUMN "Ideas".status; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."Ideas".status IS 'Idea status';
 
 
 --
@@ -1200,6 +1234,8 @@ CREATE TABLE public."Ideations" (
     "creatorId" uuid NOT NULL,
     question character varying(2048),
     deadline timestamp with time zone,
+    "disableReplies" boolean DEFAULT false NOT NULL,
+    "allowAnonymous" boolean DEFAULT false NOT NULL,
     "createdAt" timestamp with time zone NOT NULL,
     "updatedAt" timestamp with time zone NOT NULL,
     "deletedAt" timestamp with time zone
@@ -1225,6 +1261,20 @@ COMMENT ON COLUMN public."Ideations".question IS 'Question the ideation is gathe
 --
 
 COMMENT ON COLUMN public."Ideations".deadline IS 'Deadline for the ideation. If NULL then no deadline at all.';
+
+
+--
+-- Name: COLUMN "Ideations"."disableReplies"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."Ideations"."disableReplies" IS 'Disable replies';
+
+
+--
+-- Name: COLUMN "Ideations"."allowAnonymous"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."Ideations"."allowAnonymous" IS 'Allow anonymous ideas';
 
 
 --
@@ -4119,4 +4169,7 @@ COPY public."SequelizeMeta" (name) FROM stdin;
 20240618064610-create-discussion.js
 20240702054643-alter-vote-container-files.js
 20240829073146-argument-idea-attachments.js
+20250108215519-alter-ideation-disable-replies.js
+20250119150407-alter-ideation-allow-anonymous-ideas.js
+20250131193905-draft-ideas.js
 \.

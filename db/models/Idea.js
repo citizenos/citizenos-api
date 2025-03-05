@@ -41,7 +41,7 @@ module.exports = function (sequelize, DataTypes) {
             },
             authorId: {
                 type: DataTypes.UUID,
-                allowNull: false,
+                allowNull: true,
                 comment: 'Author of the idea',
                 references: {
                     model: 'Users',
@@ -49,6 +49,12 @@ module.exports = function (sequelize, DataTypes) {
                 },
                 onUpdate: 'CASCADE',
                 onDelete: 'CASCADE'
+            },
+            sessionId: {
+                type: DataTypes.STRING,
+                allowNull: true,
+                defaultValue: null,
+                comment: 'Encrypted Session ID when the idea was created'
             },
             statement: {
                 type: DataTypes.STRING(2048),
@@ -64,6 +70,12 @@ module.exports = function (sequelize, DataTypes) {
                 type: DataTypes.TEXT,
                 allowNull: true,
                 comment: 'Image for the idea'
+            },
+            status: {
+                type: DataTypes.ENUM('draft', 'published'),
+                allowNull: false,
+                defaultValue: 'draft',
+                comment: 'Idea status'
             },
             deletedById: {
                 type: DataTypes.UUID,
@@ -104,6 +116,12 @@ module.exports = function (sequelize, DataTypes) {
                 onUpdate: 'CASCADE',
                 onDelete: 'CASCADE'
             },
+            demographics: {
+                type: DataTypes.JSONB,
+                allowNull: true,
+                defaultValue: null,
+                comment: 'Demographics fields'
+            },
             createdAt: {
                 allowNull: false,
                 type: DataTypes.DATE
@@ -128,19 +146,21 @@ module.exports = function (sequelize, DataTypes) {
             statement: this.dataValues.statement,
             description: this.dataValues.description,
             imageUrl: this.dataValues.imageUrl,
+            status: this.dataValues.status,
             createdAt: this.dataValues.createdAt,
             updatedAt: this.dataValues.updatedAt,
             deletedAt: this.dataValues.deletedAt,
             deletedReasonType: this.dataValues.deletedReasonType,
-            deletedReasonText: this.dataValues.deletedReasonText
+            deletedReasonText: this.dataValues.deletedReasonText,
         };
 
 
         if (this.dataValues.author) {
             data.author = this.dataValues.author;
-        } else {
-            data.author = {};
-            data.author.id = this.dataValues.authorId;
+        }
+
+        if(this.dataValues.sessionId) {
+            data.sessionId = this.dataValues.sessionId;
         }
 
         if (this.dataValues.deletedBy) {
@@ -157,6 +177,10 @@ module.exports = function (sequelize, DataTypes) {
             data.report.id = this.dataValues.deletedByReportId;
         }
 
+        if(this.dataValues.demographics) {
+            data.demographics = this.dataValues.demographics;
+        }
+
         return data;
     };
 
@@ -164,7 +188,7 @@ module.exports = function (sequelize, DataTypes) {
         Idea.belongsTo(models.User, {
             as:'author',
             foreignKey: 'authorId',
-            constraints: true
+            allowNull: true
         });
 
         Idea.belongsTo(models.Ideation, {

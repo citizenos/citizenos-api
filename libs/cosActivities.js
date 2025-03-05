@@ -148,6 +148,14 @@ module.exports = function (app) {
             currentValues[field] = instance.dataValues[field];
         });
 
+        // diff cannot compare object states properly when
+        // previousValues was null and the field type is JSON.
+        // For example, for ideation/demigpaphics field:
+        // TypeError: Cannot use 'in' operator to search for 'age' in null
+        if (previousValues.demographicsConfig === null) {
+            previousValues.demographicsConfig = {}
+        }
+
         // Diff is only performed for JSON objects, thus if we put regular JS objects to it, it MAY result in invalid results
         // For example Date comparisons will fail if both sides have a Date object.
         const previousValuesJson = JSON.parse(JSON.stringify(previousValues));

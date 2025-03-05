@@ -1,5 +1,7 @@
 'use strict';
 
+const { capitalizeFirstLetter } = require('../../libs/util');
+
 
 
 module.exports = function (app) {
@@ -9,6 +11,7 @@ module.exports = function (app) {
     const models = app.get('models');
     const cosActivities = app.get('cosActivities');
     const authTokenRestrictedUse = app.get('middleware.authTokenRestrictedUse');
+    const { createHash } = require('crypto');
     const emailLib = app.get('email');
     const db = models.sequelize;
     const Op = db.Sequelize.Op;
@@ -46,6 +49,9 @@ module.exports = function (app) {
         const question = req.body.question;
         const deadline = req.body.deadline;
         const topicId = req.params.topicId;
+        const allowAnonymous = req.body.allowAnonymous || false;
+        const disableReplies = (allowAnonymous) ? true : (req.body.disableReplies || false);
+
         try {
             if (!question) {
                 return res.badRequest('Ideation question is missing', 1);
@@ -54,9 +60,12 @@ module.exports = function (app) {
             const ideation = Ideation.build({
                 question,
                 deadline,
-                creatorId: req.user.id
+                creatorId: req.user.id,
+                allowAnonymous,
+                disableReplies,
+                template: req.body.template,
+                demographicsConfig: req.body.demographicsConfig,
             });
-
 
             // TODO: Some of these queries can be done in parallel
             const topic = await Topic.findOne({
@@ -134,9 +143,13 @@ module.exports = function (app) {
                     i.id,
                     i.question,
                     i.deadline,
+                    i."disableReplies",
                     i."creatorId",
                     i."createdAt",
                     i."updatedAt",
+                    i."allowAnonymous",
+                    i."template",
+                    i."demographicsConfig",
                     COALESCE(ii.count, 0) as "ideas.count",
                     COALESCE(fi.count, 0) as "folders.count"
                 FROM "Ideations" i
@@ -307,10 +320,11 @@ module.exports = function (app) {
                     to_char(i."createdAt", 'HH24:MI') as "Time",
                     i.statement as "Idea heading",
                     i.description as "Idea",
+                    i.demographics as "Demographics",
                     iv."count" as "Likes",
                     f.folders as "Folders"
                 FROM "Ideas" i
-                JOIN "Users" u ON u.id = i."authorId"
+                LEFT JOIN "Users" u ON u.id = i."authorId"
                 LEFT JOIN (
                     SELECT
                         ii."ideaId",
@@ -345,8 +359,21 @@ module.exports = function (app) {
                 rowDelimiter: '\r\n'
             });
 
-            stream.on('data', function (voteResult) {
-                csvStream.write(voteResult);
+            stream.on('data', function (ideaResult) {
+                const demographics = ideaResult.Demographics || {};
+
+                delete ideaResult.Demographics;
+                const parsedDemographics = Object.keys(demographics).reduce((acc, key) => ({
+                    ...acc,
+                    [capitalizeFirstLetter(key)]: demographics[key]
+                }), {})
+
+                const csvData = {
+                    ...ideaResult,
+                    ...parsedDemographics
+                };
+
+                csvStream.write(csvData);
             });
 
             stream.on('error', function (err) {
@@ -383,7 +410,7 @@ module.exports = function (app) {
         try {
             const topicId = req.params.topicId;
             const ideationId = req.params.ideationId;
-            let fields = ['deadline', 'question'];
+            let fields = ['deadline', 'disableReplies', 'template', 'question', 'demographicsConfig'];
 
             const topic = await Topic.findOne({
                 where: {
@@ -398,11 +425,11 @@ module.exports = function (app) {
                     }
                 ]
             });
-            if (!topic || !topic.Ideations || !topic.Ideations.length) {
+            if (!topic?.Ideations?.length) {
                 return res.notFound();
             }
             if (topic.status === Topic.STATUSES.draft) {
-                fields = fields.concat(['question']);
+                fields = fields.concat(['question', 'allowAnonymous']);
             }
             const ideation = topic.Ideations[0];
             await db.transaction(async function (t) {
@@ -410,6 +437,12 @@ module.exports = function (app) {
                     if (Object.keys(req.body).indexOf(field) > -1)
                         ideation[field] = req.body[field];
                 });
+                if (!ideation.disableReplies) {
+                    ideation.disableReplies = false;
+                }
+                if (ideation.allowAnonymous) {
+                    ideation.disableReplies = true;
+                }
                 await cosActivities
                     .updateActivity(
                         ideation,
@@ -432,6 +465,10 @@ module.exports = function (app) {
                         i.id,
                         i.question,
                         i.deadline,
+                        i."disableReplies",
+                        i."allowAnonymous",
+                        i."template",
+                        i."demographicsConfig",
                         i."creatorId",
                         i."createdAt",
                         i."updatedAt",
@@ -520,6 +557,12 @@ module.exports = function (app) {
         const statement = req.body.statement;
         const description = req.body.description;
         const imageUrl = req.body.imageUrl;
+        let demographics = req.body.demographics;
+        const status = req.body.status || 'draft';
+
+        if (status === 'draft') {
+            demographics = null
+        }
         try {
 
             const ideation = await Ideation.findOne({
@@ -534,21 +577,27 @@ module.exports = function (app) {
                 ]
             });
 
-            if (!ideation || !ideation.Topics.length) {
+            if (!ideation?.Topics?.length) {
                 return res.notFound();
             }
             if (ideation.deadline && new Date(ideation.deadline) < new Date()) return res.forbidden();
+
             await db
                 .transaction(async function (t) {
 
                     await topicLib.addUserAsMember(req.user.id, topicId, t);
 
+                    const sessToken = createHash('sha256').update(req.cookies[config.session.name]).digest('base64');
+
                     const idea = Idea.build({
-                        authorId: req.user.id,
+                        authorId: (ideation.allowAnonymous && status !== 'draft') ? null : req.user.id,
+                        sessionId: (ideation.allowAnonymous && status !== 'draft') ? sessToken : null,
                         statement,
                         description,
                         imageUrl,
-                        ideationId
+                        ideationId,
+                        demographics,
+                        status
                     });
                     idea.topicId = topicId;
                     await idea.save({ transaction: t });
@@ -559,7 +608,7 @@ module.exports = function (app) {
                             ideation,
                             {
                                 type: 'User',
-                                id: req.user.id,
+                                id: (ideation.allowAnonymous) ? null : req.user.id,
                                 ip: req.ip
                             },
                             req.method + ' ' + req.path,
@@ -576,7 +625,7 @@ module.exports = function (app) {
                                     model: User,
                                     attributes: ['id', 'name', 'email', 'imageUrl'],
                                     as: 'author',
-                                    required: true
+                                    required: false
                                 }
                             ]
                         });
@@ -667,6 +716,7 @@ module.exports = function (app) {
                 "Idea"."description",
                 "Idea"."createdAt",
                 "Idea"."imageUrl",
+                "Idea"."status",
                 "Idea"."updatedAt",
                 "Idea"."deletedAt",
                 "author"."id" AS "author.id",
@@ -685,7 +735,7 @@ module.exports = function (app) {
                 ${returncolumns}
                 COALESCE(ic.count, 0) AS "replies.count"
                 FROM "Ideas" AS "Idea"
-                INNER JOIN "Users" AS "author" ON "Idea"."authorId" = "author"."id"
+                LEFT JOIN "Users" AS "author" ON "Idea"."authorId" = "author"."id"
                 LEFT JOIN "Users" dbu ON (dbu.id = "Idea"."deletedById")
                 LEFT JOIN (
                     SELECT
@@ -709,6 +759,16 @@ module.exports = function (app) {
                 raw: true,
                 nest: true
             });
+
+            const ideation = await Ideation.findOne({
+                where: {
+                    id: req.params.ideationId
+                },
+                attributes: ['allowAnonymous']
+            });
+            if (ideation.allowAnonymous) {
+                delete idea[0].author;
+            }
             return res.ok(idea[0]);
 
         } catch (err) {
@@ -731,7 +791,7 @@ module.exports = function (app) {
                     }
                 ]
             });
-            if (!ideation || !ideation.Topics.length || ideation.Topics[0].visbility === Topic.VISIBILITY.private) {
+            if (!ideation?.Topics.length || ideation.Topics[0].visbility === Topic.VISIBILITY.private) {
                 return res.notFound();
             }
 
@@ -753,7 +813,9 @@ module.exports = function (app) {
             const topicId = req.params.topicId;
             const ideationId = req.params.ideationId;
             const ideaId = req.params.ideaId;
-            let fields = ['statement', 'description', 'imageUrl'];
+            const sessToken = createHash('sha256').update(req.cookies[config.session.name]).digest('base64');
+
+            let fields = ['statement', 'description', 'imageUrl', 'status', 'demographics'];
 
             const idea = await Idea.findOne({
                 where: {
@@ -788,21 +850,35 @@ module.exports = function (app) {
             if (!idea) {
                 return res.notFound();
             }
-            if (idea.authorId !== req.user.id) return res.forbidden();
+
+            if ((!ideation.allowAnonymous && idea.authorId !== req.user.id) || (ideation.allowAnonymous && idea.status !== 'draft' && idea.sessionId !== sessToken)) return res.forbidden();
 
             await db.transaction(async function (t) {
                 fields.forEach(function (field) {
                     if (Object.keys(req.body).indexOf(field) > -1)
                         idea[field] = req.body[field];
                 });
+
+
+                if (ideation.allowAnonymous && idea.status !== 'draft') {
+                    idea.authorId = null;
+                    idea.sessionId = sessToken;
+                }
+
+                const activityIdea = Idea.build(idea);
+                if (idea.status === 'draft') {
+                    delete idea.demographics;
+                }
+
+                delete activityIdea.demographics;
                 idea.topicId = topicId;
                 await cosActivities
                     .updateActivity(
-                        idea,
+                        activityIdea,
                         null,
                         {
                             type: 'User',
-                            id: req.user.id,
+                            id: (ideation.allowAnonymous) ? null : req.user.id,
                             ip: req.ip
                         },
                         req.method + ' ' + req.path,
@@ -826,6 +902,7 @@ module.exports = function (app) {
             const ideaId = req.params.ideaId;
             const ideationId = req.params.ideationId;
             const topicId = req.params.topicId;
+            const sessToken = createHash('sha256').update(req.cookies[config.session.name]).digest('base64');
             const idea = await Idea.findOne({
                 where: {
                     id: ideaId
@@ -852,7 +929,7 @@ module.exports = function (app) {
                 res.forbidden();
             }
 
-            if (idea.authorId !== req.user.id) {
+            if ((!ideation.allowAnonymous && idea.authorId !== req.user.id) || (ideation.allowAnonymous && idea.sessionId !== sessToken)) {
                 return res.forbidden();
             }
 
@@ -893,6 +970,10 @@ module.exports = function (app) {
         const favourite = req.query.favourite;
         const folderId = req.query.folderId;
         const showModerated = req.query.showModerated || false;
+        let status = req.query.status || null;
+        if (!req.user?.id || !req.user?.userId) {
+            status = 'published';
+        }
         let groupBySql = ``;
         let joinSql = `
         LEFT JOIN (
@@ -917,6 +998,16 @@ module.exports = function (app) {
         let returncolumns = ``;
         if (authorId) {
             where += ` AND "Idea"."authorId" = :authorId `;
+        }
+        if (status) {
+            if (status === 'draft') {
+                where += ` AND "Idea"."status" = :status `;
+                where += ` AND "Idea"."authorId" = :userId `;
+            } else {
+                where += ` AND "Idea"."status" = 'published' `;
+            }
+        } else {
+            where += ` AND ("Idea"."status" = 'published' OR "Idea"."status" = 'draft' AND "Idea"."authorId"=:userId) `;
         }
         let orderSql = ' iv."up.count" DESC, "replies.count" DESC, "Idea"."createdAt" DESC ';
         if (!showModerated || showModerated == "false") {
@@ -988,6 +1079,7 @@ module.exports = function (app) {
                 "Idea"."description",
                 "Idea"."createdAt",
                 "Idea"."imageUrl",
+                "Idea"."status",
                 "Idea"."updatedAt",
                 "Idea"."deletedAt",
                 "author"."id" AS "author.id",
@@ -1007,7 +1099,7 @@ module.exports = function (app) {
                 ${returncolumns}
                 COALESCE(ic.count, 0) AS "replies.count"
                 FROM "Ideas" AS "Idea"
-                INNER JOIN "Users" AS "author" ON "Idea"."authorId" = "author"."id"
+                LEFT JOIN "Users" AS "author" ON "Idea"."authorId" = "author"."id"
                 LEFT JOIN "Users" dbu ON (dbu.id = "Idea"."deletedById")
                 LEFT JOIN (
                     SELECT
@@ -1028,6 +1120,7 @@ module.exports = function (app) {
                     userId: req.user?.id || req.user?.userId,
                     ideationId,
                     authorId,
+                    status,
                     favourite,
                     folderId,
                     limit,
@@ -1039,7 +1132,20 @@ module.exports = function (app) {
             });
 
             const count = ideas[0]?.countTotal || 0;
-            ideas.forEach((idea) => delete idea.countTotal);
+
+            const ideation = await Ideation.findOne({
+                where: {
+                    id: req.params.ideationId
+                },
+                attributes: ['allowAnonymous']
+            });
+
+            ideas.forEach((idea) => {
+                if (!idea.author.id || (ideation.allowAnonymous && idea.status !== 'draft')) {
+                    delete idea.author;
+                }
+                delete idea.countTotal
+            });
 
             return res.ok({
                 count,
@@ -1073,7 +1179,7 @@ module.exports = function (app) {
                 ]
             });
 
-            if (!ideation || !ideation.Topics.length || ideation.Topics[0].visbility === Topic.VISIBILITY.private) {
+            if (!ideation?.Topics?.length || ideation.Topics[0].visbility === Topic.VISIBILITY.private) {
                 return res.notFound();
             }
 
@@ -1112,7 +1218,7 @@ module.exports = function (app) {
                 ]
             });
 
-            if (!ideation || !ideation.Topics.length) {
+            if (!ideation?.Topics?.length) {
                 return res.notFound();
             }
 
@@ -1175,7 +1281,7 @@ module.exports = function (app) {
                     },
                 ]
             });
-            if (!ideation || !ideation.Topics.length || ideation.Topics[0].visbility === Topic.VISIBILITY.private) {
+            if (!ideation?.Topics?.length || ideation.Topics[0].visbility === Topic.VISIBILITY.private) {
                 return res.notFound();
             }
 
@@ -1206,6 +1312,7 @@ module.exports = function (app) {
                 })
                 const resFolder = folder.toJSON();
                 resFolder.ideas = ideas;
+
                 return res.ok(resFolder);
 
             } catch (err) {
@@ -1240,7 +1347,7 @@ module.exports = function (app) {
                     },
                 ]
             });
-            if (!ideation || !ideation.Topics.length || ideation.Topics[0].visbility === Topic.VISIBILITY.private) {
+            if (!ideation?.Topics?.length || ideation.Topics[0].visbility === Topic.VISIBILITY.private) {
                 return res.notFound();
             }
 
@@ -1335,7 +1442,7 @@ module.exports = function (app) {
                     },
                 ]
             });
-            if (!ideation || !ideation.Topics.length || ideation.Topics[0].visbility === Topic.VISIBILITY.private) {
+            if (!ideation?.Topics?.length || ideation.Topics[0].visbility === Topic.VISIBILITY.private) {
                 return res.notFound();
             }
 
@@ -1375,7 +1482,7 @@ module.exports = function (app) {
                 }
             ]
         });
-        if (!ideation || !ideation.Topics.length || ideation.Topics[0].visbility === Topic.VISIBILITY.private) {
+        if (!ideation?.Topics?.length || ideation.Topics[0].visbility === Topic.VISIBILITY.private) {
             return res.notFound();
         }
 
@@ -1712,7 +1819,7 @@ module.exports = function (app) {
                 ]
             });
 
-            if (!ideation || !ideation.Ideas.length || !ideation.Topics.length || ideation.Topics[0].visbility === Topic.VISIBILITY.private) {
+            if (!ideation?.Ideas?.length || !ideation?.Topics?.length || ideation.Topics[0].visbility === Topic.VISIBILITY.private) {
                 return res.notFound();
             }
 
@@ -1788,7 +1895,7 @@ module.exports = function (app) {
                 ]
             });
 
-            if (!ideation || !ideation.Ideas.length || !ideation.Topics.length || ideation.Topics[0].visbility === Topic.VISIBILITY.private) {
+            if (!ideation?.Ideas?.length || !ideation?.Topics?.length || ideation.Topics[0].visbility === Topic.VISIBILITY.private) {
                 return res.notFound();
             }
 
@@ -1865,7 +1972,7 @@ module.exports = function (app) {
             ]
         });
 
-        if (!ideation || !ideation.Ideas.length || !ideation.Topics.length || ideation.Topics[0].visbility === Topic.VISIBILITY.private) {
+        if (!ideation?.Ideas?.length || !ideation?.Topics?.length || ideation.Topics[0].visbility === Topic.VISIBILITY.private) {
             return res.notFound();
         }
 
@@ -1964,7 +2071,7 @@ module.exports = function (app) {
                 ]
             });
 
-            if (!ideation || !ideation.Topics.length || ideation.Topics[0].visbility === Topic.VISIBILITY.private) {
+            if (!ideation?.Topics?.length || ideation.Topics[0].visbility === Topic.VISIBILITY.private) {
                 return res.notFound();
             }
 
@@ -2279,6 +2386,14 @@ module.exports = function (app) {
      */
     app.post('/api/users/:userId/topics/:topicId/ideations/:ideationId/ideas/:ideaId/comments', loginCheck(['partner']), topicLib.hasPermission(TopicMemberUser.LEVELS.read, true), async (req, res, next) => {
         try {
+            const ideation = await Ideation.findOne({
+                where: {
+                    id: req.params.ideationId
+                }
+            });
+            if (ideation?.disableReplies || ideation.allowAnonymous) {
+                return res.forbidden('Replies are disabled for this ideation');
+            }
             let type = req.body.type || Comment.TYPES.reply;
             const parentId = req.body.parentId;
             const topicId = req.params.topicId;
@@ -2318,7 +2433,6 @@ module.exports = function (app) {
                     await topicLib.addUserAsMember(req.user.id, topicId, t);
 
                     await comment.save({ transaction: t });
-                    //comment.edits.createdAt = JSON.stringify(comment.createdAt);
                     const idea = await Idea.findOne({
                         where: {
                             id: req.params.ideaId
@@ -2792,9 +2906,9 @@ module.exports = function (app) {
     app.get('/api/topics/:topicId/ideations/:ideationId/ideas/:ideaId/comments', topicLib.hasVisibility(Topic.VISIBILITY.public), topicLib.isModerator(), ideaCommentsList);
 
     /**
-     * Delete Topic Comment
+     * Delete Idea Comment
      */
-    app.delete('/api/users/:userId/topics/:topicId/ideations/:ideationId/ideas/:ideaId/comments/:commentId', loginCheck(['partner']), discussionLib.isCommentCreator(), topicLib.hasPermission(TopicMemberUser.LEVELS.admin, false, null, true));
+    app.delete('/api/users/:userId/topics/:topicId/ideations/:ideationId/ideas/:ideaId/comments/:commentId', loginCheck(['partner']), discussionLib.isCommentCreator(), topicLib.hasPermission(TopicMemberUser.LEVELS.read, false, null, true));
 
     //WARNING: Don't mess up with order here! In order to use "next('route')" in the isCommentCreator, we have to have separate route definition
     //NOTE: If you have good ideas how to keep one route definition with several middlewares, feel free to share!
@@ -2875,7 +2989,6 @@ module.exports = function (app) {
                 createdAt: now,
                 type: type
             });
-            comment.set('edits', null);
             comment.set('edits', edits);
             comment.subject = subject;
             comment.text = text;
@@ -3036,7 +3149,7 @@ module.exports = function (app) {
                     }
                 );
 
-            if (!results || !results.length) {
+            if (!results?.length) {
                 return res.notFound();
             }
 
@@ -3565,8 +3678,16 @@ module.exports = function (app) {
         const attachmentLimit = config.attachments.limit || 5;
         const topicId = req.params.topicId;
         const ideaId = req.params.ideaId;
+        const sessToken = createHash('sha256').update(req.cookies[config.session.name]).digest('base64');
+
         try {
 
+            const ideation = await Ideation.findOne({
+                where: {
+                    id: req.params.ideationId
+                },
+                attributes: ['allowAnonymous']
+            });
             const idea = await Idea.findOne({
                 where: {
                     id: ideaId
@@ -3574,6 +3695,12 @@ module.exports = function (app) {
                 include: [Attachment]
             });
 
+            if (!ideation.allowAnonymous && idea.authorId !== req.user.id) {
+                return res.forbidden();
+            }
+            if (ideation.allowAnonymous && idea.status !== 'draft' && idea.sessionId !== sessToken) {
+                return res.forbidden();
+            }
             if (!idea) {
                 return res.badRequest('Matching idea not found', 3);
             }
@@ -3582,7 +3709,12 @@ module.exports = function (app) {
             }
 
             let data = await cosUpload.upload(req, `${topicId}_${ideaId}`);
-            data.creatorId = req.user.id;
+            if (!ideation.allowAnonymous) {
+                data.creatorId = req.user.id;
+            } else {
+                data.creatorId = null;
+                data.sessionId = sessToken;
+            }
             data.source = Attachment.SOURCES.upload;
             let attachment = Attachment.build(data);
             await db.transaction(async function (t) {
@@ -3601,7 +3733,7 @@ module.exports = function (app) {
                     attachment,
                     {
                         type: 'User',
-                        id: req.user.id,
+                        id: (ideation.allowAnonymous) ? null : req.user.id,
                         ip: req.ip
                     },
                     null,
@@ -3642,6 +3774,35 @@ module.exports = function (app) {
         const size = req.body.size;
         let link = req.body.link;
         const attachmentLimit = config.attachments.limit || 5;
+        const sessToken = createHash('sha256').update(req.cookies[config.session.name]).digest('base64');
+        const ideationPromise = Ideation.findOne({
+            where: {
+                id: req.params.ideationId
+            },
+            attributes: ['allowAnonymous']
+        });
+
+        const ideaPromise = Idea.findOne({
+            where: {
+                id: ideaId
+            },
+            include: [Attachment]
+        });
+        const [ideation, idea] = await Promise.all([ideationPromise, ideaPromise]);
+
+        if ((ideation.allowAnonymous && idea.sessionId !== sessToken) || (!ideation.allowAnonymous && req.user.id !== req.params.userId)) {
+            return res.forbidden();
+        }
+
+
+
+        if (!idea) {
+            return res.badRequest('Matching idea not found', 3);
+        }
+        if (idea.Attachments && idea.Attachments.length >= attachmentLimit) {
+            return res.badRequest('Idea attachment limit reached', 2);
+        }
+
         if (source !== Attachment.SOURCES.upload && !link) {
             return res.badRequest('Missing attachment link');
         }
@@ -3650,19 +3811,6 @@ module.exports = function (app) {
         }
 
         try {
-            const idea = await Idea.findOne({
-                where: {
-                    id: ideaId
-                },
-                include: [Attachment]
-            });
-
-            if (!idea) {
-                return res.badRequest('Matching idea not found', 3);
-            }
-            if (idea.Attachments && idea.Attachments.length >= attachmentLimit) {
-                return res.badRequest('Idea attachment limit reached', 2);
-            }
             let urlObject;
             if (link) {
                 urlObject = new URL(link);
@@ -3698,7 +3846,7 @@ module.exports = function (app) {
                 type: type,
                 size: size,
                 source: source,
-                creatorId: req.user.userId,
+                creatorId: (ideation.allowAnonymous) ? null : req.user.userId,
                 link: link
             });
 
@@ -3718,7 +3866,7 @@ module.exports = function (app) {
                     attachment,
                     {
                         type: 'User',
-                        id: req.user.userId,
+                        id: (ideation.allowAnonymous) ? null : req.user.userId,
                         ip: req.ip
                     },
                     null,
@@ -3743,15 +3891,36 @@ module.exports = function (app) {
             return res.badRequest('Missing attachment name');
         }
 
+        const sessToken = createHash('sha256').update(req.cookies[config.session.name]).digest('base64');
+
         try {
-            const attachment = await Attachment
+            const ideationPromise = Ideation.findOne({
+                where: {
+                    id: req.params.ideationId
+                },
+                attributes: ['allowAnonymous']
+            });
+            const attachmentPromise = Attachment
                 .findOne({
                     where: {
                         id: req.params.attachmentId
                     },
                     include: [Idea]
                 });
+            const [ideation, attachment] = await Promise.all([ideationPromise, attachmentPromise]);
 
+            const idea = attachment.Ideas[0];
+
+            if ((!ideation.allowAnonymous || idea.status === 'draft') && idea.authorId !== req.user.id) {
+                return res.forbidden();
+            }
+            if (ideation.allowAnonymous && idea.status !== 'draft' && idea.sessionId !== sessToken) {
+                return res.forbidden();
+            }
+
+            if (!idea) {
+                return res.badRequest('Matching idea not found', 3);
+            }
             attachment.name = newName;
 
             await db
@@ -3764,7 +3933,7 @@ module.exports = function (app) {
                         idea,
                         {
                             type: 'User',
-                            id: req.user.userId,
+                            id: (ideation.allowAnonymous) ? null : req.user.userId,
                             ip: req.ip
                         },
                         req.method + ' ' + req.path,
@@ -3789,12 +3958,32 @@ module.exports = function (app) {
      */
     app.delete('/api/users/:userId/topics/:topicId/ideations/:ideationId/ideas/:ideaId/attachments/:attachmentId', loginCheck(['partner']), topicLib.hasPermission(TopicMemberUser.LEVELS.read, null, [Topic.STATUSES.ideation]), async function (req, res, next) {
         try {
-            const attachment = await Attachment.findOne({
+            const sessToken = createHash('sha256').update(req.cookies[config.session.name]).digest('base64');
+            const attachmentPromise = Attachment.findOne({
                 where: {
                     id: req.params.attachmentId
                 },
                 include: [Idea]
             });
+            const ideationPromise = Ideation.findOne({
+                where: {
+                    id: req.params.ideationId
+                },
+                attributes: ['allowAnonymous']
+            });
+            const [attachment, ideation] = await Promise.all([attachmentPromise, ideationPromise]);
+            const idea = attachment.Ideas[0];
+
+            if ((!ideation.allowAnonymous || idea.status === 'draft') && idea.authorId !== req.user.id) {
+                return res.forbidden();
+            }
+            if (ideation.allowAnonymous && idea.status !== 'draft' && idea.sessionId !== sessToken) {
+                return res.forbidden();
+            }
+
+            if (!idea) {
+                return res.badRequest('Matching idea not found', 3);
+            }
 
             await db
                 .transaction(async function (t) {
@@ -3804,7 +3993,7 @@ module.exports = function (app) {
                     }
                     await cosActivities.deleteActivity(attachment, attachment.Ideas[0], {
                         type: 'User',
-                        id: req.user.userId,
+                        id: (ideation.allowAnonymous) ? null : req.user.userId,
                         ip: req.ip
                     }, req.method + ' ' + req.path, t);
 
@@ -3835,7 +4024,7 @@ module.exports = function (app) {
                     c.name as "creator.name"
                 FROM "IdeaAttachments" ia
                 JOIN "Attachments" a ON a.id = ia."attachmentId"
-                JOIN "Users" c ON c.id = a."creatorId"
+                LEFT JOIN "Users" c ON c.id = a."creatorId"
                 WHERE ia."ideaId" = :ideaId AND ia.type=:type
                 AND a."deletedAt" IS NULL
                 ;
