@@ -3698,7 +3698,7 @@ module.exports = function (app) {
             if (!ideation.allowAnonymous && idea.authorId !== req.user.id) {
                 return res.forbidden();
             }
-            if (ideation.allowAnonymous && idea.sessionId !== sessToken) {
+            if (ideation.allowAnonymous && idea.status !== 'draft' && idea.sessionId !== sessToken) {
                 return res.forbidden();
             }
             if (!idea) {
@@ -3911,7 +3911,10 @@ module.exports = function (app) {
 
             const idea = attachment.Ideas[0];
 
-            if ((ideation.allowAnonymous && idea.sessionId !== sessToken) || (!ideation.allowAnonymous && req.user.id !== req.params.userId)) {
+            if ((!ideation.allowAnonymous || idea.status === 'draft') && idea.authorId !== req.user.id) {
+                return res.forbidden();
+            }
+            if (ideation.allowAnonymous && idea.status !== 'draft' && idea.sessionId !== sessToken) {
                 return res.forbidden();
             }
 
@@ -3971,8 +3974,15 @@ module.exports = function (app) {
             const [attachment, ideation] = await Promise.all([attachmentPromise, ideationPromise]);
             const idea = attachment.Ideas[0];
 
-            if ((ideation.allowAnonymous && idea.sessionId !== sessToken) || (!ideation.allowAnonymous && req.user.id !== req.params.userId)) {
+            if ((!ideation.allowAnonymous || idea.status === 'draft') && idea.authorId !== req.user.id) {
                 return res.forbidden();
+            }
+            if (ideation.allowAnonymous && idea.status !== 'draft' && idea.sessionId !== sessToken) {
+                return res.forbidden();
+            }
+
+            if (!idea) {
+                return res.badRequest('Matching idea not found', 3);
             }
 
             await db

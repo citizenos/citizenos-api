@@ -1,3 +1,11 @@
+## 2025-03-05 - v5.1.0
+  * Feature: Anonymous idea gatherings - ideas are posted anonymously and not connected to any user
+  * Feature: Ask extra demographic information to anonymous idea gatherings
+  * Feature: User can create idea drafts - for anonymous idea gatherings idea connection with user is removed after posting
+  * Feature: Disable replies for ideas
+  * Feature: Allow users to create templates for anonymous ideas
+  * FIX: Invite and join flow UX/UI updates
+
 ## 2025-01-31 - v5.0.9
   * Fix: Issue FE #1839 - TOPICS: Partially hide email addresses shown to topic admins in the 'Invited' tab
 
