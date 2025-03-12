@@ -321,6 +321,7 @@ module.exports = function (app) {
                     i.statement as "Idea heading",
                     i.description as "Idea",
                     i.demographics as "Demographics",
+                    i.status as "Status",
                     iv."count" as "Likes",
                     f.folders as "Folders"
                 FROM "Ideas" i
@@ -347,7 +348,7 @@ module.exports = function (app) {
 					JOIN "Folders" f ON f.id = fi."folderId"
 					GROUP BY fi."ideaId"
 				) f ON f."ideaId" = i.id
-                WHERE i."ideationId" = $1
+                WHERE i."ideationId" = $1 AND i."status" != 'draft'
                 ;`,
                 [ideationId]
             );
@@ -363,6 +364,7 @@ module.exports = function (app) {
                 const demographics = ideaResult.Demographics || {};
 
                 delete ideaResult.Demographics;
+                delete ideaResult.Status;
                 const parsedDemographics = Object.keys(demographics).reduce((acc, key) => ({
                     ...acc,
                     [capitalizeFirstLetter(key)]: demographics[key]
