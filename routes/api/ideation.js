@@ -591,7 +591,7 @@ module.exports = function (app) {
 
                     const idea = Idea.build({
                         authorId: (ideation.allowAnonymous && status !== 'draft') ? null : req.user.id,
-                        sessionId: (ideation.allowAnonymous && status !== 'draft') ? sessToken : null,
+                        sessionId: (ideation.allowAnonymous && status !== 'draft') ? null : sessToken,
                         statement,
                         description,
                         imageUrl,
