@@ -156,9 +156,11 @@ module.exports = function (app) {
                 LEFT JOIN (
                     SELECT
                         "ideationId",
+                        "status",
                         COUNT("ideationId") as count
                     FROM "Ideas"
-                    GROUP BY "ideationId"
+                    GROUP BY "ideationId", "status"
+                    HAVING "status" != 'draft'
                 ) AS ii ON ii."ideationId" = i.id
                 LEFT JOIN (
                     SELECT
