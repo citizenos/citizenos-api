@@ -1,3 +1,9 @@
+## 2025-03-12 - v5.1.1
+  * Fix: Issue FE #2043: Exclude draft ideas from counter and CSV exports
+  * Fix: Issue FE #2016: Idea sessionId creation process
+  * Fix: Issue FE #2029: IDEA GATHERING: Removing image leads to a forbidden error
+  * Update: Package dependencies updated to latest versions
+
 ## 2025-03-05 - v5.1.0
   * Feature: Anonymous idea gatherings - ideas are posted anonymously and not connected to any user
   * Feature: Ask extra demographic information to anonymous idea gatherings
