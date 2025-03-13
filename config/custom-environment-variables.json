@@ -5,6 +5,7 @@
   },
   "db": {
     "url": "DATABASE_URL",
+    "passphrase": "CITIZENOS_DB_PASSPHRASE",
     "options": {
       "__name": "DATABASE_OPTIONS",
       "__format": "json"

@@ -4,6 +4,8 @@ const _ = require('lodash');
 const cryptoLib = require('../../libs/crypto');
 const hooks = require('../../libs/sequelize/hooks');
 const Sequelize = require('sequelize');
+const config = require('config');
+const validator = require('validator');
 
 /**
  * User
@@ -67,21 +69,72 @@ module.exports = function (sequelize, DataTypes) {
                 }
             },
             email: {
-                type: DataTypes.STRING(254),
-                comment: 'User registration email.',
+                type: DataTypes.TEXT,
+                comment: 'User registration email (encrypted).',
                 set: function (v) {
-                    if (v && typeof v.toLowerCase === 'function') {
-                        this.setDataValue('email', v.toLowerCase());
-                    } else {
-                        this.setDataValue('email', v);
+                    if (!v) {
+                        this.setDataValue('email', null);
+                        return;
+                    }
+                    const value = typeof v.toLowerCase === 'function' ? v.toLowerCase() : v;
+                    this.setDataValue('_email_raw', value);
+                    this.setDataValue('email', value);
+                },
+                get: async function() {
+                    const value = this.getDataValue('email');
+                    if (!value) return null;
+
+                    // If we have raw data, return it directly
+                    if (this.getDataValue('_email_raw')) {
+                        return this.getDataValue('_email_raw');
+                    }
+
+                    try {
+                        const passphrase = config.get('db.passphrase');
+                        // Try decoding base64 first (for old data)
+                        const [results] = await sequelize.query(
+                            'SELECT pgp_sym_decrypt(decode(:encrypted, \'base64\'), :passphrase, \'cipher-algo=aes256\')::text as decrypted',
+                            {
+                                replacements: {
+                                    encrypted: value,
+                                    passphrase: passphrase
+                                },
+                                type: sequelize.QueryTypes.SELECT
+                            }
+                        );
+
+                        return results?.decrypted || null;
+                    } catch (err1) {
+                        console.error('Base64 decryption failed:', err1);
+                        try {
+                            // If base64 decode fails, try direct bytea (for new data)
+                            const passphrase = config.get('db.passphrase');
+                            const [results] = await sequelize.query(
+                                'SELECT pgp_sym_decrypt(:encrypted::bytea, :passphrase, \'cipher-algo=aes256\')::text as decrypted',
+                                {
+                                    replacements: {
+                                        encrypted: value,
+                                        passphrase: passphrase
+                                    },
+                                    type: sequelize.QueryTypes.SELECT
+                                }
+                            );
+                            return results?.decrypted || null;
+                        } catch (err2) {
+                            console.error('Bytea decryption error:', err2);
+                            return null;
+                        }
                     }
                 },
                 unique: {
                     msg: 'The email address is already in use.'
                 },
                 validate: {
-                    isEmail: {
-                        msg: 'Invalid email.'
+                    isValidEmail(value) {
+                        const rawValue = this.getDataValue('_email_raw') || value;
+                        if (!validator.isEmail(rawValue)) {
+                            throw new Error('Invalid email.');
+                        }
                     }
                 }
             },
@@ -239,11 +292,20 @@ module.exports = function (sequelize, DataTypes) {
             name: this.dataValues.name,
             company: this.dataValues.company,
             language: this.dataValues.language,
-            email: this.dataValues.email, //TODO: probably should take this out of the responses, is email sensitive? Seems a bit so as used for log-in.
-            imageUrl: this.dataValues.imageUrl
+            imageUrl: this.dataValues.imageUrl,
+            email: this.dataValues.email
         };
 
         return user;
+    };
+
+    // Add a method to get decrypted values
+    User.prototype.getDecryptedFields = async function() {
+        const email = await this.email;
+        return {
+            ...this.toJSON(),
+            email
+        };
     };
 
     /**
@@ -270,6 +332,33 @@ module.exports = function (sequelize, DataTypes) {
 
         user.password = cryptoLib.getHash(user.password, 'sha256');
         options.validate = false; // Stop validation from running twice!
+    });
+
+    // Add beforeCreate hook for encryption
+    User.beforeCreate(async (user, options) => {
+        if (user.getDataValue('_email_raw')) {
+            const value = user.getDataValue('_email_raw');
+            const passphrase = config.get('db.passphrase');
+            const [result] = await sequelize.query(
+                'SELECT encode(pgp_sym_encrypt(:value::text, :passphrase, \'cipher-algo=aes256\'), \'base64\') as encrypted',
+                {
+                    replacements: {
+                        value: value,
+                        passphrase: passphrase
+                    },
+                    type: sequelize.QueryTypes.SELECT,
+                    transaction: options.transaction
+                }
+            );
+            user.setDataValue('email', result.encrypted);
+            user.setDataValue('_email_raw', null);
+        }
+    });
+
+    // Add beforeUpdate hook for encryption
+    User.beforeUpdate(async (user, options) => {
+        // Same encryption logic as beforeCreate
+        await User.beforeCreate(user, options);
     });
 
     User.SOURCES = SOURCES;
