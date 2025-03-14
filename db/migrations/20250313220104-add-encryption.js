@@ -120,8 +120,8 @@ module.exports = {
       await queryInterface.sequelize.query(`
         UPDATE "UserConnections"
         SET
-          connectionUserId_new = pgp_sym_decrypt("connectionUserId"::bytea, :passphrase)::text,
-          connectionData_new = pgp_sym_decrypt("connectionData"::bytea, :passphrase)::jsonb
+          "connectionUserId_new" = pgp_sym_decrypt("connectionUserId"::bytea, :passphrase)::text,
+          "connectionData_new" = pgp_sym_decrypt("connectionData"::bytea, :passphrase)::jsonb
         WHERE "connectionUserId" IS NOT NULL OR "connectionData" IS NOT NULL;
       `, {
         replacements: { passphrase },
