@@ -1,7 +1,7 @@
 'use strict';
 
 const _ = require('lodash');
-const config = require('config');
+const cryptoLib = require('../../libs/crypto');
 
 /**
  * UserConnection
@@ -56,52 +56,17 @@ module.exports = function (sequelize, DataTypes) {
                         this.setDataValue('connectionUserId', null);
                         return;
                     }
-                    this.setDataValue('_connectionUserId_raw', v);
-                    this.setDataValue('connectionUserId', v);
+                    this.setDataValue('connectionUserId', cryptoLib.privateEncrypt(v));
                 },
-                get: async function() {
+                get: function() {
                     const value = this.getDataValue('connectionUserId');
                     if (!value) return null;
 
-                    // If we have raw data, return it directly
-                    if (this.getDataValue('_connectionUserId_raw')) {
-                        return this.getDataValue('_connectionUserId_raw');
-                    }
-
                     try {
-                        const passphrase = config.get('db.passphrase');
-                        // Try decoding base64 first (for old data)
-                        const [results] = await sequelize.query(
-                            'SELECT pgp_sym_decrypt(decode(:encrypted, \'base64\'), :passphrase, \'cipher-algo=aes256\')::text as decrypted',
-                            {
-                                replacements: {
-                                    encrypted: value,
-                                    passphrase: passphrase
-                                },
-                                type: sequelize.QueryTypes.SELECT
-                            }
-                        );
-                        return results?.decrypted || null;
-                    } catch (err1) {
-                        console.error('Base64 decryption failed:', err1);
-                        try {
-                            // If base64 decode fails, try direct bytea (for new data)
-                            const passphrase = config.get('db.passphrase');
-                            const [results] = await sequelize.query(
-                                'SELECT pgp_sym_decrypt(:encrypted::bytea, :passphrase, \'cipher-algo=aes256\')::text as decrypted',
-                                {
-                                    replacements: {
-                                        encrypted: value,
-                                        passphrase: passphrase
-                                    },
-                                    type: sequelize.QueryTypes.SELECT
-                                }
-                            );
-                            return results?.decrypted || null;
-                        } catch (err2) {
-                            console.error('Bytea decryption error:', err2);
-                            return null;
-                        }
+                        return cryptoLib.privateDecrypt(value);
+                    } catch (err) {
+                        console.error('Decryption error:', err);
+                        return null;
                     }
                 }
             },
@@ -114,52 +79,18 @@ module.exports = function (sequelize, DataTypes) {
                         this.setDataValue('connectionData', null);
                         return;
                     }
-                    this.setDataValue('_connectionData_raw', v);
-                    this.setDataValue('connectionData', JSON.stringify(v));
+                    this.setDataValue('connectionData', cryptoLib.privateEncrypt(JSON.stringify(v)));
                 },
-                get: async function() {
+                get: function() {
                     const value = this.getDataValue('connectionData');
                     if (!value) return null;
 
-                    // If we have raw data, return it directly
-                    if (this.getDataValue('_connectionData_raw')) {
-                        return this.getDataValue('_connectionData_raw');
-                    }
-
                     try {
-                        const passphrase = config.get('db.passphrase');
-                        // Try decoding base64 first (for old data)
-                        const [results] = await sequelize.query(
-                            'SELECT pgp_sym_decrypt(decode(:encrypted, \'base64\'), :passphrase, \'cipher-algo=aes256\')::text as decrypted',
-                            {
-                                replacements: {
-                                    encrypted: value,
-                                    passphrase: passphrase
-                                },
-                                type: sequelize.QueryTypes.SELECT
-                            }
-                        );
-                        return JSON.parse(results?.decrypted || null);
-                    } catch (err1) {
-                        console.error('Base64 decryption failed:', err1);
-                        try {
-                            // If base64 decode fails, try direct bytea (for new data)
-                            const passphrase = config.get('db.passphrase');
-                            const [results] = await sequelize.query(
-                                'SELECT pgp_sym_decrypt(:encrypted::bytea, :passphrase, \'cipher-algo=aes256\')::text as decrypted',
-                                {
-                                    replacements: {
-                                        encrypted: value,
-                                        passphrase: passphrase
-                                    },
-                                    type: sequelize.QueryTypes.SELECT
-                                }
-                            );
-                            return JSON.parse(results?.decrypted || null);
-                        } catch (err2) {
-                            console.error('Bytea decryption error:', err2);
-                            return null;
-                        }
+                        const decrypted = cryptoLib.privateDecrypt(value);
+                        return JSON.parse(decrypted);
+                    } catch (err) {
+                        console.error('Decryption error:', err);
+                        return null;
                     }
                 }
             }
@@ -167,50 +98,26 @@ module.exports = function (sequelize, DataTypes) {
     );
 
     // Add beforeCreate hook for encryption
-    UserConnection.beforeCreate(async (connection, options) => {
-        const passphrase = config.get('db.passphrase');
-
+    UserConnection.beforeCreate(async (connection) => {
         // Handle connectionUserId encryption
         if (connection.getDataValue('_connectionUserId_raw')) {
             const value = connection.getDataValue('_connectionUserId_raw');
-            const [result] = await sequelize.query(
-                'SELECT pgp_sym_encrypt(:value::text, :passphrase, \'cipher-algo=aes256\') as encrypted',
-                {
-                    replacements: {
-                        value: value,
-                        passphrase: passphrase
-                    },
-                    type: sequelize.QueryTypes.SELECT,
-                    transaction: options.transaction
-                }
-            );
-            connection.setDataValue('connectionUserId', result.encrypted);
+            connection.setDataValue('connectionUserId', cryptoLib.privateEncrypt(value));
             connection.setDataValue('_connectionUserId_raw', null);
         }
 
         // Handle connectionData encryption
         if (connection.getDataValue('_connectionData_raw')) {
             const value = JSON.stringify(connection.getDataValue('_connectionData_raw'));
-            const [result] = await sequelize.query(
-                'SELECT pgp_sym_encrypt(:value::text, :passphrase, \'cipher-algo=aes256\') as encrypted',
-                {
-                    replacements: {
-                        value: value,
-                        passphrase: passphrase
-                    },
-                    type: sequelize.QueryTypes.SELECT,
-                    transaction: options.transaction
-                }
-            );
-            connection.setDataValue('connectionData', result.encrypted);
+            connection.setDataValue('connectionData', cryptoLib.privateEncrypt(value));
             connection.setDataValue('_connectionData_raw', null);
         }
     });
 
     // Add beforeUpdate hook for encryption
-    UserConnection.beforeUpdate(async (connection, options) => {
+    UserConnection.beforeUpdate(async (connection) => {
         // Same encryption logic as beforeCreate
-        await UserConnection.beforeCreate(connection, options);
+        await UserConnection.beforeCreate(connection);
     });
 
     UserConnection.associate = function (models) {
