@@ -469,15 +469,15 @@ module.exports = function (app) {
 
         const key = cachedResetCodeKey(user.id)
         const cachedResetCode = await getResetPasswordToken(key);
-    
+
         if (!cachedResetCode) {
             user.passwordResetCode = true; // Model will generate new code
             await user.save({ fields: ["passwordResetCode"] });
             await setResetPasswordToken(key, CACHED_RESET_TOKEN_TTL, user.passwordResetCode);
         }
-    
+
         const passwordResetCode = cachedResetCode || user.passwordResetCode;
-    
+
         const emailResult = await emailLib.sendPasswordReset(
             user.email,
             passwordResetCode
@@ -505,7 +505,7 @@ module.exports = function (app) {
         });
 
         const cachedResetCode = await getResetPasswordToken(cachedResetCodeKey(user.id));
-    
+
         // !user.passwordResetCode avoids the situation where passwordResetCode has not been sent (null), but user posts null to API
         if (
               !user ||
@@ -564,7 +564,7 @@ module.exports = function (app) {
         try {
             const sessionData = await smartId.authenticate(pid, countryCode);
             sessionData.userId = userId;
-            const sessionDataEncrypted = {sessionDataEncrypted: cryptoLib.encrypt(config.session.secret, sessionData)};
+            const sessionDataEncrypted = {sessionDataEncrypted: cryptoLib.privateEncrypt(config.session.secret, sessionData)};
             const token = jwt.sign(sessionDataEncrypted, config.session.privateKey, {
                 expiresIn: '5m',
                 algorithm: config.session.algorithm
@@ -686,7 +686,7 @@ module.exports = function (app) {
 
     const _getAuthReqStatus = async (authType, token, timeoutMs) => {
         const tokenData = jwt.verify(token, config.session.publicKey, {algorithms: [config.session.algorithm]});
-        const loginFlowData = cryptoLib.decrypt(config.session.secret, tokenData.sessionDataEncrypted);
+        const loginFlowData = cryptoLib.privateDecrypt(tokenData.sessionDataEncrypted);
         let authLib, defaultErrorMessage;
         switch (authType) {
             case UserConnection.CONNECTION_IDS.smartid:
@@ -699,7 +699,6 @@ module.exports = function (app) {
                 break;
         }
         const response = await authLib.statusAuth(loginFlowData.sessionId, loginFlowData.sessionHash, timeoutMs);
-
         if (response.error) {
             throw new Error(response.error, response.error.code);
         } else if (response.state === 'RUNNING') {
@@ -864,7 +863,7 @@ module.exports = function (app) {
         try {
             const sessionData = await mobileId.authenticate(pid, phoneNumber, null);
             sessionData.userId = userId;
-            const sessionDataEncrypted = {sessionDataEncrypted: cryptoLib.encrypt(config.session.secret, sessionData)};
+            const sessionDataEncrypted = {sessionDataEncrypted: cryptoLib.privateEncrypt(config.session.secret, sessionData)};
             const token = jwt.sign(sessionDataEncrypted, config.session.privateKey, {
                 expiresIn: '5m',
                 algorithm: config.session.algorithm
