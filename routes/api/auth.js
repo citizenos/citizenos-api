@@ -138,9 +138,14 @@ module.exports = function (app) {
         let termsAcceptedAt = null;
         let created = false;
 
-        if (termsVersion ) {
+        if (termsVersion) {
             termsAcceptedAt = new Date();
         }
+
+        logger.info('Signup attempt - Debug info:', {
+            email: email,
+            encryptedEmail: cryptoLib.privateEncrypt(email.toLowerCase())
+        });
 
         let user = await User
             .findOne({
@@ -168,64 +173,66 @@ module.exports = function (app) {
                 return res.ok(`Check your email ${email} to verify your account.`);
             }
         } else {
-            await db.transaction(async function (t) {
-                [user, created] = await User
-                    .findOrCreate({
-                        where: db.where(db.fn('lower', db.col('email')), db.fn('lower', email)), // Well, this will allow user to log in either using User and pass or just Google.. I think it's ok..
-                        defaults: {
-                            name,
-                            email,
-                            password,
-                            company,
-                            source: User.SOURCES.citizenos,
-                            language,
-                            termsVersion,
-                            termsAcceptedAt,
-                            preferences
-                        },
-                        transaction: t
-                    });
+            try {
+                await db.transaction(async function (t) {
+                    [user, created] = await User
+                        .findOrCreate({
+                            where: db.where(db.fn('lower', db.col('email')), db.fn('lower', email)),
+                            defaults: {
+                                name,
+                                email,
+                                password,
+                                company,
+                                source: User.SOURCES.citizenos,
+                                language,
+                                termsVersion,
+                                termsAcceptedAt,
+                                preferences
+                            },
+                            transaction: t
+                        });
+                    if (created) {
+                        logger.info('Created a new user', user.id);
+                        await cosActivities.createActivity(
+                            user,
+                            null,
+                            {
+                                type: 'User',
+                                id: user.id,
+                                ip: req.ip
+                            },
+                            req.method + ' ' + req.path,
+                            t
+                        );
+                        await UserConnection
+                            .create({
+                                userId: user.id,
+                                connectionId: UserConnection.CONNECTION_IDS.citizenos,
+                                connectionUserId: user.id,
+                                connectionData: user
+                            }, {
+                                transaction: t
+                            });
 
-                if (created) {
-                    logger.info('Created a new user', user.id);
-                    await cosActivities.createActivity(
-                        user,
-                        null,
-                        {
-                            type: 'User',
-                            id: user.id,
-                            ip: req.ip
-                        },
-                        req.method + ' ' + req.path,
-                        t
-                    );
-                }
-
-                const uc = await UserConnection
-                    .create({
-                        userId: user.id,
-                        connectionId: UserConnection.CONNECTION_IDS.citizenos,
-                        connectionUserId: user.id,
-                        connectionData: user
-                    }, {
-                        transaction: t
-                    });
-
-                return cosActivities.addActivity(
-                    uc,
-                    {
-                        type: 'User',
-                        id: user.id,
-                        ip: req.ip
-                    },
-                    null,
-                    user,
-                    req.method + ' ' + req.path,
-                    t
-                );
-            });
+                        await cosActivities.addActivity(
+                            user,
+                            {
+                                type: 'User',
+                                id: user.id,
+                                ip: req.ip
+                            },
+                            null,
+                            user,
+                            req.method + ' ' + req.path,
+                            t
+                        );
+                    }
+                });
+            } catch (err) {
+                logger.error('Error creating user:', err);
+                return res.internalServerError(err);
+            }
         }
-
         if (user) {
             if (user.emailIsVerified) {
                 setAuthCookie(req, res, user.id);
@@ -234,11 +241,11 @@ module.exports = function (app) {
                 userData.termsAcceptedAt = user.dataValues.termsAcceptedAt;
                 userData.preferences = user.dataValues.preferences;
 
-                return res.ok({user: userData , redirectSuccess});
+                return res.ok({user: userData, redirectSuccess});
             } else {
                 // Store redirect url in the token so that /api/auth/verify/:code could redirect to the url late
                 const tokenData = {
-                    redirectSuccess // TODO: Misleading naming, would like to use "redirectUri" (OpenID convention) instead, but needs RAA.ee to update codebase.
+                    redirectSuccess
                 };
 
                 const token = jwt.sign(tokenData, config.session.privateKey, {algorithm: config.session.algorithm});
@@ -250,7 +257,7 @@ module.exports = function (app) {
                 return res.ok(`Check your email ${user.email} to verify your account.`, userData);
             }
         } else {
-            return res.ok(`Check your email ${user.email} to verify your account.`);
+            return res.ok(`Check your email ${email} to verify your account.`);
         }
     }));
 
@@ -512,7 +519,7 @@ module.exports = function (app) {
         try {
             const sessionData = await smartId.authenticate(pid, countryCode);
             sessionData.userId = userId;
-            const sessionDataEncrypted = {sessionDataEncrypted: cryptoLib.encrypt(config.session.secret, sessionData)};
+            const sessionDataEncrypted = {sessionDataEncrypted: cryptoLib.privateEncrypt(config.session.secret, sessionData)};
             const token = jwt.sign(sessionDataEncrypted, config.session.privateKey, {
                 expiresIn: '5m',
                 algorithm: config.session.algorithm
@@ -634,7 +641,7 @@ module.exports = function (app) {
 
     const _getAuthReqStatus = async (authType, token, timeoutMs) => {
         const tokenData = jwt.verify(token, config.session.publicKey, {algorithms: [config.session.algorithm]});
-        const loginFlowData = cryptoLib.decrypt(config.session.secret, tokenData.sessionDataEncrypted);
+        const loginFlowData = cryptoLib.privateDecrypt(tokenData.sessionDataEncrypted);
         let authLib, defaultErrorMessage;
         switch (authType) {
             case UserConnection.CONNECTION_IDS.smartid:
@@ -647,6 +654,7 @@ module.exports = function (app) {
                 break;
         }
         const response = await authLib.statusAuth(loginFlowData.sessionId, loginFlowData.sessionHash, timeoutMs);
+        console.log('response', response);
         if (response.error) {
             throw new Error(response.error, response.error.code);
         } else if (response.state === 'RUNNING') {
@@ -811,7 +819,7 @@ module.exports = function (app) {
         try {
             const sessionData = await mobileId.authenticate(pid, phoneNumber, null);
             sessionData.userId = userId;
-            const sessionDataEncrypted = {sessionDataEncrypted: cryptoLib.encrypt(config.session.secret, sessionData)};
+            const sessionDataEncrypted = {sessionDataEncrypted: cryptoLib.privateEncrypt(config.session.secret, sessionData)};
             const token = jwt.sign(sessionDataEncrypted, config.session.privateKey, {
                 expiresIn: '5m',
                 algorithm: config.session.algorithm

@@ -94,7 +94,7 @@ module.exports = function (app) {
                         connectionUserId: sourceId,
                         connectionData: profile
                     },
-                    {transaction: t}
+                    { transaction: t }
                 );
 
                 await cosActivities.addActivity(uc, {
@@ -120,14 +120,12 @@ module.exports = function (app) {
 
                 if (!user.imageUrl) {
                     logger.info('Updating User profile image from social network');
-                    user.imageUrl = imageUrl; // Update existing Users image url in case there is none (for case where User is created via CitizenOS but logs in with social)
-
+                    user.imageUrl = imageUrl;
                     await user.save();
                 }
-
             });
         } else if (req.user?.id && req.user.id !== userConnectionInfo.userId) {
-            throw new Error('User conection error');
+            throw new Error('User connection error');
         } else {
             user = userConnectionInfo.User;
         }
@@ -174,7 +172,7 @@ module.exports = function (app) {
                 passReqToCallback: true
             },
             async function (req, accessToken, refreshToken, profile, done) {
-                logger.info('Facebook responded with profile: ', profile);
+                console.log('Facebook responded with profile: ', profile);
                 try {
                     const user = await _findOrCreateUser(UserConnection.CONNECTION_IDS.facebook, User.SOURCES.facebook, profile, req);
 
@@ -195,13 +193,22 @@ module.exports = function (app) {
             async function (email, password, done) {
 
                 if (!validator.isEmail(email)) {
-                    return done({message: 'Invalid email.'}, false);
+                    return done({ message: 'Invalid email.' }, false);
                 }
 
-                const user = await User
-                    .findOne({
-                        where: db.where(db.fn('lower', db.col('email')), db.fn('lower', email))
-                    });
+                const lowercaseEmail = email.toLowerCase();
+                const encryptedEmail = cryptoLib.privateEncrypt(lowercaseEmail);
+
+                logger.info('Login attempt - Debug info:', {
+                    originalEmail: email,
+                    lowercaseEmail: lowercaseEmail
+                });
+
+                const user = await User.findOne({
+                    where: {
+                        email: encryptedEmail
+                    }
+                });
 
                 if (user && user.password === cryptoLib.getHash(password, 'sha256')) {
                     const userData = user.toJSON();
