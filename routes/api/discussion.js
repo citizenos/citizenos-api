@@ -9,7 +9,7 @@ module.exports = function (app) {
     const models = app.get('models');
     const db = models.sequelize;
     const { injectReplacements } = require('sequelize/lib/utils/sql');
-    //const _ = app.get('lodash');
+    const cryptoLib = app.get('cryptoLib');
     const emailLib = app.get('email');
     const cosActivities = app.get('cosActivities');
 
@@ -959,11 +959,18 @@ module.exports = function (app) {
 
             const setDiscussionId = (discussionId, reply) => {
                 reply.discussionId = discussionId;
+                if (reply.creator?.email) {
+                    reply.creator.email = cryptoLib.privateDecrypt(reply.creator.email);
+                }
                 if (reply.replies.rows.length) {
                     reply.replies.rows.forEach((r) => setDiscussionId(discussionId, r));
                 }
             }
             comments.forEach((comment) => {
+                if (comment.creator?.email) {
+                    comment.creator.email = cryptoLib.privateDecrypt(comment.creator.email);
+                }
+
                 const discussionId = comment.discussionId;
                 comment.replies.rows.forEach((reply) => {
                     setDiscussionId(discussionId, reply);

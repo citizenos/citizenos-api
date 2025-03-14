@@ -1192,7 +1192,6 @@ suite('Users', function () {
                         };
 
                         const inviteCreateResult1 = (await _groupInviteUsersCreate(agentCreator, userCreator.id, group.id, '{asdasdas', 400)).body;
-
                         assert.deepEqual(inviteCreateResult1, expectedResponseBody);
 
                         const inviteCreateResult2 = (await _groupInviteUsersCreate(agentCreator, userCreator.id, group.id, 'PPPasdasdas', 400)).body;
@@ -1254,11 +1253,14 @@ suite('Users', function () {
 
                         const inviteRead = (await groupInviteUsersRead(request.agent(app), group.id, groupInviteCreated.id)).body.data;
 
-                        const expectedInvite = Object.assign({}, groupInviteCreated); // Clone
+                        const expectedInvite = { ...groupInviteCreated }; // Clone
 
                         expectedInvite.group = {
                             id: group.id,
                             name: group.name,
+                            description: group.description,
+                            visibility: group.visibility,
+                            imageUrl: group.imageUrl,
                             creator: {
                                 id: userCreator.id
                             }
@@ -1268,6 +1270,7 @@ suite('Users', function () {
                             company: null,
                             id: userCreator.id,
                             imageUrl: null,
+                            email: null,
                             name: userCreator.name
                         };
 
@@ -1296,11 +1299,14 @@ suite('Users', function () {
                         const inviteRead1 = (await groupInviteUsersRead(request.agent(app), group.id, groupInviteCreated1.id)).body.data;
                         const inviteRead2 = (await groupInviteUsersRead(request.agent(app), group.id, groupInviteCreated2.id)).body.data;
 
-                        const expectedInvite = Object.assign({}, groupInviteCreated2); // Clone
+                        const expectedInvite = {...groupInviteCreated2}; // Clone
 
                         expectedInvite.group = {
                             id: group.id,
                             name: group.name,
+                            description: group.description,
+                            visibility: group.visibility,
+                            imageUrl: group.imageUrl,
                             creator: {
                                 id: userCreator.id
                             }
@@ -1309,6 +1315,7 @@ suite('Users', function () {
                         expectedInvite.creator = {
                             company: null,
                             id: userCreator.id,
+                            email: null,
                             imageUrl: null,
                             name: userCreator.name
                         };
@@ -1351,6 +1358,7 @@ suite('Users', function () {
                         expectedInvite.group = {
                             id: group.id,
                             name: group.name,
+                            visibility: group.visibility,
                             creator: {
                                 id: userCreator.id
                             }
@@ -1359,6 +1367,7 @@ suite('Users', function () {
                         expectedInvite.creator = {
                             company: null,
                             id: userCreator.id,
+                            email: null,
                             imageUrl: null,
                             name: userCreator.name
                         };
@@ -1397,6 +1406,9 @@ suite('Users', function () {
                         expectedInvite.group = {
                             id: group.id,
                             name: group.name,
+                            description: group.description,
+                            visibility: group.visibility,
+                            imageUrl: group.imageUrl,
                             creator: {
                                 id: userCreator.id
                             }
@@ -1406,6 +1418,7 @@ suite('Users', function () {
                             company: null,
                             id: userCreator.id,
                             imageUrl: null,
+                            email: null,
                             name: userCreator.name
                         };
 
@@ -1914,10 +1927,8 @@ suite('Users', function () {
                             id: userCreator.id,
                             name: userCreator.name,
                             company: userCreator.company,
-                            invite: "{}",
                             imageUrl: userCreator.imageUrl,
                             level: GroupMemberUser.LEVELS.admin,
-                            email: userCreator.email
                         };
                         assert.property(userCreatorMember, 'latestActivity');
                         delete userCreatorMember.latestActivity;
@@ -1931,11 +1942,8 @@ suite('Users', function () {
                             id: userMember.id,
                             name: userMember.name,
                             company: userMember.company,
-                            invite: "{}",
                             imageUrl: userMember.imageUrl,
-                            level: GroupMemberUser.LEVELS.read,
-                            email: userMember.email,
-                            phoneNumber: null
+                            level: GroupMemberUser.LEVELS.read
                         };
                         assert.property(userMemberMember, 'latestActivity');
                         delete userMemberMember.latestActivity;
@@ -1957,7 +1965,6 @@ suite('Users', function () {
                             id: userCreator.id,
                             name: userCreator.name,
                             company: userCreator.company,
-                            invite: "{}",
                             imageUrl: userCreator.imageUrl,
                             level: GroupMemberUser.LEVELS.admin
                         };
@@ -1974,7 +1981,6 @@ suite('Users', function () {
                             name: userMember.name,
                             company: userMember.company,
                             imageUrl: userMember.imageUrl,
-                            invite: "{}",
                             level: GroupMemberUser.LEVELS.read
                         };
                         assert.property(userMemberMember, 'latestActivity');

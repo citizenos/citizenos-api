@@ -934,7 +934,7 @@ module.exports = function (app) {
         if (user.moderator) {
             returncolumns += `
             , c.email as "creator.email"
-            , uc."connectionData"::jsonb->'phoneNumber' AS "creator.phoneNumber"
+            , uc."connectionData" AS "creator.connectionData"
             `;
 
             returncolumns += `
@@ -1126,7 +1126,7 @@ module.exports = function (app) {
             }
         );
         let topic;
-        if (result && result.length && result[0] && (result[0].visibility === 'public' || result[0]?.permission?.level !== TopicMemberUser.LEVELS.none)) {
+        if (result?.length && result[0] && (result[0].visibility === 'public' || result[0]?.permission?.level !== TopicMemberUser.LEVELS.none)) {
             topic = result[0];
         } else {
             logger.warn('Topic not found', topicId);
@@ -1196,6 +1196,17 @@ module.exports = function (app) {
 
         if (!topic.report.id) {
             delete topic.report;
+        }
+
+        if (topic.creator.email) {
+            topic.creator.email = cryptoLib.privateDecrypt(topic.creator.email);
+        }
+        if (topic.creator.connectionData) {
+            const data = cryptoLib.privateDecrypt(topic.creator.connectionData);
+            if (data.phoneNumber) {
+                topic.creator.phoneNumber = data.phoneNumber;
+            }
+            delete topic.creator.connectionData;
         }
 
         return topic;
