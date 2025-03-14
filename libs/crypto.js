@@ -25,7 +25,7 @@ const HASH_TYPES = {
 
 const crypto = require('crypto');
 const base64url = require('base64-url');
-
+const config = require('config');
 /**
  * Get a hash of string
  *
@@ -113,6 +113,21 @@ const _getHashType = function (hash) {
     return null;
 };
 
+
+const _privateEncrypt = (data) => {
+    const privateKey = config.session.privateKey;
+    const buffer = Buffer.from(data);
+    const encrypted = crypto.privateEncrypt(privateKey, buffer);
+    return encrypted.toString('base64');
+}
+
+const _privateDecrypt = (data) => {
+    const publicKey = config.session.publicKey;
+    const buffer = Buffer.from(data, 'base64');
+    const decrypted = crypto.publicDecrypt(publicKey, buffer);
+    return decrypted.toString('utf8');
+}
+
 const algorithm = 'aes-256-ctr';
 const IV_LENGTH = 16;
 
@@ -144,5 +159,7 @@ module.exports = {
     getAtHash: _getAtHash,
     getHashType: _getHashType,
     encrypt: _encrypt,
-    decrypt: _decrypt
+    decrypt: _decrypt,
+    privateEncrypt: _privateEncrypt,
+    privateDecrypt: _privateDecrypt
 };

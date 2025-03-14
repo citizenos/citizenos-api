@@ -1,73 +1,113 @@
 'use strict';
 const config = require('config');
+const cryptoLib = require('../../libs/crypto');
 
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
-  async up (queryInterface, Sequelize) {
+  async up(queryInterface, Sequelize) {
     if (!config.get('db.passphrase')) {
       throw new Error('Passphrase is not set');
     }
 
-    const passphrase = config.get('db.passphrase');
-
     await queryInterface.sequelize.transaction(async (t) => {
-      // First ensure pgcrypto extension is available
-      await queryInterface.sequelize.query('CREATE EXTENSION IF NOT EXISTS pgcrypto;', { transaction: t });
+      // First: Add new columns
+      const columnAdditions = [
+        ['Users', 'emailEncrypted', Sequelize.TEXT],
+        ['UserConnections', 'connectionUserIdEncrypted', Sequelize.TEXT],
+        ['UserConnections', 'connectionUserDataEncrypted', Sequelize.TEXT]
+      ];
 
-      // Add new encrypted columns
-      await queryInterface.addColumn('Users', 'emailEncrypted', {
-        type: Sequelize.TEXT,
-        allowNull: true
-      }, { transaction: t });
-
-      await queryInterface.addColumn('UserConnections', 'connectionUserIdEncrypted', {
-        type: Sequelize.TEXT,
-        allowNull: true
-      }, { transaction: t });
-
-      await queryInterface.addColumn('UserConnections', 'connectionUserDataEncrypted', {
-        type: Sequelize.TEXT,
-        allowNull: true
-      }, { transaction: t });
-
-      // Encrypt existing data
-      await queryInterface.sequelize.query(`
-        UPDATE "Users"
-        SET "emailEncrypted" = pgp_sym_encrypt(email::text, :passphrase, 'cipher-algo=aes256')
-        WHERE email IS NOT NULL;
-      `, {
-        replacements: { passphrase },
-        transaction: t
-      });
-
-      await queryInterface.sequelize.query(`
-        UPDATE "UserConnections"
-        SET
-          "connectionUserIdEncrypted" = pgp_sym_encrypt("connectionUserId"::text, :passphrase, 'cipher-algo=aes256'),
-          "connectionUserDataEncrypted" = pgp_sym_encrypt("connectionData"::text, :passphrase, 'cipher-algo=aes256')
-        WHERE "connectionUserId" IS NOT NULL OR "connectionData" IS NOT NULL;
-      `, {
-        replacements: { passphrase },
-        transaction: t
-      });
-
-      // Verify data was encrypted successfully
-      const [[{ count: usersCount }]] = await queryInterface.sequelize.query(`
-        SELECT COUNT(*) as count FROM "Users"
-        WHERE email IS NOT NULL AND "emailEncrypted" IS NULL;
-      `, { transaction: t });
-
-      const [[{ count: connectionsCount }]] = await queryInterface.sequelize.query(`
-        SELECT COUNT(*) as count FROM "UserConnections"
-        WHERE ("connectionUserId" IS NOT NULL AND "connectionUserIdEncrypted" IS NULL)
-        OR ("connectionData" IS NOT NULL AND "connectionUserDataEncrypted" IS NULL);
-      `, { transaction: t });
-
-      if (usersCount > 0 || connectionsCount > 0) {
-        throw new Error('Some records failed to encrypt');
+      for (const [table, column, type] of columnAdditions) {
+        await queryInterface.addColumn(table, column, {
+          type,
+          allowNull: true
+        }, { transaction: t });
       }
 
-      // Rename columns to preserve the original names
+      // Second: Encrypt data in batches
+      const BATCH_SIZE = 1000;
+      let offset = 0;
+
+      while (true) {
+        const users = await queryInterface.sequelize.query(
+          'SELECT id, email FROM "Users" WHERE email IS NOT NULL LIMIT :limit OFFSET :offset',
+          {
+            replacements: { limit: BATCH_SIZE, offset },
+            type: Sequelize.QueryTypes.SELECT,
+            transaction: t
+          }
+        );
+
+        if (users.length === 0) break;
+
+        await Promise.all(users.map(async (user) => {
+          if (!user.email) return;
+          try {
+            const encrypted = cryptoLib.privateEncrypt(user.email);
+            await queryInterface.sequelize.query(
+              'UPDATE "Users" SET "emailEncrypted" = :encrypted WHERE id = :id',
+              {
+                replacements: { encrypted, id: user.id },
+                transaction: t
+              }
+            );
+          } catch (err) {
+            throw new Error(`Failed to encrypt email for user ${user.id}: ${err.message}`);
+          }
+        }));
+
+        offset += BATCH_SIZE;
+      }
+
+      const connections = await queryInterface.sequelize.query(
+        'SELECT "userId", "connectionId", "connectionUserId", "connectionData" FROM "UserConnections" WHERE "connectionUserId" IS NOT NULL OR "connectionData" IS NOT NULL',
+        { type: Sequelize.QueryTypes.SELECT, transaction: t }
+      );
+
+      for (const conn of connections) {
+        const updates = [];
+        const replacements = { userId: conn.userId, connectionId: conn.connectionId };
+
+        if (conn.connectionUserId) {
+          updates.push('"connectionUserIdEncrypted" = :encryptedUserId');
+          replacements.encryptedUserId = cryptoLib.privateEncrypt(conn.connectionUserId);
+        }
+
+        if (conn.connectionData) {
+          updates.push('"connectionUserDataEncrypted" = :encryptedData');
+          replacements.encryptedData = cryptoLib.privateEncrypt(JSON.stringify(conn.connectionData));
+        }
+
+        if (updates.length > 0) {
+          await queryInterface.sequelize.query(
+            `UPDATE "UserConnections" SET ${updates.join(', ')} WHERE "userId" = :userId AND "connectionId" = :connectionId`,
+            {
+              replacements,
+              transaction: t
+            }
+          );
+        }
+      }
+
+      // Verify with counts before proceeding
+      const verificationQueries = [
+        ['Users', 'email', 'emailEncrypted'],
+        ['UserConnections', 'connectionUserId', 'connectionUserIdEncrypted'],
+        ['UserConnections', 'connectionData', 'connectionUserDataEncrypted']
+      ];
+
+      for (const [table, oldCol, newCol] of verificationQueries) {
+        const [{ count }] = await queryInterface.sequelize.query(
+          `SELECT COUNT(*) as count FROM "${table}" WHERE ${oldCol} IS NOT NULL AND "${newCol}" IS NULL`,
+          { type: Sequelize.QueryTypes.SELECT, transaction: t }
+        );
+
+        if (parseInt(count) > 0) {
+          throw new Error(`Encryption verification failed for ${table}.${oldCol}`);
+        }
+      }
+
+      // Finally: Rename and cleanup columns
       await queryInterface.renameColumn('Users', 'email', 'email_old', { transaction: t });
       await queryInterface.renameColumn('Users', 'emailEncrypted', 'email', { transaction: t });
 
@@ -84,51 +124,122 @@ module.exports = {
     });
   },
 
-  async down (queryInterface, Sequelize) {
-    if (!config.get('db.passphrase')) {
-      throw new Error('Passphrase is not set');
-    }
-    const passphrase = config.get('db.passphrase');
-
+  async down(queryInterface, Sequelize) {
     await queryInterface.sequelize.transaction(async (t) => {
-      // Add temporary columns for decrypted data
-      await queryInterface.addColumn('Users', 'email_new', {
-        type: Sequelize.STRING,
-        allowNull: true
-      }, { transaction: t });
+      // Add temporary columns with NOT NULL constraint removed
+      const tempColumns = [
+        ['Users', 'email_new', Sequelize.STRING],
+        ['UserConnections', 'connectionUserId_new', Sequelize.STRING],
+        ['UserConnections', 'connectionData_new', Sequelize.JSONB]
+      ];
 
-      await queryInterface.addColumn('UserConnections', 'connectionUserId_new', {
-        type: Sequelize.STRING,
-        allowNull: true
-      }, { transaction: t });
+      for (const [table, column, type] of tempColumns) {
+        await queryInterface.addColumn(table, column, {
+          type,
+          allowNull: true
+        }, { transaction: t });
+      }
 
-      await queryInterface.addColumn('UserConnections', 'connectionData_new', {
-        type: Sequelize.JSONB,
-        allowNull: true
-      }, { transaction: t });
+      // Decrypt in batches with proper error handling
+      const BATCH_SIZE = 1000;
+      let offset = 0;
 
-      // Decrypt data
-      await queryInterface.sequelize.query(`
-        UPDATE "Users"
-        SET email_new = pgp_sym_decrypt(email::bytea, :passphrase)::text
-        WHERE email IS NOT NULL;
-      `, {
-        replacements: { passphrase },
-        transaction: t
-      });
+      while (true) {
+        const users = await queryInterface.sequelize.query(
+          'SELECT id, email FROM "Users" WHERE email IS NOT NULL LIMIT :limit OFFSET :offset',
+          {
+            replacements: { limit: BATCH_SIZE, offset },
+            type: Sequelize.QueryTypes.SELECT,
+            transaction: t
+          }
+        );
 
-      await queryInterface.sequelize.query(`
-        UPDATE "UserConnections"
-        SET
-          "connectionUserId_new" = pgp_sym_decrypt("connectionUserId"::bytea, :passphrase)::text,
-          "connectionData_new" = pgp_sym_decrypt("connectionData"::bytea, :passphrase)::jsonb
-        WHERE "connectionUserId" IS NOT NULL OR "connectionData" IS NOT NULL;
-      `, {
-        replacements: { passphrase },
-        transaction: t
-      });
+        if (users.length === 0) break;
 
-      // Rename columns back
+        await Promise.all(users.map(async (user) => {
+          if (!user.email) return;
+          try {
+            const decrypted = cryptoLib.privateDecrypt(user.email);
+            if (decrypted) {
+              await queryInterface.sequelize.query(
+                'UPDATE "Users" SET email_new = :decrypted WHERE id = :id',
+                {
+                  replacements: { decrypted, id: user.id },
+                  transaction: t
+                }
+              );
+            }
+          } catch (err) {
+            console.error(`Failed to decrypt email for user ${user.id}:`, err);
+          }
+        }));
+
+        offset += BATCH_SIZE;
+      }
+
+      const connections = await queryInterface.sequelize.query(
+        'SELECT "userId", "connectionId", "connectionUserId", "connectionData" FROM "UserConnections" WHERE "connectionUserId" IS NOT NULL OR "connectionData" IS NOT NULL',
+        { type: Sequelize.QueryTypes.SELECT, transaction: t }
+      );
+
+      for (const conn of connections) {
+        const updates = [];
+        const replacements = { userId: conn.userId, connectionId: conn.connectionId };
+
+        if (conn.connectionUserId) {
+          try {
+            const decrypted = cryptoLib.privateDecrypt(conn.connectionUserId);
+            if (decrypted) {
+              updates.push('"connectionUserId_new" = :decryptedUserId');
+              replacements.decryptedUserId = decrypted;
+            }
+          } catch (err) {
+            console.error(`Failed to decrypt connectionUserId for connection ${conn.userId}/${conn.connectionId}:`, err);
+          }
+        }
+
+        if (conn.connectionData) {
+          try {
+            const decrypted = cryptoLib.privateDecrypt(conn.connectionData);
+            if (decrypted) {
+              updates.push('"connectionData_new" = :decryptedData');
+              replacements.decryptedData = JSON.parse(decrypted);
+            }
+          } catch (err) {
+            console.error(`Failed to decrypt connectionData for connection ${conn.userId}/${conn.connectionId}:`, err);
+          }
+        }
+
+        if (updates.length > 0) {
+          await queryInterface.sequelize.query(
+            `UPDATE "UserConnections" SET ${updates.join(', ')} WHERE "userId" = :userId AND "connectionId" = :connectionId`,
+            {
+              replacements,
+              transaction: t
+            }
+          );
+        }
+      }
+
+      // Verify decryption before dropping columns
+      const verificationQueries = [
+        ['Users', 'email', 'email_new'],
+        ['UserConnections', 'connectionUserId', 'connectionUserId_new'],
+        ['UserConnections', 'connectionData', 'connectionData_new']
+      ];
+
+      for (const [table, oldCol, newCol] of verificationQueries) {
+        const [{ count }] = await queryInterface.sequelize.query(
+          `SELECT COUNT(*) as count FROM "${table}" WHERE ${oldCol} IS NOT NULL AND "${newCol}" IS NULL`,
+          { type: Sequelize.QueryTypes.SELECT, transaction: t }
+        );
+
+        if (parseInt(count) > 0) {
+          throw new Error(`Decryption verification failed for ${table}.${oldCol}`);
+        }
+      }
+
+      // Rename and cleanup
       await queryInterface.renameColumn('Users', 'email', 'email_old', { transaction: t });
       await queryInterface.renameColumn('Users', 'email_new', 'email', { transaction: t });
 

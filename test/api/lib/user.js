@@ -9,7 +9,7 @@ module.exports = function (app) {
     const userLib = require('../user');
     const models = app.get('models');
     const db = models.Sequelize;
-
+    const cryptoLib = app.get('cryptoLib');
     const User = models.User;
 
     /**
@@ -42,13 +42,13 @@ module.exports = function (app) {
         }
 
         await auth.signup(agent, email, password, language);
-
+        const encryptedEmail = cryptoLib.privateEncrypt(email.toLowerCase());
         const user = await User.update(
             {
                 emailIsVerified: true
             },
             {
-                where: db.where(db.fn('lower', db.col('email')), db.fn('lower', email)),
+                where: db.where(db.col('email'),encryptedEmail),
                 returning: true
             }
         );
