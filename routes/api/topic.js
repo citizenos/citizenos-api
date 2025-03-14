@@ -3244,11 +3244,7 @@ module.exports = function (app) {
      *
      * @see /api/users/:userId/topics/:topicId/members/users "Auto accept" - Adds a Member to the Topic instantly and sends a notification to the User.
      */
-<<<<<<< HEAD
-    app.post('/api/users/:userId/topics/:topicId/invites/users', loginCheck(), topicService.hasPermission(TopicMemberUser.LEVELS.admin, false, [Topic.STATUSES.draft, Topic.STATUSES.ideation, Topic.STATUSES.inProgress, Topic.STATUSES.voting, Topic.STATUSES.followUp]), rateLimiter(5, false), speedLimiter(1, false), asyncMiddleware(async function (req, res) {
-=======
-    app.post('/api/users/:userId/topics/:topicId/invites/users', loginCheck(), hasPermission(TopicMemberUser.LEVELS.admin, false, [Topic.STATUSES.draft, Topic.STATUSES.ideation, Topic.STATUSES.inProgress, Topic.STATUSES.voting, Topic.STATUSES.followUp]), rateLimiter(5, false), speedLimiter(1, false), async function (req, res) {
->>>>>>> 976fbc8d (#1818 (#443))
+    app.post('/api/users/:userId/topics/:topicId/invites/users', loginCheck(), topicService.hasPermission(TopicMemberUser.LEVELS.admin, false, [Topic.STATUSES.draft, Topic.STATUSES.ideation, Topic.STATUSES.inProgress, Topic.STATUSES.voting, Topic.STATUSES.followUp]), rateLimiter(5, false), speedLimiter(1, false), async function (req, res) {
         //NOTE: userId can be actual UUID or e-mail - it is comfort for the API user, but confusing in the BE code.
        try {
         const topicId = req.params.topicId;
@@ -3267,7 +3263,7 @@ module.exports = function (app) {
         const inviteMessage = members[0].inviteMessage;
         const validEmailMembers = [];
         let validUserIdMembers = [];
-
+        asyncMiddleware
         // userId can be actual UUID or e-mail, sort to relevant buckets
         members.forEach((m) => {
             if (m.userId) {
@@ -3286,7 +3282,7 @@ module.exports = function (app) {
             }
         });
 
-        const validEmails = validEmailMembers.map(m => cryptoLib.privateEncrypt(m.userId));
+        const validEmails = validEmailMembers.map(m => m.userId);
         if (validEmails.length) {
             // Find out which e-mails already exist
             const usersExistingEmail = await User
@@ -3330,7 +3326,7 @@ module.exports = function (app) {
                 });
 
                 createdUsers = await User.bulkCreate(usersToCreate);
-
+                asyncMiddleware
                 const createdUsersActivitiesCreatePromises = createdUsers.map(async function (user) {
                     return cosActivities.createActivity(
                         user,
@@ -3352,8 +3348,7 @@ module.exports = function (app) {
                 createdUsers.forEach((u) => {
                     const member = {
                         userId: u.id
-                    };
-
+                    };asyncMiddleware
                     // Sequelize defaultValue has no effect if "undefined" or "null" is set for attribute...
                     const level = validEmailMembers.find(m => m.userId === u.email).level;
                     if (level) {
@@ -3377,8 +3372,7 @@ module.exports = function (app) {
                 where: {
                     topicId: topicId
                 }
-            });
-
+            });asyncMiddleware
             const createInvitePromises = validUserIdMembers.map(async function (member) {
                 const addedMember = currentMembers.find(cmember => cmember.userId === member.userId );
 
@@ -3421,7 +3415,8 @@ module.exports = function (app) {
                                 where: {
                                     userId: member.userId,
                                     topicId: topicId
-                                }
+                                },
+                                transaction: t
                             }
                         );
                     logger.info(`Removed ${deletedCount} invites`);
