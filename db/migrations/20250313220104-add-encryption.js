@@ -181,7 +181,7 @@ module.exports = {
         'SELECT "userId", "connectionId", "connectionUserId", "connectionData" FROM "UserConnections" WHERE "connectionUserId" IS NOT NULL OR "connectionData" IS NOT NULL',
         { type: Sequelize.QueryTypes.SELECT, transaction: t }
       );
-
+      console.log('connections', connections);
       for (const conn of connections) {
         const updates = [];
         const replacements = { userId: conn.userId, connectionId: conn.connectionId };
@@ -230,7 +230,7 @@ module.exports = {
 
       for (const [table, oldCol, newCol] of verificationQueries) {
         const [{ count }] = await queryInterface.sequelize.query(
-          `SELECT COUNT(*) as count FROM "${table}" WHERE ${oldCol} IS NOT NULL AND "${newCol}" IS NULL`,
+          `SELECT COUNT(*) as count FROM "${table}" WHERE "${oldCol}" IS NOT NULL AND "${newCol}" IS NULL`,
           { type: Sequelize.QueryTypes.SELECT, transaction: t }
         );
 
