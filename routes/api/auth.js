@@ -505,7 +505,7 @@ module.exports = function (app) {
         try {
             const sessionData = await smartId.authenticate(pid, countryCode);
             sessionData.userId = userId;
-            const sessionDataEncrypted = {sessionDataEncrypted: cryptoLib.privateEncrypt(config.session.secret, sessionData)};
+            const sessionDataEncrypted = {sessionDataEncrypted: cryptoLib.encrypt(config.session.secret, sessionData)};
             const token = jwt.sign(sessionDataEncrypted, config.session.privateKey, {
                 expiresIn: '5m',
                 algorithm: config.session.algorithm
@@ -627,7 +627,7 @@ module.exports = function (app) {
 
     const _getAuthReqStatus = async (authType, token, timeoutMs) => {
         const tokenData = jwt.verify(token, config.session.publicKey, {algorithms: [config.session.algorithm]});
-        const loginFlowData = cryptoLib.privateDecrypt(tokenData.sessionDataEncrypted);
+        const loginFlowData = cryptoLib.decrypt(config.session.secret, tokenData.sessionDataEncrypted);
         let authLib, defaultErrorMessage;
         switch (authType) {
             case UserConnection.CONNECTION_IDS.smartid:
@@ -640,7 +640,7 @@ module.exports = function (app) {
                 break;
         }
         const response = await authLib.statusAuth(loginFlowData.sessionId, loginFlowData.sessionHash, timeoutMs);
-        console.log('response', response);
+
         if (response.error) {
             throw new Error(response.error, response.error.code);
         } else if (response.state === 'RUNNING') {
@@ -805,7 +805,7 @@ module.exports = function (app) {
         try {
             const sessionData = await mobileId.authenticate(pid, phoneNumber, null);
             sessionData.userId = userId;
-            const sessionDataEncrypted = {sessionDataEncrypted: cryptoLib.privateEncrypt(config.session.secret, sessionData)};
+            const sessionDataEncrypted = {sessionDataEncrypted: cryptoLib.encrypt(config.session.secret, sessionData)};
             const token = jwt.sign(sessionDataEncrypted, config.session.privateKey, {
                 expiresIn: '5m',
                 algorithm: config.session.algorithm

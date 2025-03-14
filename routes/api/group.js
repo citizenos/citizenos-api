@@ -10,9 +10,9 @@ module.exports = function (app) {
     const path = require('path');
     const logger = app.get('logger');
     const models = app.get('models');
+    const cryptoLib = app.get('cryptoLib');
     const db = models.sequelize;
     const Op = db.Sequelize.Op;
-    const _ = app.get('lodash');
     const cosActivities = app.get('cosActivities');
     const cosUpload = app.get('cosUpload');
     const validator = app.get('validator');
@@ -326,6 +326,8 @@ module.exports = function (app) {
                 level: null
             }
         }
+        group.creator.email = cryptoLib.privateDecrypt(group.creator.email);
+
         return group;
     };
 
@@ -427,6 +429,8 @@ module.exports = function (app) {
         if (group.join && !group.join.token) {
             delete group.join;
         }
+
+        group.creator.email = cryptoLib.privateDecrypt(group.creator.email);
 
         return group;
     };
@@ -576,6 +580,7 @@ module.exports = function (app) {
                 groupUpdated.parent = { id: group.parentId };
                 delete groupUpdated.parentId;
                 groupUpdated.creator = creator.dataValues;
+                groupUpdated.creator.email = cryptoLib.privateDecrypt(groupUpdated.creator.email);
                 groupUpdated.members = { users: { count: memberUsersCount }, topics: memberTopicsCount[0] };
                 t.afterCommit(() => {
                     if (!groupUpdated) {
@@ -911,8 +916,9 @@ module.exports = function (app) {
         rows.forEach(function (groupRow) {
             results.countTotal = groupRow.countTotal;
             delete groupRow.countTotal;
-            const group = _.cloneDeep(groupRow);
-            const member = _.clone(group.member);
+            groupRow.creator.email = cryptoLib.privateDecrypt(groupRow.creator.email);
+            const group = { ...groupRow };
+            const member = {...group.member };
 
 
             if (memberGroupIds.indexOf(group.id) < 0) {
@@ -923,8 +929,8 @@ module.exports = function (app) {
                 memberGroupIds.push(group.id);
             }
 
-            if (include && member && member.memberId) {
-                results.rows.find(function (g, index) {
+            if (include && member?.memberId) {
+                results.rows.forEach(function (g, index) {
                     if (g.id === group.id) {
                         const newMember = {
                             id: member.memberId
@@ -1223,7 +1229,7 @@ module.exports = function (app) {
                     delete member.email;
                     delete member.invite;
                 } else if (member.email) {
-                    member.email = member.email.replace(/^(.).*(?=@)/, '$1*****');
+                    member.email = cryptoLib.privateDecrypt(member.email).replace(/^(.).*(?=@)/, '$1*****');
                 }
 
                 delete member.countTotal;
@@ -1256,7 +1262,7 @@ module.exports = function (app) {
                 raw: true
             });
 
-        if (groupMembers.length === 1 && _.find(groupMembers, { userId: memberId })) {
+        if (groupMembers.length === 1 && groupMembers.find( m => m.userId === memberId )) {
             return res.badRequest('Cannot revoke admin permissions from the last admin member.');
         }
 
@@ -1316,7 +1322,7 @@ module.exports = function (app) {
                 raw: true
             });
 
-        if (groupMemberUsers.length === 1 && _.find(groupMemberUsers, { userId: memberId })) {
+        if (groupMemberUsers.length === 1 && groupMemberUsers.find(user => user.userId === memberId)) {
             return res.badRequest('Cannot delete the last admin member.');
         }
 
@@ -1648,7 +1654,7 @@ module.exports = function (app) {
             members = [members];
         }
         const inviteMessage = members[0].inviteMessage; // IF future holds personalized invite messages, every invite has its own message. Also, easiest solution without rewriting a lot of code.
-        const validEmailMembers = [];
+        let validEmailMembers = [];
         let validUserIdMembers = [];
 
         // Need the Group just for the activity
@@ -1664,7 +1670,7 @@ module.exports = function (app) {
             }
         });
         // userId can be actual UUID or e-mail, sort to relevant buckets
-        _(members).forEach(function (m) {
+        members.forEach(function (m) {
             // Regular members can only invite members with read permissions
             if (group.visibility === Group.VISIBILITY.public && creator.level === GroupMemberUser.LEVELS.read) {
                 m.level = GroupMemberUser.LEVELS.read;
@@ -1687,7 +1693,7 @@ module.exports = function (app) {
             }
         });
 
-        const validEmails = _.map(validEmailMembers, 'userId');
+        const validEmails = validEmailMembers.map(valid => cryptoLib.privateEncrypt(valid.userId));
         if (validEmails.length) {
             // Find out which e-mails already exist
             const usersExistingEmail = await User
@@ -1703,12 +1709,13 @@ module.exports = function (app) {
                 });
 
 
-            _(usersExistingEmail).forEach(function (u) {
-                const member = _.find(validEmailMembers, { userId: u.email });
+            usersExistingEmail.forEach(function (u) {
+                const member = validEmailMembers.find(member => member.userId === u.email);
                 if (member) {
                     member.userId = u.id;
                     validUserIdMembers.push(member);
-                    _.remove(validEmailMembers, member); // Remove the e-mail, so that by the end of the day only e-mails that did not exist remain.
+                    // Remove the e-mail, so that by the end of the day only e-mails that did not exist remain.
+                    validEmailMembers = validEmailMembers.filter(m => m.userId !== member.userId);
                 }
             });
         }
@@ -1719,7 +1726,7 @@ module.exports = function (app) {
             // The leftovers are e-mails for which User did not exist
             if (validEmailMembers.length) {
                 const usersToCreate = [];
-                _(validEmailMembers).forEach(function (m) {
+                validEmailMembers.forEach(function (m) {
                     usersToCreate.push({
                         email: m.userId,
                         language: m.language,
@@ -1749,13 +1756,13 @@ module.exports = function (app) {
 
             // Go through the newly created users and add them to the validUserIdMembers list so that they get invited
             if (createdUsers?.length) {
-                _(createdUsers).forEach(function (u) {
+                createdUsers.forEach(function (u) {
                     const member = {
                         userId: u.id
                     };
 
                     // Sequelize defaultValue has no effect if "undefined" or "null" is set for attribute...
-                    const level = _.find(validEmailMembers, { userId: u.email }).level;
+                    const level = (validEmailMembers.find( m => m.userId === u.email )).level;
                     if (level) {
                         member.level = level;
                     }
@@ -1957,7 +1964,7 @@ module.exports = function (app) {
         invites.forEach(function (invite) {
 
             if (invite.user?.email) {
-                invite.user.email = invite.user.email.replace(/^(.).*(?=@)/, '$1*****');
+                invite.user.email = cryptoLib.privateDecrypt(invite.user.email).replace(/^(.).*(?=@)/, '$1*****');
             }
             delete invite.countTotal;
         });
@@ -2558,7 +2565,7 @@ module.exports = function (app) {
                 ELSE false
             END as "favourite",
                 lvl."permission.level",
-                lvl."permission.levelGroup",`;
+                lvl."permission.levelGroup", `;
             where += `AND COALESCE(lvl."permission.level", lvl."permission.levelGroup", :defaultPermission)::"enum_TopicMemberUsers_level" > 'none'`;
             userSql = `
             LEFT JOIN (
@@ -2762,7 +2769,7 @@ module.exports = function (app) {
                             o.id = optText[0];
                             o.value = optText[1];
                             if (voteResults && voteResults.length) {
-                                const result = _.find(voteResults, { 'optionId': optText[0] });
+                                const result = voteResults.find( o => o.optionId === optText[0] );
                                 if (result) {
                                     o.voteCount = parseInt(result.voteCount, 10);
                                 }

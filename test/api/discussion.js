@@ -2148,7 +2148,7 @@ suite('Users', function () {
                     assert.equal(comments.length, 3);
 
                     // Comment 1
-                    const c1 = comments.find((c) => c.id === comment1.id);
+                    const c1 = comments.find(c => c.id === comment1.id);
 
                     assert.equal(c1.id, comment1.id);
                     assert.equal(c1.type, comment1.type);

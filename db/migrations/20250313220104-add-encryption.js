@@ -5,8 +5,8 @@ const cryptoLib = require('../../libs/crypto');
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {
-    if (!config.get('db.passphrase')) {
-      throw new Error('Passphrase is not set');
+    if (!config.get('db.privateKey')) {
+      throw new Error('Key is not set');
     }
 
     await queryInterface.sequelize.transaction(async (t) => {
@@ -39,7 +39,6 @@ module.exports = {
         );
 
         if (users.length === 0) break;
-
         await Promise.all(users.map(async (user) => {
           if (!user.email) return;
           try {
@@ -98,7 +97,7 @@ module.exports = {
 
       for (const [table, oldCol, newCol] of verificationQueries) {
         const [{ count }] = await queryInterface.sequelize.query(
-          `SELECT COUNT(*) as count FROM "${table}" WHERE ${oldCol} IS NOT NULL AND "${newCol}" IS NULL`,
+          `SELECT COUNT(*) as count FROM "${table}" WHERE "${oldCol}" IS NOT NULL AND "${newCol}" IS NULL`,
           { type: Sequelize.QueryTypes.SELECT, transaction: t }
         );
 
@@ -181,7 +180,6 @@ module.exports = {
         'SELECT "userId", "connectionId", "connectionUserId", "connectionData" FROM "UserConnections" WHERE "connectionUserId" IS NOT NULL OR "connectionData" IS NOT NULL',
         { type: Sequelize.QueryTypes.SELECT, transaction: t }
       );
-      console.log('connections', connections);
       for (const conn of connections) {
         const updates = [];
         const replacements = { userId: conn.userId, connectionId: conn.connectionId };
@@ -203,13 +201,12 @@ module.exports = {
             const decrypted = cryptoLib.privateDecrypt(conn.connectionData);
             if (decrypted) {
               updates.push('"connectionData_new" = :decryptedData');
-              replacements.decryptedData = JSON.parse(decrypted);
+              replacements.decryptedData = decrypted;
             }
           } catch (err) {
             console.error(`Failed to decrypt connectionData for connection ${conn.userId}/${conn.connectionId}:`, err);
           }
         }
-
         if (updates.length > 0) {
           await queryInterface.sequelize.query(
             `UPDATE "UserConnections" SET ${updates.join(', ')} WHERE "userId" = :userId AND "connectionId" = :connectionId`,

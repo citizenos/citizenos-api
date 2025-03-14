@@ -24,9 +24,7 @@ module.exports = function (app) {
                 if (['deletedById', 'deletedByReportId', 'edits'].indexOf(field) > -1) {
                     item = null;
                 } else {
-                    const change = _.find(resultItems, function (resItem) {
-                        return resItem.path.indexOf(field) > -1;
-                    });
+                    const change = resultItems.find(resItem => resItem);
 
                     if (!change) {
                         resultItems.push(item);

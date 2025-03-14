@@ -115,14 +115,14 @@ const _getHashType = function (hash) {
 
 
 const _privateEncrypt = (data) => {
-    const privateKey = config.session.privateKey;
+    const privateKey = config.db.privateKey;
     const buffer = Buffer.from(data);
     const encrypted = crypto.privateEncrypt(privateKey, buffer);
     return encrypted.toString('base64');
 }
 
 const _privateDecrypt = (data) => {
-    const publicKey = config.session.publicKey;
+    const publicKey = config.db.publicKey;
     const buffer = Buffer.from(data, 'base64');
     const decrypted = crypto.publicDecrypt(publicKey, buffer);
     return decrypted.toString('utf8');
