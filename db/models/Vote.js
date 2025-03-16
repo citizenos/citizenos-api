@@ -1,6 +1,5 @@
 'use strict';
 
-const _ = require('lodash');
 const hooks = require('../../libs/sequelize/hooks');
 
 /**
@@ -87,14 +86,14 @@ module.exports = function (sequelize, DataTypes) {
             },
             type: {
                 type: DataTypes.ENUM,
-                values: _.values(TYPES),
+                values: Object.values(TYPES),
                 comment: 'Vote type. Used to decide visual layout.',
                 allowNull: false,
                 defaultValue: TYPES.regular
             },
             authType: {
                 type: DataTypes.ENUM,
-                values: _.values(AUTH_TYPES),
+                values: Object.values(AUTH_TYPES),
                 allowNull: false,
                 comment: 'Authorization types. Soft - user has to be logged in to Vote. Hard - user has to digitally sign a vote.',
                 defaultValue: AUTH_TYPES.soft

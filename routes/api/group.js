@@ -917,7 +917,7 @@ module.exports = function (app) {
             results.countTotal = groupRow.countTotal;
             delete groupRow.countTotal;
             groupRow.creator.email = cryptoLib.privateDecrypt(groupRow.creator.email);
-            const group = { ...groupRow };
+            const group = structuredClone(groupRow);
             const member = {...group.member };
 
 

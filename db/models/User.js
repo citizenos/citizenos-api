@@ -1,6 +1,5 @@
 'use strict';
 
-const _ = require('lodash');
 const cryptoLib = require('../../libs/crypto');
 const hooks = require('../../libs/sequelize/hooks');
 const Sequelize = require('sequelize');
@@ -79,7 +78,7 @@ module.exports = function (sequelize, DataTypes) {
                     // Immediately encrypt the value
                     this.setDataValue('email', cryptoLib.privateEncrypt(value));
                 },
-                get: function() {
+                get: function () {
                     const value = this.getDataValue('email');
                     if (!value) return null;
 
@@ -143,7 +142,7 @@ module.exports = function (sequelize, DataTypes) {
             // TODO: Move to separate table - https://trello.com/c/71sCR1zZ/178-api-refactor-move-user-source-to-separate-usersources-table-so-i-can-store-all-connections-also-esteid-could-be-another-source-w
             source: {
                 type: DataTypes.ENUM,
-                values: _.values(SOURCES),
+                values: Object.values(SOURCES),
                 allowNull: false,
                 comment: 'User creation source.'
             },
@@ -256,14 +255,14 @@ module.exports = function (sequelize, DataTypes) {
             company: this.dataValues.company,
             language: this.dataValues.language,
             imageUrl: this.dataValues.imageUrl,
-            email: this.email // Use the getter which handles decryption
+            email: this.email
         };
 
         return user;
     };
 
     // Add a method to get decrypted values
-    User.prototype.getDecryptedFields = async function() {
+    User.prototype.getDecryptedFields = async function () {
         const email = await this.email;
         return {
             ...this.toJSON(),

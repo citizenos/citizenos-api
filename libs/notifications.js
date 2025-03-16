@@ -3,7 +3,6 @@
 
 module.exports = function (app) {
     const jsonpatch = require('fast-json-patch');
-    const _ = require('lodash');
     const models = app.get('models');
     const db = models.sequelize;
     const Topic = models.Topic;
@@ -17,7 +16,7 @@ module.exports = function (app) {
             if (activity.data.origin['@type'] === 'Topic') {
                 activity.data.origin.description = null;
             }
-            const resultObject = _.cloneDeep(activity.data.origin);
+            const resultObject = structuredClone(activity.data.origin);
             activity.data.resultObject = jsonpatch.applyPatch(resultObject, activity.data.result).newDocument;
             activity.data.result.forEach(function (item) {
                 const field = item.path.split('/')[1];

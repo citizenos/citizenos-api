@@ -1366,7 +1366,6 @@ const app = require('../../app');
 const config = app.get('config');
 const models = app.get('models');
 const db = models.sequelize;
-const _ = app.get('lodash');
 const cosUtil = app.get('util');
 const fs = app.get('fs');
 const SevenZip = app.get('SevenZip');
@@ -3109,7 +3108,7 @@ suite('Users', function () {
                     assert.equal(groupRes.permission.level, TopicMemberGroup.LEVELS.admin);
 
                     const group2Res = groups.rows.find((g) => { return g.id === group2.id });
-                    assert.isNull(group2Res.name);
+                    assert.equal(group2Res.name, group2.name);
                     assert.equal(group2Res.level, topicMemberGroupLevel);
                     assert.isNull(group2Res.permission.level);
 
@@ -3121,11 +3120,11 @@ suite('Users', function () {
                     let adminUser = null;
                     const memberUsers = [];
 
-                    for (let i = 0; i < users.rows.length; i++) {
-                        if (users.rows[i].level === TopicMemberUser.LEVELS.admin) {
-                            adminUser = users.rows[i];
+                    for (const user of users.rows) {
+                        if (user.level === TopicMemberUser.LEVELS.admin) {
+                            adminUser = user;
                         } else {
-                            memberUsers.push(users.rows[i]);
+                            memberUsers.push(user);
                         }
                     }
                     assert.equal(adminUser.id, user.id);
@@ -3255,9 +3254,15 @@ suite('Users', function () {
                         assert.equal(groups.countTotal, 2);
                         const searchString = group.name.split(' ')[1];
                         const groups2 = (await topicMembersGroupsList(agent, user.id, topic.id, 2, null, searchString, 'level', 'DESC')).body.data;
-                        assert.equal(1, groups2.count);
-                        assert.equal(1, groups2.countTotal);
+                        assert.equal(2, groups2.count);
+                        assert.equal(2, groups2.countTotal);
                         assert.isAbove(groups2.rows[0].name.toLowerCase().indexOf(searchString.toLowerCase()), -1);
+
+                        const searchString2 = group2.name;
+                        const groups3 = (await topicMembersGroupsList(agent, user.id, topic.id, 2, null, searchString2, 'level', 'DESC')).body.data;
+                        assert.equal(1, groups3.count);
+                        assert.equal(1, groups3.countTotal);
+                        assert.isAbove(groups3.rows[0].name.toLowerCase().indexOf(searchString.toLowerCase()), -1);
                     });
 
                 });
@@ -4003,6 +4008,9 @@ suite('Users', function () {
                         expectedInvite.topic = {
                             id: topic.id,
                             title: topic.title,
+                            description: topic.description,
+                            imageUrl: topic.imageUrl,
+                            intro: topic.intro,
                             visibility: topic.visibility,
                             creator: {
                                 id: userCreator.id
@@ -4012,6 +4020,7 @@ suite('Users', function () {
                         expectedInvite.creator = {
                             company: null,
                             id: userCreator.id,
+                            email: null,
                             imageUrl: null,
                             name: userCreator.name
                         };
@@ -4046,6 +4055,9 @@ suite('Users', function () {
                         expectedInvite.topic = {
                             id: topic.id,
                             title: topic.title,
+                            description: topic.description,
+                            imageUrl: topic.imageUrl,
+                            intro: topic.intro,
                             visibility: topic.visibility,
                             creator: {
                                 id: userCreator.id
@@ -4055,6 +4067,7 @@ suite('Users', function () {
                         expectedInvite.creator = {
                             company: null,
                             id: userCreator.id,
+                            email: null,
                             imageUrl: null,
                             name: userCreator.name
                         };
@@ -4096,6 +4109,9 @@ suite('Users', function () {
                         expectedInvite.topic = {
                             id: topic.id,
                             title: topic.title,
+                            description: topic.description,
+                            imageUrl: topic.imageUrl,
+                            intro: topic.intro,
                             visibility: topic.visibility,
                             creator: {
                                 id: userCreator.id
@@ -4105,6 +4121,7 @@ suite('Users', function () {
                         expectedInvite.creator = {
                             company: null,
                             id: userCreator.id,
+                            email: null,
                             imageUrl: null,
                             name: userCreator.name
                         };
@@ -4139,6 +4156,9 @@ suite('Users', function () {
                         expectedInvite.topic = {
                             id: topic.id,
                             title: topic.title,
+                            description: topic.description,
+                            imageUrl: topic.imageUrl,
+                            intro: topic.intro,
                             visibility: topic.visibility,
                             creator: {
                                 id: userCreator.id
@@ -4148,6 +4168,7 @@ suite('Users', function () {
                         expectedInvite.creator = {
                             company: null,
                             id: userCreator.id,
+                            email: null,
                             imageUrl: null,
                             name: userCreator.name
                         };
@@ -4277,6 +4298,9 @@ suite('Users', function () {
                         expectedInvite.topic = {
                             id: topic.id,
                             title: topic.title,
+                            description: topic.description,
+                            imageUrl: topic.imageUrl,
+                            intro: topic.intro,
                             visibility: topic.visibility,
                             creator: {
                                 id: userCreator.id
@@ -4285,6 +4309,7 @@ suite('Users', function () {
 
                         expectedInvite.creator = {
                             company: null,
+                            email: null,
                             id: userCreator.id,
                             imageUrl: null,
                             name: userCreator.name
@@ -5301,7 +5326,7 @@ suite('Users', function () {
                     assert.equal(options.count, 3);
                     assert.equal(options.rows.length, 3);
 
-                    _(options.rows).forEach(function (o, index) {
+                    options.rows.forEach(function (o, index) {
                         assert.property(o, 'id');
                         assert.equal(o.value, voteOptions[index].value);
                     });
@@ -8152,7 +8177,7 @@ suite('Users', function () {
                     assert.equal(list.count, mentions.length);
 
                     // Mention
-                    const m1 = _.find(mentions, { id: mention1.id });
+                    const m1 = mentions.find(m => m.id === mention1.id );
                     assert.deepEqual(m1, mention1);
                 });
 

@@ -472,7 +472,7 @@ module.exports = function (app) {
             ]
         });
 
-        if (!discussion || !discussion.Topics.length) {
+        if (!discussion?.Topics?.length) {
             return res.notFound();
         }
         if (discussion.deadline && new Date(discussion.deadline) < new Date()) return res.forbidden();
@@ -626,7 +626,7 @@ module.exports = function (app) {
             types = types.filter((type) => Comment.TYPES[type]);
         }
 
-        if (types && types.length) {
+        if (types?.length) {
             where += ` AND ct.type IN (:types) `
         }
 

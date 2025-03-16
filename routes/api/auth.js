@@ -142,6 +142,10 @@ module.exports = function (app) {
             termsAcceptedAt = new Date();
         }
 
+        if (!email || !validator.isEmail(email)) {
+            return res.badRequest('Invalid email');
+        };
+
         logger.info('Signup attempt - Debug info:', {
             email: email,
             encryptedEmail: cryptoLib.privateEncrypt(email.toLowerCase())
@@ -149,7 +153,7 @@ module.exports = function (app) {
 
         let user = await User
             .findOne({
-                where: db.where(db.fn('lower', db.col('email')), db.fn('lower', email)),
+                where: db.where(db.col('email'), cryptoLib.privateEncrypt(email.toLowerCase())),
                 include: [UserConnection]
             });
         if (user) {
@@ -229,8 +233,16 @@ module.exports = function (app) {
                     }
                 });
             } catch (err) {
-                logger.error('Error creating user:', err);
-                return res.internalServerError(err);
+                if (err.errors) {
+                    let resErrors = {};
+                    Object.keys(err.errors).forEach(key => {
+                        resErrors[err.errors[key].path] = err.errors[key].message;
+                    });
+                    return res.badRequest(resErrors);
+                } else {
+                    logger.error('Error creating user:', err);
+                    return res.internalServerError(err);
+                }
             }
         }
         if (user) {

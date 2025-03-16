@@ -1142,7 +1142,7 @@ suite('Users', function () {
 
                     data.rows.forEach(function (comment) {
                         assert.equal(comment.creator.email, creator.email);
-                        if (comment.replies && comment.replies.rows) {
+                        if (comment.replies?.rows) {
                             comment.replies.rows.forEach(function (creply) {
                                 assert.equal(creply.creator.email, creator.email);
                             });
