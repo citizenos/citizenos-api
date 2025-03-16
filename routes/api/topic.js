@@ -3282,7 +3282,7 @@ module.exports = function (app) {
             }
         });
 
-        const validEmails = validEmailMembers.map(m => m.userId);
+        const validEmails = validEmailMembers.map(m => cryptoLib.privateEncrypt(m.userId));
         if (validEmails.length) {
             // Find out which e-mails already exist
             const usersExistingEmail = await User
@@ -3326,7 +3326,6 @@ module.exports = function (app) {
                 });
 
                 createdUsers = await User.bulkCreate(usersToCreate);
-                asyncMiddleware
                 const createdUsersActivitiesCreatePromises = createdUsers.map(async function (user) {
                     return cosActivities.createActivity(
                         user,
