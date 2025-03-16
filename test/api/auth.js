@@ -1235,10 +1235,8 @@ suite('Auth', function () {
             const signupResult = (await _signup(agent, email, password, null, null, null, null, 400)).body;
             const expected = {
                 status: {
-                    code: 40000
-                },
-                errors: {
-                    email: 'Invalid email.'
+                    code: 40000,
+                    message: 'Invalid email'
                 }
             };
 
@@ -1252,10 +1250,8 @@ suite('Auth', function () {
             const signupResult = (await _signup(agent, email, password, null, null, null, null, 400)).body;
             const expected = {
                 status: {
-                    code: 40000
-                },
-                errors: {
-                    email: 'Invalid email.'
+                    code: 40000,
+                    message: 'Invalid email'
                 }
             };
 
@@ -1302,11 +1298,8 @@ suite('Auth', function () {
             const signupResult = (await _signup(agent, email, password, null, null, null, null, 400)).body;
             const expected = {
                 status: {
-                    code: 40000
-                },
-                errors: {
-                    email: "Invalid email.",
-                    password: 'Password must be at least 6 character long, containing at least 1 digit, 1 lower and upper case character.'
+                    code: 40000,
+                    message: 'Invalid email'
                 }
             };
             assert.deepEqual(signupResult, expected);

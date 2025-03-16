@@ -10,7 +10,6 @@ module.exports = function (app) {
     const { injectReplacements } = require('sequelize/lib/utils/sql');
     const cryptoLib = app.get('cryptoLib');
     const logger = app.get('logger');
-    const _ = app.get('lodash');
     const cosActivities = app.get('cosActivities');
     const loginCheck = app.get('middleware.loginCheck');
     const topicLib = require('./topic')(app);
@@ -392,8 +391,14 @@ module.exports = function (app) {
             returnList.push(returnActivity);
         });
 
-        _.sortBy(returnList, function (activity) {
-            return activity.updatedAt;
+        returnList.sort(function (a, b) {
+            if (a.updatedAt < b.updatedAt) {
+                return -1;
+            } else if (a.updatedAt > b.updatedAt) {
+                return 1;
+            } else {
+                return 0;
+            }
         });
 
         return returnList;

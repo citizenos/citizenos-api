@@ -1,6 +1,5 @@
 'use strict';
 
-const _ = require('lodash');
 const cryptoLib = require('../../libs/crypto');
 
 /**
@@ -42,7 +41,7 @@ module.exports = function (sequelize, DataTypes) {
             },
             connectionId: {
                 type: DataTypes.ENUM,
-                values: _.values(CONNECTION_IDS),
+                values: Object.values(CONNECTION_IDS),
                 allowNull: false,
                 comment: 'User connection identificator.',
                 primaryKey: true

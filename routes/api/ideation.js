@@ -8,6 +8,7 @@ module.exports = function (app) {
     const config = app.get('config');
     const logger = app.get('logger');
     const loginCheck = app.get('middleware.loginCheck');
+    const cryptoLib = app.get('cryptoLib');
     const models = app.get('models');
     const cosActivities = app.get('cosActivities');
     const authTokenRestrictedUse = app.get('middleware.authTokenRestrictedUse');
@@ -482,9 +483,11 @@ module.exports = function (app) {
                     LEFT JOIN (
                         SELECT
                             "ideationId",
+                            "status",
                             COUNT("ideationId") as count
                         FROM "Ideas"
-                        GROUP BY "ideationId"
+                        GROUP BY "ideationId", "status"
+                        HAVING "status" != 'draft'
                     ) AS ii ON ii."ideationId" = i.id
                     LEFT JOIN (
                         SELECT
@@ -624,6 +627,7 @@ module.exports = function (app) {
                             where: {
                                 id: idea.id
                             },
+                            attributes: ['id', 'ideationId', 'statement', 'description', 'imageUrl', 'status', 'createdAt', 'updatedAt', 'deletedById', 'deletedByReportId', 'deletedAt', 'deletedReasonType', 'deletedReasonText', 'authorId', 'demographics'],
                             include: [
                                 {
                                     model: User,
@@ -773,6 +777,11 @@ module.exports = function (app) {
             if (ideation.allowAnonymous) {
                 delete idea[0].author;
             }
+
+            if (idea[0].author.email) {
+                idea[0].author.email = cryptoLib.privateDecrypt(idea[0].author.email);
+            }
+
             return res.ok(idea[0]);
 
         } catch (err) {
@@ -825,6 +834,7 @@ module.exports = function (app) {
                 where: {
                     id: ideaId
                 },
+                attributes: ['id', 'ideationId', 'statement', 'description', 'imageUrl', 'status', 'createdAt', 'updatedAt', 'deletedById', 'deletedByReportId', 'deletedAt', 'deletedReasonType', 'deletedReasonText', 'authorId', 'demographics'],
                 include: [
                     {
                         model: User,
@@ -1147,6 +1157,8 @@ module.exports = function (app) {
             ideas.forEach((idea) => {
                 if (!idea.author.id || (ideation.allowAnonymous && idea.status !== 'draft')) {
                     delete idea.author;
+                } else {
+                    idea.author.email = cryptoLib.privateDecrypt(idea.author.email);
                 }
                 delete idea.countTotal
             });
@@ -1299,6 +1311,7 @@ module.exports = function (app) {
                     where: {
                         ideationId: req.params.ideationId
                     },
+                    attributes: ['id', 'ideationId', 'statement', 'description', 'imageUrl', 'status', 'createdAt', 'updatedAt', 'deletedById', 'deletedByReportId', 'deletedAt', 'deletedReasonType', 'deletedReasonText', 'authorId', 'demographics'],
                     include: [
                         {
                             model: User,
@@ -1365,6 +1378,7 @@ module.exports = function (app) {
                     where: {
                         ideationId: req.params.ideationId
                     },
+                    attributes: ['id', 'ideationId', 'statement', 'description', 'imageUrl', 'status', 'createdAt', 'updatedAt', 'deletedById', 'deletedByReportId', 'deletedAt', 'deletedReasonType', 'deletedReasonText', 'authorId', 'demographics'],
                     include: [
                         {
                             model: User,
@@ -1404,6 +1418,7 @@ module.exports = function (app) {
                 where: {
                     ideationId: req.params.ideationId
                 },
+                attributes: ['id', 'ideationId', 'statement', 'description', 'imageUrl', 'status', 'createdAt', 'updatedAt', 'deletedById', 'deletedByReportId', 'deletedAt', 'deletedReasonType', 'deletedReasonText', 'authorId', 'demographics'],
                 include: [
                     {
                         model: User,
@@ -2547,7 +2562,7 @@ module.exports = function (app) {
             types = types.filter((type) => Comment.TYPES[type]);
         }
 
-        if (types && types.length) {
+        if (types?.length) {
             where += ` AND ic.type IN (:types) `
         }
 
@@ -2888,6 +2903,11 @@ module.exports = function (app) {
                     countRes[item.type] = item.count;
                 });
             }
+            comments.forEach((comment) => {
+                if (comment.creator.email) {
+                    comment.creator.email = cryptoLib.privateDecrypt(comment.creator.email);
+                }
+            });
             countRes.total = countRes.pro + countRes.con + countRes.poi + countRes.reply;
             return res.ok({
                 count: countRes,
