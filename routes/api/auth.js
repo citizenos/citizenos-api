@@ -399,13 +399,13 @@ module.exports = function (app) {
 
             if (getStateCookie(req, COOKIE_NAME_OPENID_AUTH_STATE)) { // We are in the middle of OpenID authorization flow
                 return res.redirect(urlLib.getApi('/api/auth/openid/authorize'));
-            } else {  
+            } else {
                 // Check if this is the first time user uses this link.
                 // If it's first time, then we authorize user.
                 if (!emailIsVerified) {
                     setAuthCookie(req, res, id);
-                }         
-        
+                }
+
                 return res.redirect(302, redirectSuccess);
             }
         } catch (err) {
@@ -448,7 +448,9 @@ module.exports = function (app) {
         }
 
         const user = await User.findOne({
-            where: db.where(db.fn('lower', db.col('email')), db.fn('lower', email))
+            where: {
+                'email': cryptoLib.privateEncrypt(email.toLowerCase())
+            }
         });
 
         if (!user) {
@@ -475,7 +477,7 @@ module.exports = function (app) {
         const user = await User.findOne({
             where: {
                 [Op.and]: [
-                    db.where(db.fn('lower', db.col('email')), db.fn('lower', email)),
+                    db.where(db.col('email'), cryptoLib.privateEncrypt(email.toLowerCase())),
                     db.where(db.col('passwordResetCode'), passwordResetCode)
                 ]
             }

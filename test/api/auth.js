@@ -48,7 +48,7 @@ const _loginId = async function (agent, token, clientCert, expectedHttpCode) {
     }
 
     if (token) {
-        a.send({token: token});
+        a.send({ token: token });
     }
 
     return a.expect(expectedHttpCode)
@@ -109,7 +109,7 @@ const _loginSmartIdInit = async function (agent, pid, userId, expectedHttpCode) 
     return agent
         .post(path)
         .set('Content-Type', 'application/json')
-        .send({pid, userId})
+        .send({ pid, userId })
         .expect(expectedHttpCode)
         .expect('Content-Type', /json/);
 };
@@ -344,7 +344,7 @@ const _passwordResetSend = async function (agent, email, expectedHttpCode) {
     return agent
         .post(path)
         .set('Content-Type', 'application/json')
-        .send({email: email})
+        .send({ email: email })
         .expect(expectedHttpCode)
         .expect('Content-Type', /json/);
 };
@@ -355,7 +355,6 @@ const passwordResetSend = function (agent, email) {
 
 const _passwordResetComplete = async function (agent, email, password, passwordResetCode, expectedHttpCode) {
     const path = '/api/auth/password/reset';
-
     return agent
         .post(path)
         .set('Content-Type', 'application/json')
@@ -471,7 +470,6 @@ const User = models.User;
 const UserConnection = models.UserConnection;
 const UserConsent = models.UserConsent;
 const Partner = models.Partner;
-const db = models.sequelize;
 
 suite('Auth', function () {
 
@@ -591,7 +589,7 @@ suite('Auth', function () {
                 this.timeout(5000);
 
                 const agent = request.agent(app);
-                const cert = fs.readFileSync('./test/resources/certificates/good-jaak-kristjan_jõeorg_esteid_sign.pem', {encoding: 'utf8'}).replace(/\n/g, '');
+                const cert = fs.readFileSync('./test/resources/certificates/good-jaak-kristjan_jõeorg_esteid_sign.pem', { encoding: 'utf8' }).replace(/\n/g, '');
                 await _loginId(agent, null, cert, 200);
             });
 
@@ -624,7 +622,7 @@ suite('Auth', function () {
 
                     assert.equal(response.status.code, 20001);
                     assert.match(response.data.challengeID, /[0-9]{4}/);
-                    const tokenData = jwt.verify(response.data.token, config.session.publicKey, {algorithms: [config.session.algorithm]});
+                    const tokenData = jwt.verify(response.data.token, config.session.publicKey, { algorithms: [config.session.algorithm] });
                     const loginMobileFlowData = cryptoLib.decrypt(config.session.secret, tokenData.sessionDataEncrypted);
                     assert.property(loginMobileFlowData, 'sessionHash');
 
@@ -654,7 +652,7 @@ suite('Auth', function () {
 
                     assert.equal(response.status.code, 20001);
                     assert.match(response.data.challengeID, /[0-9]{4}/);
-                    const tokenData = jwt.verify(response.data.token, config.session.publicKey, {algorithms: [config.session.algorithm]});
+                    const tokenData = jwt.verify(response.data.token, config.session.publicKey, { algorithms: [config.session.algorithm] });
                     const loginMobileFlowData = cryptoLib.decrypt(config.session.secret, tokenData.sessionDataEncrypted);
                     assert.property(loginMobileFlowData, 'sessionHash');
 
@@ -872,7 +870,7 @@ suite('Auth', function () {
                     const token = response.data.token;
                     assert.isNotNull(token);
 
-                    const tokenData = jwt.verify(token, config.session.publicKey, {algorithms: [config.session.algorithm]});
+                    const tokenData = jwt.verify(token, config.session.publicKey, { algorithms: [config.session.algorithm] });
                     const loginMobileFlowData = cryptoLib.decrypt(config.session.secret, tokenData.sessionDataEncrypted);
 
                     assert.property(loginMobileFlowData, 'sessionId');
@@ -937,7 +935,7 @@ suite('Auth', function () {
                         const token = response.data.token;
                         assert.isNotNull(token);
 
-                        const tokenData = jwt.verify(token, config.session.publicKey, {algorithms: [config.session.algorithm]});
+                        const tokenData = jwt.verify(token, config.session.publicKey, { algorithms: [config.session.algorithm] });
                         const loginMobileFlowData = cryptoLib.decrypt(config.session.secret, tokenData.sessionDataEncrypted);
 
                         assert.property(loginMobileFlowData, 'sessionId');
@@ -958,7 +956,7 @@ suite('Auth', function () {
                         const token2 = response2.data.token;
                         assert.isNotNull(token2);
 
-                        const tokenData2 = jwt.verify(token2, config.session.publicKey, {algorithms: [config.session.algorithm]});
+                        const tokenData2 = jwt.verify(token2, config.session.publicKey, { algorithms: [config.session.algorithm] });
                         const loginMobileFlowData2 = cryptoLib.decrypt(config.session.secret, tokenData2.sessionDataEncrypted);
 
                         assert.property(loginMobileFlowData2, 'sessionId');
@@ -1000,7 +998,7 @@ suite('Auth', function () {
                         const token = response.data.token;
                         assert.isNotNull(token);
 
-                        const tokenData = jwt.verify(token, config.session.publicKey, {algorithms: [config.session.algorithm]});
+                        const tokenData = jwt.verify(token, config.session.publicKey, { algorithms: [config.session.algorithm] });
                         const loginMobileFlowData = cryptoLib.decrypt(config.session.secret, tokenData.sessionDataEncrypted);
 
                         assert.property(loginMobileFlowData, 'sessionId');
@@ -1022,7 +1020,7 @@ suite('Auth', function () {
                         const token2 = response2.data.token;
                         assert.isNotNull(token2);
 
-                        const tokenData2 = jwt.verify(token2, config.session.publicKey, {algorithms: [config.session.algorithm]});
+                        const tokenData2 = jwt.verify(token2, config.session.publicKey, { algorithms: [config.session.algorithm] });
                         const loginMobileFlowData2 = cryptoLib.decrypt(config.session.secret, tokenData2.sessionDataEncrypted);
 
                         assert.property(loginMobileFlowData2, 'sessionId');
@@ -1329,7 +1327,7 @@ suite('Auth', function () {
             return agent
                 .get('/api/auth/verify/thisCodeDoesNotExist')
                 .expect(302)
-                .expect('Location', urlLib.getFe('/', null, {error: 'emailVerificationFailed'}));
+                .expect('Location', urlLib.getFe('/', null, { error: 'emailVerificationFailed' }));
         });
 
     });
@@ -1397,10 +1395,10 @@ suite('Auth', function () {
             suite('Send', function () {
                 test('Success', async function () {
                     await passwordResetSend(agent, email);
-
                     const user = await User.findOne({
-                        where: db.where(db.fn('lower', db.col('email')), db.fn('lower', email))
+                        where: { 'email': cryptoLib.privateEncrypt(email.toLowerCase()) }
                     });
+
                     const passwordResetCode = user.passwordResetCode;
 
                     assert.property(user, 'passwordResetCode');
@@ -1443,7 +1441,9 @@ suite('Auth', function () {
                 suiteSetup(async function () {
                     await passwordResetSend(agent, email);
                     const user = await User.findOne({
-                        where: db.where(db.fn('lower', db.col('email')), db.fn('lower', email))
+                        where: {
+                            'email': cryptoLib.privateEncrypt(email.toLowerCase())
+                        }
                     });
                     passwordResetCode = user.passwordResetCode;
                 });
@@ -1485,8 +1485,13 @@ suite('Auth', function () {
 
                     await signup(agent, email, password, null);
                     const resBody = (await _passwordResetComplete(agent, email, password, null, 400)).body
-
-                    assert.equal(resBody.status.message, 'Invalid email, password or password reset code.');
+                    assert.deepEqual(resBody, {
+                        status: {
+                            code: 40000,
+                            message: 'Invalid email, password or password reset code.'
+                        }
+                    }
+                    );
                 });
 
                 test('Success', async function () {
@@ -1494,7 +1499,9 @@ suite('Auth', function () {
                     const loginRes = await login(agent, email, password);
                     assert.equal(email, loginRes.body.data.email);
                     const user = await User.findOne({
-                        where: db.where(db.fn('lower', db.col('email')), db.fn('lower', email))
+                        where: {
+                            'email': cryptoLib.privateEncrypt(email.toLowerCase())
+                        }
                     });
                     assert.notEqual(user.passwordResetCode, passwordResetCode);
                 });
