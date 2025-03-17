@@ -778,7 +778,7 @@ module.exports = function (app) {
                 delete idea[0].author;
             }
 
-            if (idea[0].author.email) {
+            if (idea[0].author?.email) {
                 idea[0].author.email = cryptoLib.privateDecrypt(idea[0].author.email);
             }
 
@@ -865,7 +865,7 @@ module.exports = function (app) {
                 return res.notFound();
             }
 
-            if ((!ideation.allowAnonymous && idea.authorId !== req.user.id) || (ideation.allowAnonymous && idea.status !== 'draft' && idea.sessionId !== sessToken)) return res.forbidden();
+            if ((!ideation.allowAnonymous && idea.authorId !== req.user.id) || (ideation.allowAnonymous && ((idea.status !== 'draft' && idea.sessionId !== sessToken) || (idea.status === 'draft' && idea.authorId !== req.user.id)))) return res.forbidden();
 
             await db.transaction(async function (t) {
                 fields.forEach(function (field) {
@@ -3814,7 +3814,7 @@ module.exports = function (app) {
         });
         const [ideation, idea] = await Promise.all([ideationPromise, ideaPromise]);
 
-        if ((ideation.allowAnonymous && ((idea.sessionId && idea.sessionId !== sessToken) || idea.authorId !== req.user.id)) || (!ideation.allowAnonymous && idea.authorId !== req.userId)) {
+        if ((ideation.allowAnonymous && ((idea.sessionId && idea.sessionId !== sessToken) || idea.authorId !== req.user.id)) && (!ideation.allowAnonymous && idea.authorId !== req.userId)) {
             return res.forbidden();
         }
 
@@ -3935,6 +3935,10 @@ module.exports = function (app) {
 
             const idea = attachment.Ideas[0];
 
+            console.log(ideation.allowAnonymous);
+            console.log(idea.status);
+            console.log(idea.authorId);
+            console.log(req.user.id);
             if ((!ideation.allowAnonymous || idea.status === 'draft') && idea.authorId !== req.user.id) {
                 return res.forbidden();
             }
