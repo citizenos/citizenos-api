@@ -598,7 +598,7 @@ module.exports = function (app) {
 
                     const idea = Idea.build({
                         authorId: (ideation.allowAnonymous && status !== 'draft') ? null : req.user.id,
-                        sessionId: (ideation.allowAnonymous && status !== 'draft') ? null : sessToken,
+                        sessionId: (ideation.allowAnonymous && status !== 'draft') ? sessToken : null,
                         statement,
                         description,
                         imageUrl,
@@ -627,7 +627,7 @@ module.exports = function (app) {
                             where: {
                                 id: idea.id
                             },
-                            attributes: ['id', 'ideationId', 'statement', 'description', 'imageUrl', 'status', 'createdAt', 'updatedAt', 'deletedById', 'deletedByReportId', 'deletedAt', 'deletedReasonType', 'deletedReasonText', 'authorId', 'demographics'],
+                            attributes: ['id', 'ideationId', 'statement', 'sessionId', 'description', 'imageUrl', 'status', 'createdAt', 'updatedAt', 'deletedById', 'deletedByReportId', 'deletedAt', 'deletedReasonType', 'deletedReasonText', 'authorId', 'demographics'],
                             include: [
                                 {
                                     model: User,
@@ -3814,7 +3814,7 @@ module.exports = function (app) {
         });
         const [ideation, idea] = await Promise.all([ideationPromise, ideaPromise]);
 
-        if ((ideation.allowAnonymous && idea.sessionId !== sessToken) || (!ideation.allowAnonymous && req.user.id !== req.params.userId)) {
+        if ((ideation.allowAnonymous && ((idea.sessionId && idea.sessionId !== sessToken) || idea.authorId !== req.user.id)) || (!ideation.allowAnonymous && idea.authorId !== req.userId)) {
             return res.forbidden();
         }
 
