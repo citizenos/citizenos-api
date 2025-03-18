@@ -391,7 +391,9 @@ module.exports = function (app) {
     const _sendAccountVerification = async (to, emailVerificationCode, token) => {
         const users = await User
             .findAll({
-                where: db.where(db.fn('lower', db.col('email')), db.fn('lower', to))
+                where: {
+                    email: cryptoLib.privateEncrypt(to)
+                }
             })
         const promisesToResolve = [];
 
@@ -432,7 +434,9 @@ module.exports = function (app) {
     const _sendPasswordReset = async (to, passwordResetCode) => {
         const users = await User
             .findAll({
-                where: db.where(db.fn('lower', db.col('email')), db.fn('lower', to))
+                where: {
+                    email: cryptoLib.privateEncrypt(to)
+                }
             })
         const promisesToResolve = [];
         users.forEach((user) => {

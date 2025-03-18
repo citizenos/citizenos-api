@@ -2408,7 +2408,9 @@ suite('Users', function () {
                 const resJoinRead = await groupJoinJoin(agentUser, resGroupJoinRead.token);
 
                 const userActivities = (await activityLib.activitiesRead(agentUser, user.id)).body.data;
-                const groupJoinActivityActual = userActivities[0].data;
+                const groupJoinActivityActual = userActivities.find((activity) => {
+                    return activity.data.type === 'Join' && activity.data.object.id === group.id;
+                });
 
                 const groupJoinActivityExpected = {
                     type: 'Join',
@@ -2429,15 +2431,15 @@ suite('Users', function () {
                         imageUrl: null,
                         language: null,
                         parentId: null,
-                        createdAt: groupJoinActivityActual.object.createdAt,
-                        updatedAt: groupJoinActivityActual.object.updatedAt,
+                        createdAt: groupJoinActivityActual.data.object.createdAt,
+                        updatedAt: groupJoinActivityActual.data.object.updatedAt,
                         rules: [],
                         visibility: Group.VISIBILITY.private
                     }
                 };
-                assert.deepEqual(groupJoinActivityActual, groupJoinActivityExpected);
+                assert.deepEqual(groupJoinActivityActual.data, groupJoinActivityExpected);
 
-                const groupExpected = Object.assign({}, group);
+                const groupExpected ={ ...group };
                 groupExpected.join = resGroupJoinRead;
 
                 const expectedResult = {
@@ -2493,7 +2495,9 @@ suite('Users', function () {
                         assert.equal(resData.level, GroupJoin.LEVELS.admin);
 
                         const userActivities = (await activityLib.activitiesRead(agentCreator, creator.id)).body.data;
-                        const tokenJoinUpdateActivityActual = userActivities[0].data;
+                        const tokenJoinUpdateActivityActual = userActivities.find(function (activity) {
+                            return activity.data.type === 'Update' && activity.data.object.groupId === group.id;
+                        });
 
                         const tokenJoinUpdateActivityExpected = {
                             "type": "Update",
@@ -2529,7 +2533,7 @@ suite('Users', function () {
                             ]
                         };
 
-                        assert.deepEqual(tokenJoinUpdateActivityActual, tokenJoinUpdateActivityExpected);
+                        assert.deepEqual(tokenJoinUpdateActivityActual.data, tokenJoinUpdateActivityExpected);
                     });
 
                     test('Fail - 40001 - Bad request - missing required property "level"', async function () {
@@ -2575,7 +2579,9 @@ suite('Users', function () {
                             assert.deepEqual(resBody, resBodyExpected);
 
                             const userActivities = (await activityLib.activitiesRead(agentCreator, creator.id)).body.data;
-                            const tokenJoinLevelUpdateActivityActual = userActivities[0].data;
+                            const tokenJoinLevelUpdateActivityActual = userActivities.find(function (activity) {
+                                return activity.data.type === 'Update' && activity.data.object.groupId === group.id;
+                            });
 
                             const tokenJoinLevelUpdateActivityExpected = {
                                 "type": "Update",
@@ -2606,7 +2612,7 @@ suite('Users', function () {
                                 ]
                             };
 
-                            assert.deepEqual(tokenJoinLevelUpdateActivityActual, tokenJoinLevelUpdateActivityExpected);
+                            assert.deepEqual(tokenJoinLevelUpdateActivityActual.data, tokenJoinLevelUpdateActivityExpected);
                         });
 
                         test('Fail - 40400 - Not found - invalid token', async function () {

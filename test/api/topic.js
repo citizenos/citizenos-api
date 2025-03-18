@@ -4769,16 +4769,39 @@ suite('Users', function () {
 
                         assert.deepEqual(topicJoinReadActual, {
                             id: topicReadExpected.id,
-                            title: topicReadExpected.title,
-                            visibility: topicReadExpected.visibility
-                        });
+                            title: null,
+                            description: topicReadExpected.description,
+                            visibility: topicReadExpected.visibility,
+                            imageUrl: null,
+                            intro: null,
+                            creator: {
+                              id: topicReadExpected.creator.id,
+                              name: topicReadExpected.creator.name,
+                              company: null,
+                              imageUrl: null,
+                              email: null
+                            }
+                          });
                     });
 
                     test('Success - return title for private topic', async function () {
                         const topicJoinReadActual = (await topicJoinReadUnauth(request.agent(app), topic.join.token)).body.data;
                         const topicReadExpected = {
-                            title: null
-                        };
+                            id: topic.id,
+                            title: null,
+                            description: topic.description,
+                            visibility: topic.visibility,
+                            imageUrl: null,
+                            intro: null,
+                            creator: {
+                              id: creator.id,
+                              name: creator.name,
+                              company: null,
+                              imageUrl: null,
+                              email: null
+                            }
+                          }
+
 
                         assert.deepEqual(topicJoinReadActual, topicReadExpected);
                     });
@@ -4807,7 +4830,9 @@ suite('Users', function () {
                         assert.equal(resData.level, TopicJoin.LEVELS.edit);
 
                         const userActivities = (await activityLib.activitiesRead(agentCreator, creator.id)).body.data;
-                        const tokenJoinUpdateActivityActual = userActivities[0].data;
+                        const tokenJoinUpdateActivityActual = userActivities.find((activity) => {
+                            return activity.data.type === 'Update' && activity.data.object.topicId === topic.id;
+                        });
 
                         const tokenJoinUpdateActivityExpected = {
                             "type": "Update",
@@ -4843,7 +4868,7 @@ suite('Users', function () {
                             ]
                         };
 
-                        assert.deepEqual(tokenJoinUpdateActivityActual, tokenJoinUpdateActivityExpected);
+                        assert.deepEqual(tokenJoinUpdateActivityActual.data, tokenJoinUpdateActivityExpected);
                     });
 
                     test('Fail - 40001 - Bad request - missing required property "level"', async function () {
@@ -4887,7 +4912,9 @@ suite('Users', function () {
                             assert.deepEqual(resBody, resBodyExpected);
 
                             const userActivities = (await activityLib.activitiesRead(agentCreator, creator.id)).body.data;
-                            const tokenJoinLevelUpdateActivityActual = userActivities[0].data;
+                            const tokenJoinLevelUpdateActivityActual = userActivities.find((activity) => {
+                                return activity.data.type === 'Update' && activity.data.object.topicId === topic.id;
+                            });
 
                             const tokenJoinLevelUpdateActivityExpected = {
                                 "type": "Update",
@@ -4918,7 +4945,7 @@ suite('Users', function () {
                                 ]
                             };
 
-                            assert.deepEqual(tokenJoinLevelUpdateActivityActual, tokenJoinLevelUpdateActivityExpected);
+                            assert.deepEqual(tokenJoinLevelUpdateActivityActual.data, tokenJoinLevelUpdateActivityExpected);
                         });
 
                         test('Fail - 40400 - Not found - invalid token', async function () {

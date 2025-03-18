@@ -11,9 +11,9 @@ module.exports = function (app) {
     const models = app.get('models');
     const config = app.get('config');
     const urlLib = app.get('urlLib');
-    const db = models.Sequelize;
     const User = models.User;
     const UserConnection = models.UserConnection;
+    const cryptoLib = app.get('cryptoLib');
 
     /**
      * View the invite
@@ -29,12 +29,14 @@ module.exports = function (app) {
 
         const userByEmail = await User
             .findOne({
-                where: db.where(db.fn('lower', db.col('email')), db.fn('lower',email)),
+                where: {
+                    email: cryptoLib.privateEncrypt(email)
+                },
                 include: [UserConnection]
             });
 
         // There is a User logged in?
-        if (req.user && req.user.userId) { // TODO: Move the check to some library
+        if (req.user?.userId) { // TODO: Move the check to some library
             userLoggedIn = await User
                 .findOne({
                     where: {

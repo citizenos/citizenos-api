@@ -8,8 +8,6 @@ module.exports = function (app) {
     const models = app.get('models');
     const db = models.sequelize;
     const { injectReplacements } = require('sequelize/lib/utils/sql');
-    const cryptoLib = app.get('cryptoLib');
-    const logger = app.get('logger');
     const cosActivities = app.get('cosActivities');
     const loginCheck = app.get('middleware.loginCheck');
     const topicLib = require('./topic')(app);
@@ -270,11 +268,13 @@ module.exports = function (app) {
                             delete returnActivity.data[field].language;
                             if (field === 'origin' && activity.data.type === 'Update') break;
                             user = activity.users.find( t => t.id === activity.data[field].id );
-                            try {
-                                user.email = cryptoLib.privateDecrypt(user.email);
+                     /*       try {
+                                if (user.email) {
+                                    user.email = cryptoLib.privateDecrypt(user.email);
+                                }
                             } catch (err) {
                                 logger.log('Email already decrypted', err);
-                            }
+                            }*/
                             object = User.build(user).toJSON();
                             object['@type'] = activity.data[field]['@type'];
                             if (activity.data[field].level) { // FIXME: HACK? Invite event, putting level here, not sure it belongs here, but.... https://github.com/citizenos/citizenos-fe/issues/112 https://github.com/w3c/activitystreams/issues/506
@@ -393,9 +393,9 @@ module.exports = function (app) {
 
         returnList.sort(function (a, b) {
             if (a.updatedAt < b.updatedAt) {
-                return -1;
-            } else if (a.updatedAt > b.updatedAt) {
                 return 1;
+            } else if (a.updatedAt > b.updatedAt) {
+                return -1;
             } else {
                 return 0;
             }

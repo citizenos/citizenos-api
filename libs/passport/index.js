@@ -57,7 +57,9 @@ module.exports = function (app) {
             await db.transaction(async function (t) {
                 if (!req.user?.id) {
                     [user, created] = await User.findOrCreate({
-                        where: db.where(db.fn('lower', db.col('email')), db.fn('lower', email)),
+                        where: {
+                            email: cryptoLib.privateEncrypt(email)
+                        },
                         defaults: {
                             name: displayName,
                             email: email,
