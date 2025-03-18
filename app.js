@@ -36,6 +36,7 @@ const notifications = require('./libs/notifications');
 const SlowDown = require('express-slow-down');
 const rateLimit = require('express-rate-limit')
 const { createClient } = require('redis');
+const which = require('which');
 
 let rateLimitStore, speedLimitStore;
 if (config.rateLimit && config.rateLimit.storageType === 'redis') {
@@ -198,7 +199,19 @@ app.set('etherpadClient', etherpadClient);
 app.set('superagent', superagent);
 app.set('moment', moment);
 app.set('striptags', striptags);
+
+// Add 7zip binary check
+try {
+    which.sync('7z');
+} catch (err) {
+    console.log(err);
+    logger.error('7zip (7z) is not installed on the system. Please install 7zip command line tool.');
+    // You can either throw an error or continue without 7z functionality
+    // throw new Error('7zip (7z) is not installed. Please install it before running the application.');
+}
+
 app.set('SevenZip', SevenZip);
+
 app.set('busboy', Busboy);
 app.set('stream_upload', StreamUpload);
 
