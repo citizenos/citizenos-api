@@ -73,6 +73,7 @@ module.exports = function (app) {
     app.put('/api/users/:userId', loginCheck(['partner']), asyncMiddleware(async function (req, res) {
         const fields = ['name', 'company', 'email', 'language', 'imageUrl', 'termsVersion', 'preferences'];
         const data = req.body;
+        const redirectSuccess = data.redirectSuccess || urlLib.getFe();
         if (!req.user.partnerId && data.password && data.newPassword) { // Allow only our own app change the password
             fields.push('password');
         }
@@ -145,7 +146,7 @@ module.exports = function (app) {
                 }
             });
             const tokenData = {
-                redirectSuccess: urlLib.getFe() // TODO: Misleading naming, would like to use "redirectUri" (OpenID convention) instead, but needs RAA.ee to update codebase.
+                redirectSuccess,
             };
 
             const token = jwt.sign(tokenData, config.session.privateKey, {algorithm: config.session.algorithm});
