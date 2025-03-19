@@ -1,7 +1,5 @@
 'use strict';
 
-var _ = require('lodash');
-
 /**
  * TopicMemberUser
  *
@@ -17,10 +15,10 @@ var _ = require('lodash');
 module.exports = function (sequelize, DataTypes) {
 
     // Parent model for this model
-    var TopicMember = require('./_TopicMember').model(sequelize, DataTypes);
+    const TopicMember = require('./_TopicMember').model(sequelize, DataTypes);
 
     // NOTE: TopicMemberUser extends TopicMember
-    var attributes = _.extend({
+    const attributes = {
         userId: {
             type: DataTypes.UUID,
             allowNull: false,
@@ -33,9 +31,10 @@ module.exports = function (sequelize, DataTypes) {
             onDelete: 'CASCADE',
             primaryKey: true
         }
-    }, TopicMember.attributes);
+        , ...TopicMember.attributes
+    };
 
-    var TopicMemberUser = sequelize.define('TopicMemberUser', attributes, {
+    const TopicMemberUser = sequelize.define('TopicMemberUser', attributes, {
         indexes: [
             {
                 fields: ['topicId', 'userId']

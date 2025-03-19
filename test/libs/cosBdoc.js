@@ -12,7 +12,6 @@ suite('cosBdoc', function () {
     const smartId = app.get('smartId');
     const mobileId = app.get('mobileId');
     const util = app.get('util');
-    const _ = app.get('lodash');
     const shared = require('../utils/shared');
 
     const Topic = models.Topic;
@@ -321,8 +320,8 @@ suite('cosBdoc', function () {
                 runGC();
 
                 const mem = process.memoryUsage();
-                processMemoryUsageMax = _.clone(mem);
-                processMemoryUsageMin = _.clone(mem);
+                processMemoryUsageMax = structuredClone(mem);
+                processMemoryUsageMin = structuredClone(mem);
 
                 interval = setInterval(function () {
                     const memUsage = process.memoryUsage();

@@ -1,5 +1,8 @@
 'use strict';
 
+const algorithm = 'aes-256-ctr';
+const IV_LENGTH = 16;
+
 const HASH_TYPES = {
     sha1: {
         name: 'SHA-1',
@@ -25,7 +28,7 @@ const HASH_TYPES = {
 
 const crypto = require('crypto');
 const base64url = require('base64-url');
-
+const config = require('config');
 /**
  * Get a hash of string
  *
@@ -113,10 +116,59 @@ const _getHashType = function (hash) {
     return null;
 };
 
-const algorithm = 'aes-256-ctr';
-const IV_LENGTH = 16;
+const _privateEncrypt = (data) => {
+    try {
+        const key = crypto.createHash('sha256').update(String(config.db.secret)).digest('base64');
+        let iv = crypto.createHash('sha256').update(String(config.db.iv)).digest('base64').substring(0, 16);
+        let cipher = crypto.createCipheriv(algorithm, Buffer.from(key, 'base64'), iv);
+        let encrypted = cipher.update(JSON.stringify(data));
+        encrypted = Buffer.concat([encrypted, cipher.final()]);
 
+        return encrypted.toString('hex');
+    } catch (error) {
+        console.log(error, 'ERROR', data)
+        return data;
+    }
+}
 
+const _privateDecrypt = (data) => {
+    try {
+        const key = crypto.createHash('sha256').update(String(config.db.secret)).digest('base64');
+        let iv = crypto.createHash('sha256').update(String(config.db.iv)).digest('base64').substring(0, 16);
+        const decipher = crypto.createDecipheriv(algorithm, Buffer.from(key, 'base64'), iv);
+        let decrypted = decipher.update(data, 'hex', 'utf8');
+        decrypted += decipher.final('utf8');
+        return JSON.parse(decrypted.toString());
+    } catch (error) {
+        console.log(error, 'ERROR', data)
+        return data;
+    }
+}
+/*
+const _privateEncrypt = (data) => {
+    try {
+        const privateKey = config.db.privateKey;
+        const buffer = Buffer.from(data);
+        const encrypted = crypto.privateEncrypt(privateKey, buffer);
+        return encrypted.toString('base64');
+    } catch (error) {
+        console.log(error, 'ERROR', data)
+        return data;
+    }
+}
+
+const _privateDecrypt = (data) => {
+    try {
+        const publicKey = config.db.publicKey;
+        const buffer = Buffer.from(data, 'base64');
+        const decrypted = crypto.publicDecrypt(publicKey, buffer);
+        return decrypted.toString('utf8');
+    } catch (error) {
+        console.log(error, 'ERROR', data)
+        return data;
+    }
+}
+*/
 const _encrypt = (secret, data) => {
     let key = crypto.createHash('sha256').update(String(secret)).digest('base64');
     let iv = crypto.randomBytes(IV_LENGTH);
@@ -144,5 +196,7 @@ module.exports = {
     getAtHash: _getAtHash,
     getHashType: _getHashType,
     encrypt: _encrypt,
-    decrypt: _decrypt
+    decrypt: _decrypt,
+    privateEncrypt: _privateEncrypt,
+    privateDecrypt: _privateDecrypt
 };

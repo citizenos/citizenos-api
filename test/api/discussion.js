@@ -1142,7 +1142,7 @@ suite('Users', function () {
 
                     data.rows.forEach(function (comment) {
                         assert.equal(comment.creator.email, creator.email);
-                        if (comment.replies && comment.replies.rows) {
+                        if (comment.replies?.rows) {
                             comment.replies.rows.forEach(function (creply) {
                                 assert.equal(creply.creator.email, creator.email);
                             });
@@ -1941,6 +1941,8 @@ suite('Users', function () {
                     const creatorExpected = user.toJSON();
                     delete creatorExpected.email; // Email is not returned
                     delete creatorExpected.language; // Language is not returned
+                    delete creatorExpected.phoneNumber;
+                    delete creatorExpected.company;
 
                     assert.equal(list.count.total, 3);
                     assert.equal(comments.length, 3);
@@ -1989,6 +1991,7 @@ suite('Users', function () {
                     const creatorExpected = user.toJSON();
                     delete creatorExpected.email; // Email is not returned
                     delete creatorExpected.language; // Language is not returned
+                    delete creatorExpected.company;
 
                     assert.equal(list.count.total, 3);
                     assert.equal(comments.length, 3);
@@ -2022,6 +2025,7 @@ suite('Users', function () {
                     const creatorExpected = user.toJSON();
                     delete creatorExpected.email; // Email is not returned
                     delete creatorExpected.language; // Language is not returned
+                    delete creatorExpected.company;
 
                     assert.equal(list.count.total, 7);
                     assert.equal(comments.length, 3);
@@ -2143,12 +2147,14 @@ suite('Users', function () {
                     const creatorExpected = user.toJSON();
                     creatorExpected.phoneNumber = null;
                     delete creatorExpected.language; // Language is not returned
+                    delete creatorExpected.phoneNumber;
+                    delete creatorExpected.company;
 
                     assert.equal(list.count.total, 6);
                     assert.equal(comments.length, 3);
 
                     // Comment 1
-                    const c1 = comments.find((c) => c.id === comment1.id);
+                    const c1 = comments.find(c => c.id === comment1.id);
 
                     assert.equal(c1.id, comment1.id);
                     assert.equal(c1.type, comment1.type);
