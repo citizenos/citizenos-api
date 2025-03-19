@@ -1941,6 +1941,8 @@ suite('Users', function () {
                     const creatorExpected = user.toJSON();
                     delete creatorExpected.email; // Email is not returned
                     delete creatorExpected.language; // Language is not returned
+                    delete creatorExpected.phoneNumber;
+                    delete creatorExpected.company;
 
                     assert.equal(list.count.total, 3);
                     assert.equal(comments.length, 3);
@@ -1989,6 +1991,7 @@ suite('Users', function () {
                     const creatorExpected = user.toJSON();
                     delete creatorExpected.email; // Email is not returned
                     delete creatorExpected.language; // Language is not returned
+                    delete creatorExpected.company;
 
                     assert.equal(list.count.total, 3);
                     assert.equal(comments.length, 3);
@@ -2022,6 +2025,7 @@ suite('Users', function () {
                     const creatorExpected = user.toJSON();
                     delete creatorExpected.email; // Email is not returned
                     delete creatorExpected.language; // Language is not returned
+                    delete creatorExpected.company;
 
                     assert.equal(list.count.total, 7);
                     assert.equal(comments.length, 3);
@@ -2143,6 +2147,8 @@ suite('Users', function () {
                     const creatorExpected = user.toJSON();
                     creatorExpected.phoneNumber = null;
                     delete creatorExpected.language; // Language is not returned
+                    delete creatorExpected.phoneNumber;
+                    delete creatorExpected.company;
 
                     assert.equal(list.count.total, 6);
                     assert.equal(comments.length, 3);

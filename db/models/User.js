@@ -252,7 +252,6 @@ module.exports = function (sequelize, DataTypes) {
         const user = {
             id: this.dataValues.id,
             name: this.dataValues.name,
-            company: this.dataValues.company,
             language: this.dataValues.language,
             imageUrl: this.dataValues.imageUrl,
             email: this.email

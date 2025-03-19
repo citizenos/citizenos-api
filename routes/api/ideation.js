@@ -2115,7 +2115,6 @@ module.exports = function (app) {
                 `
                 SELECT
                     u.name,
-                    u.company,
                     u."imageUrl",
                     CAST(CASE
                         WHEN iv.value=1 Then 'up'
@@ -2175,7 +2174,6 @@ module.exports = function (app) {
                 `
                 SELECT
                     u.name,
-                    u.company,
                     u."imageUrl",
                     CAST(CASE
                         WHEN iv.value=1 Then 'up'
@@ -2572,7 +2570,6 @@ module.exports = function (app) {
             if (req.user.moderator) {
                 dataForModerator = `
                 , 'email', u.email
-                , 'phoneNumber', uc."connectionData"::jsonb->>'phoneNumber'
                 `;
             }
         }
@@ -2598,7 +2595,7 @@ module.exports = function (app) {
                     c.subject,
                     c.text,
                     pg_temp.editCreatedAtToJson(c.edits) as edits,
-                    jsonb_build_object('id', u.id,'name',u.name, 'imageUrl', u."imageUrl", 'company', u.company ${dataForModerator}) as creator,
+                    jsonb_build_object('id', u.id,'name',u.name, 'imageUrl', u."imageUrl" ${dataForModerator}) as creator,
                     CASE
                         WHEN c."deletedById" IS NOT NULL THEN jsonb_build_object('id', c."deletedById", 'name', dbu.name )
                         ELSE jsonb_build_object('id', c."deletedById")
@@ -2636,7 +2633,7 @@ module.exports = function (app) {
                     c.subject,
                     c.text,
                     pg_temp.editCreatedAtToJson(c.edits) as edits,
-                    jsonb_build_object('id', u.id,'name',u.name, 'imageUrl', u."imageUrl", 'company', u.company ${dataForModerator}) as creator,
+                    jsonb_build_object('id', u.id,'name',u.name, 'imageUrl', u."imageUrl" ${dataForModerator}) as creator,
                     CASE
                         WHEN c."deletedById" IS NOT NULL THEN jsonb_build_object('id', c."deletedById", 'name', dbu.name )
                         ELSE jsonb_build_object('id', c."deletedById")
@@ -2903,11 +2900,24 @@ module.exports = function (app) {
                     countRes[item.type] = item.count;
                 });
             }
+
+            const decryptEmail = (reply) => {
+                if (reply.creator?.email) {
+                    reply.creator.email = cryptoLib.privateDecrypt(reply.creator.email);
+                }
+                if (reply.replies.rows.length) {
+                    reply.replies.rows.forEach((r) => decryptEmail(r));
+                }
+            }
             comments.forEach((comment) => {
-                if (comment.creator.email) {
+                if (comment.creator?.email) {
                     comment.creator.email = cryptoLib.privateDecrypt(comment.creator.email);
                 }
+                comment.replies.rows.forEach((reply) => {
+                    decryptEmail(reply);
+                })
             });
+
             countRes.total = countRes.pro + countRes.con + countRes.poi + countRes.reply;
             return res.ok({
                 count: countRes,
@@ -3531,7 +3541,6 @@ module.exports = function (app) {
                 `
                 SELECT
                     u.name,
-                    u.company,
                     u."imageUrl",
                     CAST(CASE
                         WHEN cv.value=1 Then 'up'
