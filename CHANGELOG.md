@@ -1,3 +1,7 @@
+## 2025-03-15 - v5.1.3
+  * Fix: Issue FE #2043: Add "other" type option to reports
+  * Fix: Issue FE #2043: Ensure moderation emails are always sent to admins
+
 ## 2025-03-14 - v5.1.2
   * Feature: Add redirectSuccess parameter to user update method
   * Fix: Authenticate user after email verification
