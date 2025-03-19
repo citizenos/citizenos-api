@@ -3941,10 +3941,6 @@ module.exports = function (app) {
 
             const idea = attachment.Ideas[0];
 
-            console.log(ideation.allowAnonymous);
-            console.log(idea.status);
-            console.log(idea.authorId);
-            console.log(req.user.id);
             if ((!ideation.allowAnonymous || idea.status === 'draft') && idea.authorId !== req.user.id) {
                 return res.forbidden();
             }
