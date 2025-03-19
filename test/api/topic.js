@@ -3854,7 +3854,6 @@ suite('Users', function () {
                         assert.equal(userInvited1.email, invitation[0].userId.toLowerCase());
 
                         const createdInviteUser2 = createdInvites.find((i) => { return i.level === invitation[1].level }); // find by level, not by id to keep the code simpler
-                     //   console.log(invitation[1].level, createdInvites)
                         assert.uuid(createdInviteUser2.id, 'v4');
                         assert.equal(createdInviteUser2.topicId, topic.id);
                         assert.equal(createdInviteUser2.creatorId, userCreator.id);
