@@ -1,7 +1,5 @@
 'use strict';
 
-var _ = require('lodash');
-
 /**
  * TopicReport
  *
@@ -15,10 +13,10 @@ var _ = require('lodash');
 module.exports = function (sequelize, DataTypes) {
 
     // Parent model for this model
-    var Report = require('./Report')(sequelize, DataTypes);
+    const Report = require('./Report')(sequelize, DataTypes);
 
     // NOTE: TopicReport extends Report
-    var attributes = _.extend({
+    const attributes = {
         topicId: {
             type: DataTypes.UUID,
             allowNull: false,
@@ -53,7 +51,7 @@ module.exports = function (sequelize, DataTypes) {
             allowNull: true,
             comment: 'Moderation reason - verbal abuse, obscene content, hate speech etc..',
             validate: {
-                doNotAllowNullWhenModeratorIsSet (value) {
+                doNotAllowNullWhenModeratorIsSet(value) {
                     if ((this.moderatedAt || this.moderatedById) && !value) {
                         throw new Error('TopicReport.moderatedReasonType cannot be null when moderator is set');
                     }
@@ -64,7 +62,7 @@ module.exports = function (sequelize, DataTypes) {
             type: DataTypes.STRING(2048),
             allowNull: true,
             validate: {
-                doNotAllowNullWhenModeratorIsSet (value) {
+                doNotAllowNullWhenModeratorIsSet(value) {
                     if ((this.moderatedAt || this.moderatedById) && !value) {
                         throw new Error('TopicReport.moderatedReasonText cannot be null when moderator is set!');
                     }
@@ -92,14 +90,15 @@ module.exports = function (sequelize, DataTypes) {
             allowNull: true,
             comment: 'Time when the Report was marked as resolved.'
         }
-    }, Report.rawAttributes);
+        , ...Report.rawAttributes
+    };
 
-    var TopicReport = sequelize.define('TopicReport', attributes);
+    const TopicReport = sequelize.define('TopicReport', attributes);
 
     // Overrides the default toJSON() to avoid sensitive data from ending up in the output.
     // Must do until scopes arrive to Sequelize - https://github.com/sequelize/sequelize/issues/1462
     TopicReport.prototype.toJSON = function () {
-        var data = Report.prototype.toJSON.call(this); // Call parents "toJSON"
+        const data = Report.prototype.toJSON.call(this); // Call parents "toJSON"
 
         // TopicReport specific white list here
         if (this.dataValues.moderator) {

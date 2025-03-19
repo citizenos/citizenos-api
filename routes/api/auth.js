@@ -147,13 +147,22 @@ module.exports = function (app) {
         let termsAcceptedAt = null;
         let created = false;
 
-        if (termsVersion ) {
+        if (termsVersion) {
             termsAcceptedAt = new Date();
         }
 
+        if (!email || !validator.isEmail(email)) {
+            return res.badRequest('Invalid email');
+        };
+
+        logger.info('Signup attempt - Debug info:', {
+            email: email,
+            encryptedEmail: cryptoLib.privateEncrypt(email.toLowerCase())
+        });
+
         let user = await User
             .findOne({
-                where: db.where(db.fn('lower', db.col('email')), db.fn('lower', email)),
+                where: db.where(db.col('email'), cryptoLib.privateEncrypt(email.toLowerCase())),
                 include: [UserConnection]
             });
         if (user) {
@@ -177,64 +186,76 @@ module.exports = function (app) {
                 return res.ok(`Check your email ${email} to verify your account.`);
             }
         } else {
-            await db.transaction(async function (t) {
-                [user, created] = await User
-                    .findOrCreate({
-                        where: db.where(db.fn('lower', db.col('email')), db.fn('lower', email)), // Well, this will allow user to log in either using User and pass or just Google.. I think it's ok..
-                        defaults: {
-                            name,
-                            email,
-                            password,
-                            company,
-                            source: User.SOURCES.citizenos,
-                            language,
-                            termsVersion,
-                            termsAcceptedAt,
-                            preferences
-                        },
-                        transaction: t
-                    });
+            try {
+                await db.transaction(async function (t) {
+                    [user, created] = await User
+                        .findOrCreate({
+                            where: {
+                                email: cryptoLib.privateEncrypt(email)
+                            },
+                            defaults: {
+                                name,
+                                email,
+                                password,
+                                company,
+                                source: User.SOURCES.citizenos,
+                                language,
+                                termsVersion,
+                                termsAcceptedAt,
+                                preferences
+                            },
+                            transaction: t
+                        });
+                    if (created) {
+                        logger.info('Created a new user', user.id);
+                        await cosActivities.createActivity(
+                            user,
+                            null,
+                            {
+                                type: 'User',
+                                id: user.id,
+                                ip: req.ip
+                            },
+                            req.method + ' ' + req.path,
+                            t
+                        );
+                        await UserConnection
+                            .create({
+                                userId: user.id,
+                                connectionId: UserConnection.CONNECTION_IDS.citizenos,
+                                connectionUserId: user.id,
+                                connectionData: user
+                            }, {
+                                transaction: t
+                            });
 
-                if (created) {
-                    logger.info('Created a new user', user.id);
-                    await cosActivities.createActivity(
-                        user,
-                        null,
-                        {
-                            type: 'User',
-                            id: user.id,
-                            ip: req.ip
-                        },
-                        req.method + ' ' + req.path,
-                        t
-                    );
+                        await cosActivities.addActivity(
+                            user,
+                            {
+                                type: 'User',
+                                id: user.id,
+                                ip: req.ip
+                            },
+                            null,
+                            user,
+                            req.method + ' ' + req.path,
+                            t
+                        );
+                    }
+                });
+            } catch (err) {
+                if (err.errors) {
+                    let resErrors = {};
+                    Object.keys(err.errors).forEach(key => {
+                        resErrors[err.errors[key].path] = err.errors[key].message;
+                    });
+                    return res.badRequest(resErrors);
+                } else {
+                    logger.error('Error creating user:', err);
+                    return res.internalServerError(err);
                 }
-
-                const uc = await UserConnection
-                    .create({
-                        userId: user.id,
-                        connectionId: UserConnection.CONNECTION_IDS.citizenos,
-                        connectionUserId: user.id,
-                        connectionData: user
-                    }, {
-                        transaction: t
-                    });
-
-                return cosActivities.addActivity(
-                    uc,
-                    {
-                        type: 'User',
-                        id: user.id,
-                        ip: req.ip
-                    },
-                    null,
-                    user,
-                    req.method + ' ' + req.path,
-                    t
-                );
-            });
+            }
         }
-
         if (user) {
             if (user.emailIsVerified) {
                 setAuthCookie(req, res, user.id);
@@ -243,11 +264,11 @@ module.exports = function (app) {
                 userData.termsAcceptedAt = user.dataValues.termsAcceptedAt;
                 userData.preferences = user.dataValues.preferences;
 
-                return res.ok({user: userData , redirectSuccess});
+                return res.ok({user: userData, redirectSuccess});
             } else {
                 // Store redirect url in the token so that /api/auth/verify/:code could redirect to the url late
                 const tokenData = {
-                    redirectSuccess // TODO: Misleading naming, would like to use "redirectUri" (OpenID convention) instead, but needs RAA.ee to update codebase.
+                    redirectSuccess
                 };
 
                 const token = jwt.sign(tokenData, config.session.privateKey, {algorithm: config.session.algorithm});
@@ -259,7 +280,7 @@ module.exports = function (app) {
                 return res.ok(`Check your email ${user.email} to verify your account.`, userData);
             }
         } else {
-            return res.ok(`Check your email ${user.email} to verify your account.`);
+            return res.ok(`Check your email ${email} to verify your account.`);
         }
     }));
 
@@ -389,13 +410,13 @@ module.exports = function (app) {
 
             if (getStateCookie(req, COOKIE_NAME_OPENID_AUTH_STATE)) { // We are in the middle of OpenID authorization flow
                 return res.redirect(urlLib.getApi('/api/auth/openid/authorize'));
-            } else {  
+            } else {
                 // Check if this is the first time user uses this link.
                 // If it's first time, then we authorize user.
                 if (!emailIsVerified) {
                     setAuthCookie(req, res, id);
-                }         
-        
+                }
+
                 return res.redirect(302, redirectSuccess);
             }
         } catch (err) {
@@ -437,7 +458,9 @@ module.exports = function (app) {
         }
 
         const user = await User.findOne({
-            where: db.where(db.fn('lower', db.col('email')), db.fn('lower', email))
+            where: {
+                'email': cryptoLib.privateEncrypt(email.toLowerCase())
+            }
         });
 
         if (!user) {
@@ -475,7 +498,7 @@ module.exports = function (app) {
         const user = await User.findOne({
             where: {
                 [Op.and]: [
-                    db.where(db.fn('lower', db.col('email')), db.fn('lower', email)),
+                    db.where(db.col('email'), cryptoLib.privateEncrypt(email.toLowerCase())),
                     db.where(db.col('passwordResetCode'), passwordResetCode)
                 ]
             }
@@ -676,6 +699,7 @@ module.exports = function (app) {
                 break;
         }
         const response = await authLib.statusAuth(loginFlowData.sessionId, loginFlowData.sessionHash, timeoutMs);
+
         if (response.error) {
             throw new Error(response.error, response.error.code);
         } else if (response.state === 'RUNNING') {
