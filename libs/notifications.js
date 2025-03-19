@@ -3,7 +3,6 @@
 
 module.exports = function (app) {
     const jsonpatch = require('fast-json-patch');
-    const _ = require('lodash');
     const models = app.get('models');
     const db = models.sequelize;
     const Topic = models.Topic;
@@ -17,16 +16,14 @@ module.exports = function (app) {
             if (activity.data.origin['@type'] === 'Topic') {
                 activity.data.origin.description = null;
             }
-            const resultObject = _.cloneDeep(activity.data.origin);
+            const resultObject = structuredClone(activity.data.origin);
             activity.data.resultObject = jsonpatch.applyPatch(resultObject, activity.data.result).newDocument;
             activity.data.result.forEach(function (item) {
                 const field = item.path.split('/')[1];
                 if (['deletedById', 'deletedByReportId', 'edits'].indexOf(field) > -1) {
                     item = null;
                 } else {
-                    const change = _.find(resultItems, function (resItem) {
-                        return resItem.path.indexOf(field) > -1;
-                    });
+                    const change = resultItems.find(resItem => resItem);
 
                     if (!change) {
                         resultItems.push(item);
@@ -429,7 +426,7 @@ module.exports = function (app) {
     }
 
     const filterUsersBySettings = async (userIds, topicIds, groupIds, activityType) => {
-        userIds = userIds.filter((item) => { return item.length > 0 });
+        userIds = userIds.filter((item) => { return item?.length > 0 });
         try {
             if (!userIds.length || !topicIds?.length) return []; //add with group notifications  && !groupIds?.length)
             let where = `usn."topicId" IN (:topicIds) `;
