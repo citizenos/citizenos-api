@@ -698,6 +698,7 @@ module.exports = function (app) {
                 break;
         }
         const response = await authLib.statusAuth(loginFlowData.sessionId, loginFlowData.sessionHash, timeoutMs);
+
         if (response.error) {
             throw new Error(response.error, response.error.code);
         } else if (response.state === 'RUNNING') {
