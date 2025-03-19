@@ -9,7 +9,7 @@ module.exports = function (app) {
     const models = app.get('models');
     const db = models.sequelize;
     const { injectReplacements } = require('sequelize/lib/utils/sql');
-    //const _ = app.get('lodash');
+    const cryptoLib = app.get('cryptoLib');
     const emailLib = app.get('email');
     const cosActivities = app.get('cosActivities');
 
@@ -472,7 +472,7 @@ module.exports = function (app) {
             ]
         });
 
-        if (!discussion || !discussion.Topics.length) {
+        if (!discussion?.Topics?.length) {
             return res.notFound();
         }
         if (discussion.deadline && new Date(discussion.deadline) < new Date()) return res.forbidden();
@@ -609,6 +609,9 @@ module.exports = function (app) {
             });
     }));
 
+    /**
+     * Get topic comments
+     */
     const topicCommentsList = async function (req, res, next) {
         const orderByValues = {
             rating: 'rating',
@@ -626,7 +629,7 @@ module.exports = function (app) {
             types = types.filter((type) => Comment.TYPES[type]);
         }
 
-        if (types && types.length) {
+        if (types?.length) {
             where += ` AND ct.type IN (:types) `
         }
 
@@ -636,7 +639,6 @@ module.exports = function (app) {
             if (req.user.moderator) {
                 dataForModerator = `
                 , 'email', u.email
-                , 'phoneNumber', uc."connectionData"::jsonb->>'phoneNumber'
                 `;
             }
         }
@@ -662,7 +664,7 @@ module.exports = function (app) {
                     c.subject,
                     c.text,
                     pg_temp.editCreatedAtToJson(c.edits) as edits,
-                    jsonb_build_object('id', u.id,'name',u.name, 'imageUrl', u."imageUrl", 'company', u.company ${dataForModerator}) as creator,
+                    jsonb_build_object('id', u.id,'name',u.name, 'imageUrl', u."imageUrl" ${dataForModerator}) as creator,
                     CASE
                         WHEN c."deletedById" IS NOT NULL THEN jsonb_build_object('id', c."deletedById", 'name', dbu.name )
                         ELSE jsonb_build_object('id', c."deletedById")
@@ -700,7 +702,7 @@ module.exports = function (app) {
                     c.subject,
                     c.text,
                     pg_temp.editCreatedAtToJson(c.edits) as edits,
-                    jsonb_build_object('id', u.id,'name',u.name, 'imageUrl', u."imageUrl", 'company', u.company ${dataForModerator}) as creator,
+                    jsonb_build_object('id', u.id,'name',u.name, 'imageUrl', u."imageUrl" ${dataForModerator}) as creator,
                     CASE
                         WHEN c."deletedById" IS NOT NULL THEN jsonb_build_object('id', c."deletedById", 'name', dbu.name )
                         ELSE jsonb_build_object('id', c."deletedById")
@@ -959,11 +961,18 @@ module.exports = function (app) {
 
             const setDiscussionId = (discussionId, reply) => {
                 reply.discussionId = discussionId;
+                if (reply.creator?.email) {
+                    reply.creator.email = cryptoLib.privateDecrypt(reply.creator.email);
+                }
                 if (reply.replies.rows.length) {
                     reply.replies.rows.forEach((r) => setDiscussionId(discussionId, r));
                 }
             }
             comments.forEach((comment) => {
+                if (comment.creator?.email) {
+                    comment.creator.email = cryptoLib.privateDecrypt(comment.creator.email);
+                }
+
                 const discussionId = comment.discussionId;
                 comment.replies.rows.forEach((reply) => {
                     setDiscussionId(discussionId, reply);

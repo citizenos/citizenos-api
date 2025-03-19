@@ -934,7 +934,7 @@ module.exports = function (app) {
         if (user.moderator) {
             returncolumns += `
             , c.email as "creator.email"
-            , uc."connectionData"::jsonb->'phoneNumber' AS "creator.phoneNumber"
+            , uc."connectionData" AS "creator.connectionData"
             `;
 
             returncolumns += `
@@ -1126,7 +1126,7 @@ module.exports = function (app) {
             }
         );
         let topic;
-        if (result && result.length && result[0] && (result[0].visibility === 'public' || result[0]?.permission?.level !== TopicMemberUser.LEVELS.none)) {
+        if (result?.length && result[0] && (result[0].visibility === 'public' || result[0]?.permission?.level !== TopicMemberUser.LEVELS.none)) {
             topic = result[0];
         } else {
             logger.warn('Topic not found', topicId);
@@ -1196,6 +1196,17 @@ module.exports = function (app) {
 
         if (!topic.report.id) {
             delete topic.report;
+        }
+
+        if (topic.creator.email) {
+            topic.creator.email = cryptoLib.privateDecrypt(topic.creator.email);
+        }
+        if (topic.creator.connectionData) {
+            const data = cryptoLib.privateDecrypt(topic.creator.connectionData);
+            if (data.phoneNumber) {
+                topic.creator.phoneNumber = data.phoneNumber;
+            }
+            delete topic.creator.connectionData;
         }
 
         return topic;
@@ -3078,10 +3089,7 @@ module.exports = function (app) {
                 `
                 SELECT
                     g.id,
-                    CASE
-                        WHEN gmu.level IS NOT NULL THEN g.name
-                        ELSE NULL
-                    END as "name",
+                    g.name,
                     tmg.level,
                     gmu.level as "permission.level",
                     g.visibility,
@@ -3118,7 +3126,6 @@ module.exports = function (app) {
         if (showExtraUserInfo) {
             extraUserInfo = `
             u.email,
-            uc."connectionData"::jsonb->>'phoneNumber' AS "phoneNumber",
             `;
         }
 
@@ -3246,14 +3253,11 @@ module.exports = function (app) {
         }
 
         let dataForModeratorAndAdmin = '';
-        let joinForAdmin = '';
         let groupForAdmin = '';
         if (req.user?.moderator) {
             dataForModeratorAndAdmin = `
             tm.email,
-            uc."connectionData"::jsonb->>'phoneNumber' AS "phoneNumber",
             `;
-            joinForAdmin = ` LEFT JOIN "UserConnections" uc ON (uc."userId" = tm.id AND uc."connectionId" = 'esteid') `;
             groupForAdmin = `, uc."connectionData"::jsonb `;
         }
 
@@ -3316,7 +3320,6 @@ module.exports = function (app) {
                     WHERE gm."deletedAt" IS NULL
                     AND tmg."deletedAt" IS NULL
                 ) tmg ON tmg."topicId" = :topicId AND (tmg."userId" = tm.id)
-                ${joinForAdmin}
                 ${where}
                 GROUP BY tm.id, tm.level, tmu.level, tm.name, tm.company, tm."imageUrl", tm.email ${groupForAdmin}
                 ${sortSql}
@@ -4168,8 +4171,9 @@ module.exports = function (app) {
      *
      * @see /api/users/:userId/topics/:topicId/members/users "Auto accept" - Adds a Member to the Topic instantly and sends a notification to the User.
      */
-    app.post('/api/users/:userId/topics/:topicId/invites/users', loginCheck(), hasPermission(TopicMemberUser.LEVELS.admin, false, [Topic.STATUSES.draft, Topic.STATUSES.ideation, Topic.STATUSES.inProgress, Topic.STATUSES.voting, Topic.STATUSES.followUp]), rateLimiter(5, false), speedLimiter(1, false), asyncMiddleware(async function (req, res) {
+    app.post('/api/users/:userId/topics/:topicId/invites/users', loginCheck(), hasPermission(TopicMemberUser.LEVELS.admin, false, [Topic.STATUSES.draft, Topic.STATUSES.ideation, Topic.STATUSES.inProgress, Topic.STATUSES.voting, Topic.STATUSES.followUp]), rateLimiter(5, false), speedLimiter(1, false), async function (req, res) {
         //NOTE: userId can be actual UUID or e-mail - it is comfort for the API user, but confusing in the BE code.
+       try {
         const topicId = req.params.topicId;
         const userId = req.user.userId;
         let members = req.body;
@@ -4205,7 +4209,7 @@ module.exports = function (app) {
             }
         });
 
-        const validEmails = validEmailMembers.map(m => m.userId);
+        const validEmails = validEmailMembers.map(m => cryptoLib.privateEncrypt(m.userId));
         if (validEmails.length) {
             // Find out which e-mails already exist
             const usersExistingEmail = await User
@@ -4232,7 +4236,6 @@ module.exports = function (app) {
                 }
             });
         }
-
         await db.transaction(async function (t) {
             let createdUsers;
 
@@ -4249,7 +4252,7 @@ module.exports = function (app) {
                     });
                 });
 
-                createdUsers = await User.bulkCreate(usersToCreate, { transaction: t });
+                createdUsers = await User.bulkCreate(usersToCreate);
 
                 const createdUsersActivitiesCreatePromises = createdUsers.map(async function (user) {
                     return cosActivities.createActivity(
@@ -4279,7 +4282,6 @@ module.exports = function (app) {
                     if (level) {
                         member.level = level;
                     }
-
                     validUserIdMembers.push(member);
                 });
             }
@@ -4301,9 +4303,8 @@ module.exports = function (app) {
             });
 
             const createInvitePromises = validUserIdMembers.map(async function (member) {
-                const addedMember = currentMembers.find(function (cmember) {
-                    return cmember.userId === member.userId;
-                });
+                const addedMember = currentMembers.find(cmember => cmember.userId === member.userId );
+
                 if (addedMember) {
                     const LEVELS = {
                         none: 0, // Enables to override inherited permissions.
@@ -4401,7 +4402,19 @@ module.exports = function (app) {
                 }
             });
         });
-    }));
+    } catch (err) {
+        if (err.errors) {
+            let resErrors = {};
+            Object.keys(err.errors).forEach(key => {
+                resErrors[err.errors[key].path] = err.errors[key].message;
+            });
+            return res.badRequest(resErrors);
+        } else {
+            logger.error('Error creating user:', err);
+            return res.internalServerError(err);
+        }
+    }
+    });
 
     app.get('/api/users/:userId/topics/:topicId/invites/users', loginCheck(), asyncMiddleware(async function (req, res) {
         const limitDefault = 10;

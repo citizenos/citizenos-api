@@ -2832,7 +2832,7 @@ suite('Users', function () {
                         const comments = list.rows;
 
                         const creatorExpected = user.toJSON();
-                        creatorExpected.phoneNumber = null;
+                        delete creatorExpected.phoneNumber;
                         delete creatorExpected.language; // Language is not returned
 
                         assert.equal(list.count.total, 6);
@@ -3953,32 +3953,20 @@ suite('Users', function () {
 
             // API - /api/users/:userId/topics/:topicId/discussions/:discussionId/comments/:commentId/attachments
             suite('Attachments', function () {
-                const creatorAgent = request.agent(app);
-                const agent = request.agent(app);
-                let creator;
-                let user;
-                let topic;
-                let topic2;
-
-                let ideation;
-                let ideation2;
-
-                let idea;
-                let idea2;
-                setup(async function () {
-                    creator = await userLib.createUserAndLogin(creatorAgent, null, null, null);
-                    user = await userLib.createUserAndLogin(agent);
-                    topic = (await topicLib.topicCreate(creatorAgent, creator.id, null, Topic.STATUSES.draft, null, Topic.VISIBILITY.public)).body.data;
-                    ideation = (await ideationCreate(creatorAgent, creator.id, topic.id, 'TEST ideation')).body.data;
-                    await topicLib.topicUpdate(creatorAgent, creator.id, topic.id, Topic.STATUSES.ideation);
-                    idea = (await ideationIdeaCreate(creatorAgent, creator.id, topic.id, ideation.id, 'TEST', 'TEST', null, 'published')).body.data;
-                    topic2 = (await topicLib.topicCreate(creatorAgent, creator.id, null, Topic.STATUSES.draft, null, Topic.VISIBILITY.private)).body.data;
-                    ideation2 = (await ideationCreate(creatorAgent, creator.id, topic2.id, 'TEST ideation')).body.data;
-                    await topicLib.topicUpdate(creatorAgent, creator.id, topic2.id, Topic.STATUSES.ideation);
-                    idea2 = (await ideationIdeaCreate(creatorAgent, creator.id, topic2.id, ideation2.id, 'TEST', 'TEST', null, 'published')).body.data;
-                });
-
                 suite('Create', function () {
+                    const creatorAgent = request.agent(app);
+                    let creator;
+                    let topic;
+                    let ideation;
+                    let idea;
+
+                    suiteSetup(async function () {
+                        creator = await userLib.createUserAndLogin(creatorAgent, null, null, null);
+                        topic = (await topicLib.topicCreate(creatorAgent, creator.id, null, Topic.STATUSES.draft, null, Topic.VISIBILITY.public)).body.data;
+                        ideation = (await ideationCreate(creatorAgent, creator.id, topic.id, 'TEST ideation')).body.data;
+                        await topicLib.topicUpdate(creatorAgent, creator.id, topic.id, Topic.STATUSES.ideation);
+                        idea = (await ideationIdeaCreate(creatorAgent, creator.id, topic.id, ideation.id, 'TEST', 'TEST', null, 'published')).body.data;
+                    });
                     test('Success', async function () {
                         const expectedAttachment = {
                             name: 'testfilename.pdf',
@@ -4023,8 +4011,28 @@ suite('Users', function () {
 
                 suite('Read', function () {
                     let attachment;
+                    const creatorAgent = request.agent(app);
+                    const agent = request.agent(app);
+                    let creator;
+                    let topic;
+                    let topic2;
 
+                    let ideation;
+                    let ideation2;
+
+                    let idea;
+                    let idea2;
                     suiteSetup(async function () {
+                        creator = await userLib.createUserAndLogin(creatorAgent, null, null, null);
+                        topic = (await topicLib.topicCreate(creatorAgent, creator.id, null, Topic.STATUSES.draft, null, Topic.VISIBILITY.public)).body.data;
+                        ideation = (await ideationCreate(creatorAgent, creator.id, topic.id, 'TEST ideation')).body.data;
+                        await topicLib.topicUpdate(creatorAgent, creator.id, topic.id, Topic.STATUSES.ideation);
+                        idea = (await ideationIdeaCreate(creatorAgent, creator.id, topic.id, ideation.id, 'TEST', 'TEST', null, 'published')).body.data;
+                        topic2 = (await topicLib.topicCreate(creatorAgent, creator.id, null, Topic.STATUSES.draft, null, Topic.VISIBILITY.private)).body.data;
+                        ideation2 = (await ideationCreate(creatorAgent, creator.id, topic2.id, 'TEST ideation')).body.data;
+                        await topicLib.topicUpdate(creatorAgent, creator.id, topic2.id, Topic.STATUSES.ideation);
+                        idea2 = (await ideationIdeaCreate(creatorAgent, creator.id, topic2.id, ideation2.id, 'TEST', 'TEST', null, 'published')).body.data;
+
                         const expectedAttachment = {
                             name: 'testfilename.pdf',
                             source: 'dropbox',
@@ -4076,7 +4084,20 @@ suite('Users', function () {
 
                 suite('Update', function () {
                     let attachment;
+                    const creatorAgent = request.agent(app);
+                    let creator;
+                    let topic;
 
+                    let ideation;
+
+                    let idea;
+                    suiteSetup(async function () {
+                        creator = await userLib.createUserAndLogin(creatorAgent, null, null, null);
+                        topic = (await topicLib.topicCreate(creatorAgent, creator.id, null, Topic.STATUSES.draft, null, Topic.VISIBILITY.public)).body.data;
+                        ideation = (await ideationCreate(creatorAgent, creator.id, topic.id, 'TEST ideation')).body.data;
+                        await topicLib.topicUpdate(creatorAgent, creator.id, topic.id, Topic.STATUSES.ideation);
+                        idea = (await ideationIdeaCreate(creatorAgent, creator.id, topic.id, ideation.id, 'TEST', 'TEST')).body.data;
+                    });
                     setup(async function () {
                         const expectedAttachment = {
                             name: 'testfilename.pdf',
@@ -4114,7 +4135,22 @@ suite('Users', function () {
 
                 suite('Delete', function () {
                     let attachment;
+                    const creatorAgent = request.agent(app);
+                    const agent = request.agent(app);
+                    let creator;
+                    let user;
+                    let topic;
+                    let ideation;
+                    let idea;
 
+                    suiteSetup(async function () {
+                        creator = await userLib.createUserAndLogin(creatorAgent, null, null, null);
+                        user = await userLib.createUserAndLogin(agent);
+                        topic = (await topicLib.topicCreate(creatorAgent, creator.id, null, Topic.STATUSES.draft, null, Topic.VISIBILITY.public)).body.data;
+                        ideation = (await ideationCreate(creatorAgent, creator.id, topic.id, 'TEST ideation')).body.data;
+                        await topicLib.topicUpdate(creatorAgent, creator.id, topic.id, Topic.STATUSES.ideation);
+                        idea = (await ideationIdeaCreate(creatorAgent, creator.id, topic.id, ideation.id, 'TEST', 'TEST', null, 'published')).body.data;
+                    });
                     setup(async function () {
                         const expectedAttachment = {
                             name: 'testfilename.pdf',
@@ -4154,6 +4190,20 @@ suite('Users', function () {
                 });
 
                 suite('Upload', function () {
+                    const creatorAgent = request.agent(app);
+                    let creator;
+                    let topic;
+                    let ideation;
+                    let idea;
+
+                    suiteSetup(async function () {
+                        creator = await userLib.createUserAndLogin(creatorAgent, null, null, null);
+                        topic = (await topicLib.topicCreate(creatorAgent, creator.id, null, Topic.STATUSES.draft, null, Topic.VISIBILITY.public)).body.data;
+                        ideation = (await ideationCreate(creatorAgent, creator.id, topic.id, 'TEST ideation')).body.data;
+                        await topicLib.topicUpdate(creatorAgent, creator.id, topic.id, Topic.STATUSES.ideation);
+                        idea = (await ideationIdeaCreate(creatorAgent, creator.id, topic.id, ideation.id, 'TEST', 'TEST', null, 'published')).body.data;
+
+                    });
                     test('Success', async function () {
                         const expectedAttachment = {
                             name: 'test.txt',
@@ -4265,8 +4315,17 @@ suite('Users', function () {
 
                 suite('List', function () {
                     let attachment;
-
+                    const creatorAgent = request.agent(app);
+                    let creator;
+                    let topic;
+                    let ideation;
+                    let idea;
                     setup(async function () {
+                        creator = await userLib.createUserAndLogin(creatorAgent, null, null, null);
+                        topic = (await topicLib.topicCreate(creatorAgent, creator.id, null, Topic.STATUSES.draft, null, Topic.VISIBILITY.public)).body.data;
+                        ideation = (await ideationCreate(creatorAgent, creator.id, topic.id, 'TEST ideation')).body.data;
+                        await topicLib.topicUpdate(creatorAgent, creator.id, topic.id, Topic.STATUSES.ideation);
+                        idea = (await ideationIdeaCreate(creatorAgent, creator.id, topic.id, ideation.id, 'TEST', 'TEST', null, 'published')).body.data;
                         const expectedAttachment = {
                             name: 'testfilename.pdf',
                             source: 'dropbox',
@@ -4336,7 +4395,7 @@ suite('Users', function () {
                 test('Success', async function () {
                     const statement = 'TEST idea';
                     const description = 'This idea is just for testing';
-                    const idea = (await ideationIdeaCreate(agent, user.id, topic.id, ideation.id, statement, description)).body.data;
+                    const idea = (await ideationIdeaCreate(agent, user.id, topic.id, ideation.id, statement, description, null, 'published')).body.data;
                     assert.equal(idea.statement, statement);
                     assert.equal(idea.description, description);
                     assert.notProperty(idea, 'author');
@@ -4406,7 +4465,7 @@ suite('Users', function () {
                 test('Success', async function () {
                     const statement = 'TEST idea';
                     const description = 'This idea is just for testing';
-                    const idea = (await ideationIdeaCreate(agent, user.id, topic.id, ideation.id, statement, description)).body.data;
+                    const idea = (await ideationIdeaCreate(agent, user.id, topic.id, ideation.id, statement, description, null, 'published')).body.data;
                     assert.property(idea, 'sessionId');
                     delete idea.sessionId;
                     const ideaR = (await ideationIdeaRead(agent, user.id, topic.id, ideation.id, idea.id)).body.data;
@@ -4435,7 +4494,7 @@ suite('Users', function () {
                 test('Success - public topic unauth', async function () {
                     const statement = 'TEST idea';
                     const description = 'This idea is just for testing';
-                    const idea = (await ideationIdeaCreate(agent, user.id, topic.id, ideation.id, statement, description)).body.data;
+                    const idea = (await ideationIdeaCreate(agent, user.id, topic.id, ideation.id, statement, description, null, 'published')).body.data;
                     assert.property(idea, 'sessionId');
                     delete idea.sessionId;
                     const ideaR = (await ideationIdeaRead(agent, user.id, topic.id, ideation.id, idea.id)).body.data;
@@ -4455,7 +4514,7 @@ suite('Users', function () {
                 test('Success - member topic', async function () {
                     const statement = 'TEST idea';
                     const description = 'This idea is just for testing';
-                    const idea = (await ideationIdeaCreate(agent, user.id, topic.id, ideation.id, statement, description)).body.data;
+                    const idea = (await ideationIdeaCreate(agent, user.id, topic.id, ideation.id, statement, description, null, 'published')).body.data;
                     assert.property(idea, 'sessionId');
                     delete idea.sessionId;
                     const ideaR = (await ideationIdeaRead(agent, user.id, topic.id, ideation.id, idea.id)).body.data;
@@ -4531,7 +4590,7 @@ suite('Users', function () {
                 test('Fail - anonymous - new session', async function () {
                     const statement = 'TEST idea';
                     const description = 'This idea is just for testing';
-                    const idea = (await ideationIdeaCreate(agent, user.id, topic.id, ideation.id, statement, description)).body.data;
+                    const idea = (await ideationIdeaCreate(agent, user.id, topic.id, ideation.id, statement, description, null, 'published')).body.data;
                     const updatedStatement = 'Test idea Update';
                     const updatedDescription = 'Updated description';
                     const agent3 = request.agent(app);
@@ -4763,7 +4822,7 @@ suite('Users', function () {
                         topic = (await topicLib.topicCreate(agentCreator, userCreator.id, null, Topic.STATUSES.draft, null, Topic.VISIBILITY.public)).body.data;
                         ideation = (await ideationCreate(agentCreator, userCreator.id, topic.id, 'TEST ideation', null, false, true)).body.data;
                         await topicLib.topicUpdate(agentCreator, userCreator.id, topic.id, Topic.STATUSES.ideation);
-                        idea = (await ideationIdeaCreate(agentCreator, userCreator.id, topic.id, ideation.id, 'TEST abusive', 'TEST inapropriate')).body.data;
+                        idea = (await ideationIdeaCreate(agentCreator, userCreator.id, topic.id, ideation.id, 'TEST abusive', 'TEST inapropriate', null, 'published')).body.data;
                         partner = await Partner.create({
                             website: 'notimportant',
                             redirectUriRegexp: 'notimportant'
@@ -5560,37 +5619,27 @@ suite('Users', function () {
 
             // API - /api/users/:userId/topics/:topicId/discussions/:discussionId/comments/:commentId/attachments
             suite('Attachments', function () {
-                const creatorAgent = request.agent(app);
-                const agent = request.agent(app);
-                const agent2 = request.agent(app);
-                let creator;
-                let email = 'test' + Date.now() + '@test.com';
-                const password = 'testPassword123';
-                let user;
-                let user2;
-                let topic;
-                let topic2;
-
-                let ideation;
-                let ideation2;
-
-                let idea;
-                let idea2;
-                setup(async function () {
-                    creator = await userLib.createUserAndLogin(creatorAgent, email, password, null);
-                    user = await userLib.createUserAndLogin(agent);
-                    user2 = await userLib.createUserAndLogin(agent2);
-                    topic = (await topicLib.topicCreate(creatorAgent, creator.id, null, Topic.STATUSES.draft, null, Topic.VISIBILITY.public)).body.data;
-                    ideation = (await ideationCreate(creatorAgent, creator.id, topic.id, 'TEST ideation', null, false, true)).body.data;
-                    await topicLib.topicUpdate(creatorAgent, creator.id, topic.id, Topic.STATUSES.ideation);
-                    idea = (await ideationIdeaCreate(creatorAgent, creator.id, topic.id, ideation.id, 'TEST', 'TEST')).body.data;
-                    topic2 = (await topicLib.topicCreate(creatorAgent, creator.id, null, Topic.STATUSES.draft, null, Topic.VISIBILITY.private)).body.data;
-                    ideation2 = (await ideationCreate(creatorAgent, creator.id, topic2.id, 'TEST ideation', null, false, true)).body.data;
-                    await topicLib.topicUpdate(creatorAgent, creator.id, topic2.id, Topic.STATUSES.ideation);
-                    idea2 = (await ideationIdeaCreate(creatorAgent, creator.id, topic2.id, ideation2.id, 'TEST', 'TEST')).body.data;
-                });
 
                 suite('Create', function () {
+                    const creatorAgent = request.agent(app);
+                    const agent2 = request.agent(app);
+                    let creator;
+                    let email = 'test_idea_attachment_' + Date.now() + '@test.com';
+                    const password = 'testPassword123';
+                    let user2;
+                    let topic;
+
+                    let ideation;
+
+                    let idea;
+                    suiteSetup(async function () {
+                        creator = await userLib.createUserAndLogin(creatorAgent, email, password, null);
+                        user2 = await userLib.createUserAndLogin(agent2);
+                        topic = (await topicLib.topicCreate(creatorAgent, creator.id, null, Topic.STATUSES.draft, null, Topic.VISIBILITY.public)).body.data;
+                        ideation = (await ideationCreate(creatorAgent, creator.id, topic.id, 'TEST ideation', null, false, true)).body.data;
+                        await topicLib.topicUpdate(creatorAgent, creator.id, topic.id, Topic.STATUSES.ideation);
+                        idea = (await ideationIdeaCreate(creatorAgent, creator.id, topic.id, ideation.id, 'TEST', 'TEST')).body.data;
+                    });
                     test('Success', async function () {
                         const expectedAttachment = {
                             name: 'testfilename.pdf',
@@ -5650,8 +5699,29 @@ suite('Users', function () {
 
                 suite('Read', function () {
                     let attachment;
+                    const creatorAgent = request.agent(app);
+                    const agent = request.agent(app);
+                    let creator;
+                    let email = 'test_idea_attachment_' + Date.now() + '@test.com';
+                    const password = 'testPassword123';
+                    let topic;
+                    let topic2;
 
+                    let ideation;
+                    let ideation2;
+
+                    let idea;
+                    let idea2;
                     suiteSetup(async function () {
+                        creator = await userLib.createUserAndLogin(creatorAgent, email, password, null);
+                        topic = (await topicLib.topicCreate(creatorAgent, creator.id, null, Topic.STATUSES.draft, null, Topic.VISIBILITY.public)).body.data;
+                        ideation = (await ideationCreate(creatorAgent, creator.id, topic.id, 'TEST ideation', null, false, true)).body.data;
+                        await topicLib.topicUpdate(creatorAgent, creator.id, topic.id, Topic.STATUSES.ideation);
+                        idea = (await ideationIdeaCreate(creatorAgent, creator.id, topic.id, ideation.id, 'TEST', 'TEST')).body.data;
+                        topic2 = (await topicLib.topicCreate(creatorAgent, creator.id, null, Topic.STATUSES.draft, null, Topic.VISIBILITY.private)).body.data;
+                        ideation2 = (await ideationCreate(creatorAgent, creator.id, topic2.id, 'TEST ideation', null, false, true)).body.data;
+                        await topicLib.topicUpdate(creatorAgent, creator.id, topic2.id, Topic.STATUSES.ideation);
+                        idea2 = (await ideationIdeaCreate(creatorAgent, creator.id, topic2.id, ideation2.id, 'TEST', 'TEST')).body.data;
                         const expectedAttachment = {
                             name: 'testfilename.pdf',
                             source: 'dropbox',
@@ -5703,6 +5773,23 @@ suite('Users', function () {
 
                 suite('Update', function () {
                     let attachment;
+                    const creatorAgent = request.agent(app);
+                    let creator;
+                    let email = 'test_idea_attachment_' + Date.now() + '@test.com';
+                    const password = 'testPassword123';
+                    let topic;
+
+                    let ideation;
+
+                    let idea;
+
+                    suiteSetup(async function () {
+                        creator = await userLib.createUserAndLogin(creatorAgent, email, password, null);
+                        topic = (await topicLib.topicCreate(creatorAgent, creator.id, null, Topic.STATUSES.draft, null, Topic.VISIBILITY.public)).body.data;
+                        ideation = (await ideationCreate(creatorAgent, creator.id, topic.id, 'TEST ideation', null, false, true)).body.data;
+                        await topicLib.topicUpdate(creatorAgent, creator.id, topic.id, Topic.STATUSES.ideation);
+                        idea = (await ideationIdeaCreate(creatorAgent, creator.id, topic.id, ideation.id, 'TEST', 'TEST')).body.data;
+                    });
 
                     setup(async function () {
                         const expectedAttachment = {
@@ -5730,6 +5817,7 @@ suite('Users', function () {
                     test('Fail - 40300 - New session', async function () {
                         const agent3 = request.agent(app);
                         const user3 = await userLib.loginUser(agent3, email, password, null);
+                        await ideationIdeaUpdate(creatorAgent, creator.id, topic.id, ideation.id, idea.id, 'TEST', 'TEST', null, 'published');
                         const resBody = (await _ideaAttachmentUpdate(agent3, user3.id, topic.id, ideation.id, idea.id, attachment.id, 'newTestFilename', 403)).body;
                         assert.deepEqual(resBody, {
                             status: { code: 40300, message: 'Forbidden' },
@@ -5750,8 +5838,24 @@ suite('Users', function () {
 
                 suite('Delete', function () {
                     let attachment;
+                    const creatorAgent = request.agent(app);
+                    const agent = request.agent(app);
+                    let creator;
+                    let email = 'test_idea_attachment_' + Date.now() + '@test.com';
+                    const password = 'testPassword123';
+                    let user;
+                    let topic;
 
-                    setup(async function () {
+                    let ideation;
+
+                    let idea;
+                    suiteSetup(async function () {
+                        creator = await userLib.createUserAndLogin(creatorAgent, email, password, null);
+                        user = await userLib.createUserAndLogin(agent);
+                        topic = (await topicLib.topicCreate(creatorAgent, creator.id, null, Topic.STATUSES.draft, null, Topic.VISIBILITY.public)).body.data;
+                        ideation = (await ideationCreate(creatorAgent, creator.id, topic.id, 'TEST ideation', null, false, true)).body.data;
+                        await topicLib.topicUpdate(creatorAgent, creator.id, topic.id, Topic.STATUSES.ideation);
+                        idea = (await ideationIdeaCreate(creatorAgent, creator.id, topic.id, ideation.id, 'TEST', 'TEST')).body.data;
                         const expectedAttachment = {
                             name: 'testfilename.pdf',
                             source: 'dropbox',
@@ -5803,6 +5907,22 @@ suite('Users', function () {
                 });
 
                 suite('Upload', function () {
+                    const creatorAgent = request.agent(app);
+                    let creator;
+                    let email = 'test_idea_attachment_' + Date.now() + '@test.com';
+                    const password = 'testPassword123';
+                    let topic;
+                    let ideation;
+
+                    let idea;
+                    suiteSetup(async function () {
+                        creator = await userLib.createUserAndLogin(creatorAgent, email, password, null);
+                        topic = (await topicLib.topicCreate(creatorAgent, creator.id, null, Topic.STATUSES.draft, null, Topic.VISIBILITY.public)).body.data;
+                        ideation = (await ideationCreate(creatorAgent, creator.id, topic.id, 'TEST ideation', null, false, true)).body.data;
+                        await topicLib.topicUpdate(creatorAgent, creator.id, topic.id, Topic.STATUSES.ideation);
+                        idea = (await ideationIdeaCreate(creatorAgent, creator.id, topic.id, ideation.id, 'TEST', 'TEST')).body.data;
+
+                    });
                     test('Success', async function () {
                         const expectedAttachment = {
                             name: 'test.txt',
@@ -5913,8 +6033,21 @@ suite('Users', function () {
 
                 suite('List', function () {
                     let attachment;
+                    const creatorAgent = request.agent(app);
+                    let creator;
+                    let email = 'test_idea_attachment_' + Date.now() + '@test.com';
+                    const password = 'testPassword123';
 
-                    setup(async function () {
+                    let topic;
+                    let ideation;
+                    let idea;
+
+                    suiteSetup(async function () {
+                        creator = await userLib.createUserAndLogin(creatorAgent, email, password, null);
+                        topic = (await topicLib.topicCreate(creatorAgent, creator.id, null, Topic.STATUSES.draft, null, Topic.VISIBILITY.public)).body.data;
+                        ideation = (await ideationCreate(creatorAgent, creator.id, topic.id, 'TEST ideation', null, false, true)).body.data;
+                        await topicLib.topicUpdate(creatorAgent, creator.id, topic.id, Topic.STATUSES.ideation);
+                        idea = (await ideationIdeaCreate(creatorAgent, creator.id, topic.id, ideation.id, 'TEST', 'TEST')).body.data;
                         const expectedAttachment = {
                             name: 'testfilename.pdf',
                             source: 'dropbox',
@@ -5957,30 +6090,30 @@ suite('Users', function () {
         });
 
         suite('Folder', function () {
+            const agent = request.agent(app);
+            const agent2 = request.agent(app);
+            const email = 'test_topicr_' + new Date().getTime() + '@test.ee';
+            const email2 = 'test_topicr_' + new Date().getTime() + 2 + '@test.ee';
+            const password = 'testPassword123';
+
+            let user;
+            let user2;
+            let topic;
+            let ideation;
+
+            suiteSetup(async function () {
+                user = await userLib.createUserAndLogin(agent, email, password, null);
+                user2 = await userLib.createUserAndLogin(agent2, email2, password, null);
+                topic = (await topicLib.topicCreate(agent, user.id, 'TEST', null, null, Topic.VISIBILITY.private)).body.data;
+                ideation = (await ideationCreate(agent, user.id, topic.id, 'TEST ideation')).body.data;
+                await topicLib.topicUpdate(agent, user.id, topic.id, Topic.STATUSES.ideation);
+                await memberLib.topicMemberUsersCreate(topic.id, [{
+                    userId: user2.id,
+                    level: TopicMemberUser.LEVELS.edit
+                }]);
+            });
+
             suite('Create', function () {
-                const agent = request.agent(app);
-                const agent2 = request.agent(app);
-                const email = 'test_topicr_' + new Date().getTime() + '@test.ee';
-                const email2 = 'test_topicr_' + new Date().getTime() + 2 + '@test.ee';
-                const password = 'testPassword123';
-
-                let user;
-                let user2;
-                let topic;
-                let ideation;
-
-                suiteSetup(async function () {
-                    user = await userLib.createUserAndLogin(agent, email, password, null);
-                    user2 = await userLib.createUserAndLogin(agent2, email2, password, null);
-                    topic = (await topicLib.topicCreate(agent, user.id, 'TEST', null, null, Topic.VISIBILITY.private)).body.data;
-                    ideation = (await ideationCreate(agent, user.id, topic.id, 'TEST ideation')).body.data;
-                    await topicLib.topicUpdate(agent, user.id, topic.id, Topic.STATUSES.ideation);
-                    await memberLib.topicMemberUsersCreate(topic.id, [{
-                        userId: user2.id,
-                        level: TopicMemberUser.LEVELS.edit
-                    }]);
-                });
-
                 test('Success', async function () {
                     const name = 'TEST ideas';
                     const description = 'This folder is just for testing';
@@ -6092,7 +6225,8 @@ suite('Users', function () {
                     const topic = (await topicLib.topicCreate(agent, user.id, 'TEST', null, null, Topic.VISIBILITY.private)).body.data;
                     const ideation = (await ideationCreate(agent, user.id, topic.id, 'TEST ideation', null, null, true)).body.data;
                     await topicLib.topicUpdate(agent, user.id, topic.id, Topic.STATUSES.ideation);
-                    idea = (await ideationIdeaCreate(agent, user.id, topic.id, ideation.id, 'TEST', 'TEST')).body.data;
+                    idea = (await ideationIdeaCreate(agent, user.id, topic.id, ideation.id, 'TEST', 'TEST', null, 'published')).body.data;
+                    delete idea.sessionId;
                     folder = (await ideationFolderCreate(agent, user.id, topic.id, ideation.id, folderName, description)).body.data;
                     folder.ideas = {
                         count: 1,
@@ -6107,6 +6241,26 @@ suite('Users', function () {
                     });
                 });
 
+                test('Success - anonymous ideation draft idea', async function () {
+                    const topic = (await topicLib.topicCreate(agent, user.id, 'TEST', null, null, Topic.VISIBILITY.private)).body.data;
+                    const ideation = (await ideationCreate(agent, user.id, topic.id, 'TEST ideation', null, null, true)).body.data;
+                    await topicLib.topicUpdate(agent, user.id, topic.id, Topic.STATUSES.ideation);
+                    idea = (await ideationIdeaCreate(agent, user.id, topic.id, ideation.id, 'TEST', 'TEST', null, 'draft')).body.data;
+                    folder = (await ideationFolderCreate(agent, user.id, topic.id, ideation.id, folderName, description)).body.data;
+                    folder.ideas = {
+                        count: 1,
+                        rows: [idea]
+                    };
+                    await ideationFolderIdeaCreate(agent, user.id, topic.id, ideation.id, folder.id, idea);
+
+                    const folderR = (await ideationFolderRead(agent, user.id, topic.id, ideation.id, folder.id)).body.data;
+                    assert.deepEqual(folderR, folder);
+                    folderR.ideas.rows.forEach(idea => {
+                        const ideaAuthor = { id: user.id, email: user.email, imageUrl: user.imageUrl, name: user.name };
+                        assert.deepEqual(idea.author, ideaAuthor);
+                    });
+                });
+
                 test('Success - public topic unauth', async function () {
                     const folderR = (await ideationFolderRead(agent, user.id, topic.id, ideation.id, folder.id)).body.data;
                     await topicLib.topicUpdate(agent, user.id, topic.id, null, Topic.VISIBILITY.public);
@@ -6118,7 +6272,7 @@ suite('Users', function () {
                     const topic = (await topicLib.topicCreate(agent, user.id, 'TEST', null, null, Topic.VISIBILITY.private)).body.data;
                     const ideation = (await ideationCreate(agent, user.id, topic.id, 'TEST ideation', null, null, true)).body.data;
                     await topicLib.topicUpdate(agent, user.id, topic.id, Topic.STATUSES.ideation);
-                    idea = (await ideationIdeaCreate(agent, user.id, topic.id, ideation.id, 'TEST', 'TEST')).body.data;
+                    idea = (await ideationIdeaCreate(agent, user.id, topic.id, ideation.id, 'TEST', 'TEST', null, 'published')).body.data;
                     await ideationFolderIdeaCreate(agent, user.id, topic.id, ideation.id, folder.id, idea);
 
                     const folderR = (await ideationFolderRead(agent, user.id, topic.id, ideation.id, folder.id)).body.data;
@@ -6182,7 +6336,8 @@ suite('Users', function () {
                         const topic = (await topicLib.topicCreate(agent, user.id, 'TEST', null, null, Topic.VISIBILITY.private)).body.data;
                         const ideation = (await ideationCreate(agent, user.id, topic.id, 'TEST ideation', null, null, true)).body.data;
                         await topicLib.topicUpdate(agent, user.id, topic.id, Topic.STATUSES.ideation);
-                        const idea = (await ideationIdeaCreate(agent, user.id, topic.id, ideation.id, 'TEST', 'TEST')).body.data;
+                        const idea = (await ideationIdeaCreate(agent, user.id, topic.id, ideation.id, 'TEST', 'TEST', null, 'published')).body.data;
+                        delete idea.sessionId;
                         const statement = 'TEST folder';
                         const description = 'This folder is just for testing';
                         const folder = (await ideationFolderCreate(agent, user.id, topic.id, ideation.id, statement, description)).body.data;
@@ -6214,8 +6369,11 @@ suite('Users', function () {
                         const topic = (await topicLib.topicCreate(agent, user.id, 'TEST', null, null, Topic.VISIBILITY.private)).body.data;
                         const ideation = (await ideationCreate(agent, user.id, topic.id, 'TEST ideation', null, null, true)).body.data;
                         await topicLib.topicUpdate(agent, user.id, topic.id, Topic.STATUSES.ideation);
-                        const idea = (await ideationIdeaCreate(agent, user.id, topic.id, ideation.id, 'TEST', 'TEST')).body.data;
-                        const idea2 = (await ideationIdeaCreate(agent, user.id, topic.id, ideation.id, 'TEST2', 'TEST2')).body.data;
+                        const idea = (await ideationIdeaCreate(agent, user.id, topic.id, ideation.id, 'TEST', 'TEST', null, 'published')).body.data;
+                        const idea2 = (await ideationIdeaCreate(agent, user.id, topic.id, ideation.id, 'TEST2', 'TEST2', null, 'published')).body.data;
+
+                        delete idea.sessionId;
+                        delete idea2.sessionId;
 
                         const statement = 'TEST folder';
                         const description = 'This folder is just for testing';
@@ -6440,8 +6598,8 @@ suite('Users', function () {
             suite('Delete', function () {
                 const agent = request.agent(app);
                 const agent2 = request.agent(app);
-                const email = 'test_topicr_' + new Date().getTime() + '@test.ee';
-                const email2 = 'test_topicr_' + new Date().getTime() + 2 + '@test.ee';
+                const email = 'test_topic_folder_delete_' + new Date().getTime() + '@test.ee';
+                const email2 = 'test_topic_folder_delete_' + new Date().getTime() + 2 + '@test.ee';
                 const password = 'testPassword123';
 
                 let user;
@@ -6452,9 +6610,6 @@ suite('Users', function () {
                 suiteSetup(async function () {
                     user = await userLib.createUserAndLogin(agent, email, password, null);
                     user2 = await userLib.createUserAndLogin(agent2, email2, password, null);
-                });
-
-                setup(async function () {
                     topic = (await topicLib.topicCreate(agent, user.id, 'TEST', null, null, Topic.VISIBILITY.private)).body.data;
                     ideation = (await ideationCreate(agent, user.id, topic.id, 'TEST ideation')).body.data;
                     await topicLib.topicUpdate(agent, user.id, topic.id, Topic.STATUSES.ideation);
@@ -6489,8 +6644,8 @@ suite('Users', function () {
             suite('List', function () {
                 const agent = request.agent(app);
                 const agent2 = request.agent(app);
-                const email = 'test_topicr_' + new Date().getTime() + '@test.ee';
-                const email2 = 'test_topicr_' + new Date().getTime() + 2 + '@test.ee';
+                const email = 'test_topic_folder_list_' + new Date().getTime() + '@test.ee';
+                const email2 = 'test_topic_folder_list_' + new Date().getTime() + 2 + '@test.ee';
                 const password = 'testPassword123';
 
                 let user;

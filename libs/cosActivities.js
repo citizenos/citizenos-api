@@ -3,7 +3,6 @@
 const diff = require('json-patch-gen');
 
 module.exports = function (app) {
-    const _ = app.get('lodash');
     const models = app.get('models');
     const db = models.sequelize;
     const uuid = app.get('uuid');
@@ -140,7 +139,7 @@ module.exports = function (app) {
         const currentValues = {};
         const previousValues = instance.previous();
 
-        var changed = instance.changed();
+        let changed = instance.changed();
         if (!changed) {
             return [];
         }
@@ -185,7 +184,7 @@ module.exports = function (app) {
         if (Array.isArray(instance)) {
             object = [];
             instance.forEach(function (elem) {
-                const o = _.cloneDeep(elem.toJSON());
+                const o = structuredClone(elem.toJSON());
                 _setExtraProperties(instance, o);
                 o['@type'] = elem.constructor.name;
                 object.push(o);
@@ -219,9 +218,9 @@ module.exports = function (app) {
     const _updateTopicDescriptionActivity = async function (instance, target, actor, fields, context, transaction) {
 
         const originPrevious = instance.previous();
-        const origin = _.clone(instance.toJSON());
+        const origin = structuredClone(instance.toJSON());
 
-        _.mapValues(originPrevious, function (val, key) {
+        Object.entries(originPrevious).forEach(([key, val]) => {
             origin[key] = val;
         });
 
@@ -249,7 +248,7 @@ module.exports = function (app) {
         origin.description = null;
         origin['@type'] = instance.constructor.name;
 
-        const object = _.clone(origin);
+        const object = structuredClone(origin);
 
         _setExtraProperties(instance, object);
         const activity = {
@@ -414,7 +413,7 @@ module.exports = function (app) {
         const originPrevious = instance.previous();
         const origin = instance.toJSON();
 
-        _.mapValues(originPrevious, function (val, key) {
+        Object.entries(originPrevious).forEach(([key, val]) => {
             origin[key] = val;
         });
 
@@ -426,7 +425,7 @@ module.exports = function (app) {
         }
 
         origin['@type'] = instance.constructor.name;
-        const object = _.clone(origin);
+        const object = structuredClone(origin);
         _setExtraProperties(instance, object);
 
         const activity = {
@@ -1016,7 +1015,7 @@ module.exports = function (app) {
         if (Array.isArray(instance)) {
             object = [];
             instance.forEach(function (elem) {
-                const o = _.cloneDeep(elem.toJSON());
+                const o = structuredClone(elem.toJSON());
                 _setExtraProperties(instance, o);
                 o['@type'] = elem.constructor.name;
                 object.push(o);
@@ -1106,36 +1105,36 @@ module.exports = function (app) {
             }
          */
 
-         const _object = instance.toJSON();
+        const _object = instance.toJSON();
 
-         _setExtraProperties(instance, _object);
+        _setExtraProperties(instance, _object);
 
-         _object['@type'] = instance.constructor.name;
+        _object['@type'] = instance.constructor.name;
 
-         var activity = {
-             type: Activity.TYPES.offer,
-             object: _object,
-             actor: actor
-         };
+        var activity = {
+            type: Activity.TYPES.offer,
+            object: _object,
+            actor: actor
+        };
 
-         if (target) {
-             const targetObject = target.toJSON();
-             _setExtraProperties(target, targetObject);
-             targetObject['@type'] = target.constructor.name;
-             if (target.dataValues.level) {
-                 targetObject.level = target.dataValues.level;
-             }
-             if (target.dataValues.inviteId) {
-                 targetObject.inviteId = target.dataValues.inviteId;
-             }
-             activity.target = targetObject;
-         }
+        if (target) {
+            const targetObject = target.toJSON();
+            _setExtraProperties(target, targetObject);
+            targetObject['@type'] = target.constructor.name;
+            if (target.dataValues.level) {
+                targetObject.level = target.dataValues.level;
+            }
+            if (target.dataValues.inviteId) {
+                targetObject.inviteId = target.dataValues.inviteId;
+            }
+            activity.target = targetObject;
+        }
 
-         if (context) {
-             activity.context = context;
-         }
+        if (context) {
+            activity.context = context;
+        }
 
-         return _saveActivity(activity, transaction);
+        return _saveActivity(activity, transaction);
     }
 
     return {
