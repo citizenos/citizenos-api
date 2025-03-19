@@ -212,7 +212,6 @@ module.exports = function (app) {
             activity.actor = activity.data.actor;
             if (activity.data.actor.type === 'User') {
                 const actor = activity.users.find( o => o.id === activity.data.actor.id );
-                activity.actor.company = actor.company;
                 activity.actor.name = actor.name;
             }
             if (activity.data.object[0] && activity.data.object[0]['@type'] === 'VoteList') {

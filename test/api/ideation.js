@@ -2832,7 +2832,7 @@ suite('Users', function () {
                         const comments = list.rows;
 
                         const creatorExpected = user.toJSON();
-                        creatorExpected.phoneNumber = null;
+                        delete creatorExpected.phoneNumber;
                         delete creatorExpected.language; // Language is not returned
 
                         assert.equal(list.count.total, 6);

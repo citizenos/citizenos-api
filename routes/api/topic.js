@@ -3126,7 +3126,6 @@ module.exports = function (app) {
         if (showExtraUserInfo) {
             extraUserInfo = `
             u.email,
-            uc."connectionData"::jsonb->>'phoneNumber' AS "phoneNumber",
             `;
         }
 
@@ -3254,14 +3253,11 @@ module.exports = function (app) {
         }
 
         let dataForModeratorAndAdmin = '';
-        let joinForAdmin = '';
         let groupForAdmin = '';
         if (req.user?.moderator) {
             dataForModeratorAndAdmin = `
             tm.email,
-            uc."connectionData"::jsonb->>'phoneNumber' AS "phoneNumber",
             `;
-            joinForAdmin = ` LEFT JOIN "UserConnections" uc ON (uc."userId" = tm.id AND uc."connectionId" = 'esteid') `;
             groupForAdmin = `, uc."connectionData"::jsonb `;
         }
 
@@ -3324,7 +3320,6 @@ module.exports = function (app) {
                     WHERE gm."deletedAt" IS NULL
                     AND tmg."deletedAt" IS NULL
                 ) tmg ON tmg."topicId" = :topicId AND (tmg."userId" = tm.id)
-                ${joinForAdmin}
                 ${where}
                 GROUP BY tm.id, tm.level, tmu.level, tm.name, tm.company, tm."imageUrl", tm.email ${groupForAdmin}
                 ${sortSql}
