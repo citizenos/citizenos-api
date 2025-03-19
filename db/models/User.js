@@ -1,9 +1,9 @@
 'use strict';
 
-const _ = require('lodash');
 const cryptoLib = require('../../libs/crypto');
 const hooks = require('../../libs/sequelize/hooks');
 const Sequelize = require('sequelize');
+const validator = require('validator');
 
 /**
  * User
@@ -67,21 +67,36 @@ module.exports = function (sequelize, DataTypes) {
                 }
             },
             email: {
-                type: DataTypes.STRING(254),
-                comment: 'User registration email.',
+                type: DataTypes.TEXT,
+                comment: 'User registration email (encrypted).',
                 set: function (v) {
-                    if (v && typeof v.toLowerCase === 'function') {
-                        this.setDataValue('email', v.toLowerCase());
-                    } else {
-                        this.setDataValue('email', v);
+                    if (!v) {
+                        this.setDataValue('email', null);
+                        return;
+                    }
+                    const value = typeof v.toLowerCase === 'function' ? v.toLowerCase() : v;
+                    // Immediately encrypt the value
+                    this.setDataValue('email', cryptoLib.privateEncrypt(value));
+                },
+                get: function () {
+                    const value = this.getDataValue('email');
+                    if (!value) return null;
+
+                    try {
+                        return cryptoLib.privateDecrypt(value);
+                    } catch (err) {
+                        console.error('Decryption error:', err);
+                        return null;
                     }
                 },
                 unique: {
                     msg: 'The email address is already in use.'
                 },
                 validate: {
-                    isEmail: {
-                        msg: 'Invalid email.'
+                    isValidEmail(value) {
+                        if (!validator.isEmail(cryptoLib.privateDecrypt(value))) {
+                            throw new Error('Invalid email.');
+                        }
                     }
                 }
             },
@@ -127,7 +142,7 @@ module.exports = function (sequelize, DataTypes) {
             // TODO: Move to separate table - https://trello.com/c/71sCR1zZ/178-api-refactor-move-user-source-to-separate-usersources-table-so-i-can-store-all-connections-also-esteid-could-be-another-source-w
             source: {
                 type: DataTypes.ENUM,
-                values: _.values(SOURCES),
+                values: Object.values(SOURCES),
                 allowNull: false,
                 comment: 'User creation source.'
             },
@@ -237,13 +252,21 @@ module.exports = function (sequelize, DataTypes) {
         const user = {
             id: this.dataValues.id,
             name: this.dataValues.name,
-            company: this.dataValues.company,
             language: this.dataValues.language,
-            email: this.dataValues.email, //TODO: probably should take this out of the responses, is email sensitive? Seems a bit so as used for log-in.
-            imageUrl: this.dataValues.imageUrl
+            imageUrl: this.dataValues.imageUrl,
+            email: this.email
         };
 
         return user;
+    };
+
+    // Add a method to get decrypted values
+    User.prototype.getDecryptedFields = async function () {
+        const email = await this.email;
+        return {
+            ...this.toJSON(),
+            email
+        };
     };
 
     /**
@@ -270,6 +293,21 @@ module.exports = function (sequelize, DataTypes) {
 
         user.password = cryptoLib.getHash(user.password, 'sha256');
         options.validate = false; // Stop validation from running twice!
+    });
+
+    // Remove the beforeCreate and beforeUpdate hooks since we're handling encryption in the setter
+    User.beforeCreate(async (user) => {
+        // Clear the raw email value after validation
+        if (user.getDataValue('_email_raw')) {
+            user.setDataValue('_email_raw', null);
+        }
+    });
+
+    User.beforeUpdate(async (user) => {
+        // Clear the raw email value after validation
+        if (user.getDataValue('_email_raw')) {
+            user.setDataValue('_email_raw', null);
+        }
     });
 
     User.SOURCES = SOURCES;

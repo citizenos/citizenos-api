@@ -8,6 +8,7 @@ module.exports = function (app) {
     const config = app.get('config');
     const logger = app.get('logger');
     const loginCheck = app.get('middleware.loginCheck');
+    const cryptoLib = app.get('cryptoLib');
     const models = app.get('models');
     const cosActivities = app.get('cosActivities');
     const authTokenRestrictedUse = app.get('middleware.authTokenRestrictedUse');
@@ -482,9 +483,11 @@ module.exports = function (app) {
                     LEFT JOIN (
                         SELECT
                             "ideationId",
+                            "status",
                             COUNT("ideationId") as count
                         FROM "Ideas"
-                        GROUP BY "ideationId"
+                        GROUP BY "ideationId", "status"
+                        HAVING "status" != 'draft'
                     ) AS ii ON ii."ideationId" = i.id
                     LEFT JOIN (
                         SELECT
@@ -595,7 +598,7 @@ module.exports = function (app) {
 
                     const idea = Idea.build({
                         authorId: (ideation.allowAnonymous && status !== 'draft') ? null : req.user.id,
-                        sessionId: (ideation.allowAnonymous && status !== 'draft') ? null : sessToken,
+                        sessionId: (ideation.allowAnonymous && status !== 'draft') ? sessToken : null,
                         statement,
                         description,
                         imageUrl,
@@ -624,6 +627,7 @@ module.exports = function (app) {
                             where: {
                                 id: idea.id
                             },
+                            attributes: ['id', 'ideationId', 'statement', 'sessionId', 'description', 'imageUrl', 'status', 'createdAt', 'updatedAt', 'deletedById', 'deletedByReportId', 'deletedAt', 'deletedReasonType', 'deletedReasonText', 'authorId', 'demographics'],
                             include: [
                                 {
                                     model: User,
@@ -773,6 +777,11 @@ module.exports = function (app) {
             if (ideation.allowAnonymous) {
                 delete idea[0].author;
             }
+
+            if (idea[0].author?.email) {
+                idea[0].author.email = cryptoLib.privateDecrypt(idea[0].author.email);
+            }
+
             return res.ok(idea[0]);
 
         } catch (err) {
@@ -825,6 +834,7 @@ module.exports = function (app) {
                 where: {
                     id: ideaId
                 },
+                attributes: ['id', 'ideationId', 'statement', 'description', 'imageUrl', 'status', 'createdAt', 'updatedAt', 'deletedById', 'deletedByReportId', 'deletedAt', 'deletedReasonType', 'deletedReasonText', 'authorId', 'demographics'],
                 include: [
                     {
                         model: User,
@@ -855,7 +865,7 @@ module.exports = function (app) {
                 return res.notFound();
             }
 
-            if ((!ideation.allowAnonymous && idea.authorId !== req.user.id) || (ideation.allowAnonymous && idea.status !== 'draft' && idea.sessionId !== sessToken)) return res.forbidden();
+            if ((!ideation.allowAnonymous && idea.authorId !== req.user.id) || (ideation.allowAnonymous && ((idea.status !== 'draft' && idea.sessionId !== sessToken) || (idea.status === 'draft' && idea.authorId !== req.user.id)))) return res.forbidden();
 
             await db.transaction(async function (t) {
                 fields.forEach(function (field) {
@@ -1147,6 +1157,8 @@ module.exports = function (app) {
             ideas.forEach((idea) => {
                 if (!idea.author.id || (ideation.allowAnonymous && idea.status !== 'draft')) {
                     delete idea.author;
+                } else {
+                    idea.author.email = cryptoLib.privateDecrypt(idea.author.email);
                 }
                 delete idea.countTotal
             });
@@ -1299,6 +1311,7 @@ module.exports = function (app) {
                     where: {
                         ideationId: req.params.ideationId
                     },
+                    attributes: ['id', 'ideationId', 'statement', 'description', 'imageUrl', 'status', 'createdAt', 'updatedAt', 'deletedById', 'deletedByReportId', 'deletedAt', 'deletedReasonType', 'deletedReasonText', 'authorId', 'demographics'],
                     include: [
                         {
                             model: User,
@@ -1365,6 +1378,7 @@ module.exports = function (app) {
                     where: {
                         ideationId: req.params.ideationId
                     },
+                    attributes: ['id', 'ideationId', 'statement', 'description', 'imageUrl', 'status', 'createdAt', 'updatedAt', 'deletedById', 'deletedByReportId', 'deletedAt', 'deletedReasonType', 'deletedReasonText', 'authorId', 'demographics'],
                     include: [
                         {
                             model: User,
@@ -1404,6 +1418,7 @@ module.exports = function (app) {
                 where: {
                     ideationId: req.params.ideationId
                 },
+                attributes: ['id', 'ideationId', 'statement', 'description', 'imageUrl', 'status', 'createdAt', 'updatedAt', 'deletedById', 'deletedByReportId', 'deletedAt', 'deletedReasonType', 'deletedReasonText', 'authorId', 'demographics'],
                 include: [
                     {
                         model: User,
@@ -2100,7 +2115,6 @@ module.exports = function (app) {
                 `
                 SELECT
                     u.name,
-                    u.company,
                     u."imageUrl",
                     CAST(CASE
                         WHEN iv.value=1 Then 'up'
@@ -2160,7 +2174,6 @@ module.exports = function (app) {
                 `
                 SELECT
                     u.name,
-                    u.company,
                     u."imageUrl",
                     CAST(CASE
                         WHEN iv.value=1 Then 'up'
@@ -2547,7 +2560,7 @@ module.exports = function (app) {
             types = types.filter((type) => Comment.TYPES[type]);
         }
 
-        if (types && types.length) {
+        if (types?.length) {
             where += ` AND ic.type IN (:types) `
         }
 
@@ -2557,7 +2570,6 @@ module.exports = function (app) {
             if (req.user.moderator) {
                 dataForModerator = `
                 , 'email', u.email
-                , 'phoneNumber', uc."connectionData"::jsonb->>'phoneNumber'
                 `;
             }
         }
@@ -2583,7 +2595,7 @@ module.exports = function (app) {
                     c.subject,
                     c.text,
                     pg_temp.editCreatedAtToJson(c.edits) as edits,
-                    jsonb_build_object('id', u.id,'name',u.name, 'imageUrl', u."imageUrl", 'company', u.company ${dataForModerator}) as creator,
+                    jsonb_build_object('id', u.id,'name',u.name, 'imageUrl', u."imageUrl" ${dataForModerator}) as creator,
                     CASE
                         WHEN c."deletedById" IS NOT NULL THEN jsonb_build_object('id', c."deletedById", 'name', dbu.name )
                         ELSE jsonb_build_object('id', c."deletedById")
@@ -2621,7 +2633,7 @@ module.exports = function (app) {
                     c.subject,
                     c.text,
                     pg_temp.editCreatedAtToJson(c.edits) as edits,
-                    jsonb_build_object('id', u.id,'name',u.name, 'imageUrl', u."imageUrl", 'company', u.company ${dataForModerator}) as creator,
+                    jsonb_build_object('id', u.id,'name',u.name, 'imageUrl', u."imageUrl" ${dataForModerator}) as creator,
                     CASE
                         WHEN c."deletedById" IS NOT NULL THEN jsonb_build_object('id', c."deletedById", 'name', dbu.name )
                         ELSE jsonb_build_object('id', c."deletedById")
@@ -2888,6 +2900,24 @@ module.exports = function (app) {
                     countRes[item.type] = item.count;
                 });
             }
+
+            const decryptEmail = (reply) => {
+                if (reply.creator?.email) {
+                    reply.creator.email = cryptoLib.privateDecrypt(reply.creator.email);
+                }
+                if (reply.replies.rows.length) {
+                    reply.replies.rows.forEach((r) => decryptEmail(r));
+                }
+            }
+            comments.forEach((comment) => {
+                if (comment.creator?.email) {
+                    comment.creator.email = cryptoLib.privateDecrypt(comment.creator.email);
+                }
+                comment.replies.rows.forEach((reply) => {
+                    decryptEmail(reply);
+                })
+            });
+
             countRes.total = countRes.pro + countRes.con + countRes.poi + countRes.reply;
             return res.ok({
                 count: countRes,
@@ -3511,7 +3541,6 @@ module.exports = function (app) {
                 `
                 SELECT
                     u.name,
-                    u.company,
                     u."imageUrl",
                     CAST(CASE
                         WHEN cv.value=1 Then 'up'
@@ -3794,7 +3823,7 @@ module.exports = function (app) {
         });
         const [ideation, idea] = await Promise.all([ideationPromise, ideaPromise]);
 
-        if ((ideation.allowAnonymous && idea.sessionId !== sessToken) || (!ideation.allowAnonymous && req.user.id !== req.params.userId)) {
+        if ((ideation.allowAnonymous && ((idea.sessionId && idea.sessionId !== sessToken) || idea.authorId !== req.user.id)) && (!ideation.allowAnonymous && idea.authorId !== req.userId)) {
             return res.forbidden();
         }
 

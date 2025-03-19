@@ -1192,7 +1192,6 @@ suite('Users', function () {
                         };
 
                         const inviteCreateResult1 = (await _groupInviteUsersCreate(agentCreator, userCreator.id, group.id, '{asdasdas', 400)).body;
-
                         assert.deepEqual(inviteCreateResult1, expectedResponseBody);
 
                         const inviteCreateResult2 = (await _groupInviteUsersCreate(agentCreator, userCreator.id, group.id, 'PPPasdasdas', 400)).body;
@@ -1254,11 +1253,14 @@ suite('Users', function () {
 
                         const inviteRead = (await groupInviteUsersRead(request.agent(app), group.id, groupInviteCreated.id)).body.data;
 
-                        const expectedInvite = Object.assign({}, groupInviteCreated); // Clone
+                        const expectedInvite = { ...groupInviteCreated }; // Clone
 
                         expectedInvite.group = {
                             id: group.id,
                             name: group.name,
+                            description: group.description,
+                            visibility: group.visibility,
+                            imageUrl: group.imageUrl,
                             creator: {
                                 id: userCreator.id
                             }
@@ -1268,6 +1270,7 @@ suite('Users', function () {
                             company: null,
                             id: userCreator.id,
                             imageUrl: null,
+                            email: null,
                             name: userCreator.name
                         };
 
@@ -1296,11 +1299,14 @@ suite('Users', function () {
                         const inviteRead1 = (await groupInviteUsersRead(request.agent(app), group.id, groupInviteCreated1.id)).body.data;
                         const inviteRead2 = (await groupInviteUsersRead(request.agent(app), group.id, groupInviteCreated2.id)).body.data;
 
-                        const expectedInvite = Object.assign({}, groupInviteCreated2); // Clone
+                        const expectedInvite = {...groupInviteCreated2}; // Clone
 
                         expectedInvite.group = {
                             id: group.id,
                             name: group.name,
+                            description: group.description,
+                            visibility: group.visibility,
+                            imageUrl: group.imageUrl,
                             creator: {
                                 id: userCreator.id
                             }
@@ -1309,6 +1315,7 @@ suite('Users', function () {
                         expectedInvite.creator = {
                             company: null,
                             id: userCreator.id,
+                            email: null,
                             imageUrl: null,
                             name: userCreator.name
                         };
@@ -1351,6 +1358,7 @@ suite('Users', function () {
                         expectedInvite.group = {
                             id: group.id,
                             name: group.name,
+                            visibility: group.visibility,
                             creator: {
                                 id: userCreator.id
                             }
@@ -1359,6 +1367,7 @@ suite('Users', function () {
                         expectedInvite.creator = {
                             company: null,
                             id: userCreator.id,
+                            email: null,
                             imageUrl: null,
                             name: userCreator.name
                         };
@@ -1397,6 +1406,9 @@ suite('Users', function () {
                         expectedInvite.group = {
                             id: group.id,
                             name: group.name,
+                            description: group.description,
+                            visibility: group.visibility,
+                            imageUrl: group.imageUrl,
                             creator: {
                                 id: userCreator.id
                             }
@@ -1406,6 +1418,7 @@ suite('Users', function () {
                             company: null,
                             id: userCreator.id,
                             imageUrl: null,
+                            email: null,
                             name: userCreator.name
                         };
 
@@ -1914,10 +1927,8 @@ suite('Users', function () {
                             id: userCreator.id,
                             name: userCreator.name,
                             company: userCreator.company,
-                            invite: "{}",
                             imageUrl: userCreator.imageUrl,
                             level: GroupMemberUser.LEVELS.admin,
-                            email: userCreator.email
                         };
                         assert.property(userCreatorMember, 'latestActivity');
                         delete userCreatorMember.latestActivity;
@@ -1931,11 +1942,8 @@ suite('Users', function () {
                             id: userMember.id,
                             name: userMember.name,
                             company: userMember.company,
-                            invite: "{}",
                             imageUrl: userMember.imageUrl,
-                            level: GroupMemberUser.LEVELS.read,
-                            email: userMember.email,
-                            phoneNumber: null
+                            level: GroupMemberUser.LEVELS.read
                         };
                         assert.property(userMemberMember, 'latestActivity');
                         delete userMemberMember.latestActivity;
@@ -1957,7 +1965,6 @@ suite('Users', function () {
                             id: userCreator.id,
                             name: userCreator.name,
                             company: userCreator.company,
-                            invite: "{}",
                             imageUrl: userCreator.imageUrl,
                             level: GroupMemberUser.LEVELS.admin
                         };
@@ -1974,7 +1981,6 @@ suite('Users', function () {
                             name: userMember.name,
                             company: userMember.company,
                             imageUrl: userMember.imageUrl,
-                            invite: "{}",
                             level: GroupMemberUser.LEVELS.read
                         };
                         assert.property(userMemberMember, 'latestActivity');
@@ -2402,7 +2408,9 @@ suite('Users', function () {
                 const resJoinRead = await groupJoinJoin(agentUser, resGroupJoinRead.token);
 
                 const userActivities = (await activityLib.activitiesRead(agentUser, user.id)).body.data;
-                const groupJoinActivityActual = userActivities[0].data;
+                const groupJoinActivityActual = userActivities.find((activity) => {
+                    return activity.data.type === 'Join' && activity.data.object.id === group.id;
+                });
 
                 const groupJoinActivityExpected = {
                     type: 'Join',
@@ -2423,15 +2431,15 @@ suite('Users', function () {
                         imageUrl: null,
                         language: null,
                         parentId: null,
-                        createdAt: groupJoinActivityActual.object.createdAt,
-                        updatedAt: groupJoinActivityActual.object.updatedAt,
+                        createdAt: groupJoinActivityActual.data.object.createdAt,
+                        updatedAt: groupJoinActivityActual.data.object.updatedAt,
                         rules: [],
                         visibility: Group.VISIBILITY.private
                     }
                 };
-                assert.deepEqual(groupJoinActivityActual, groupJoinActivityExpected);
+                assert.deepEqual(groupJoinActivityActual.data, groupJoinActivityExpected);
 
-                const groupExpected = Object.assign({}, group);
+                const groupExpected ={ ...group };
                 groupExpected.join = resGroupJoinRead;
 
                 const expectedResult = {
@@ -2487,7 +2495,9 @@ suite('Users', function () {
                         assert.equal(resData.level, GroupJoin.LEVELS.admin);
 
                         const userActivities = (await activityLib.activitiesRead(agentCreator, creator.id)).body.data;
-                        const tokenJoinUpdateActivityActual = userActivities[0].data;
+                        const tokenJoinUpdateActivityActual = userActivities.find(function (activity) {
+                            return activity.data.type === 'Update' && activity.data.object.groupId === group.id;
+                        });
 
                         const tokenJoinUpdateActivityExpected = {
                             "type": "Update",
@@ -2523,7 +2533,7 @@ suite('Users', function () {
                             ]
                         };
 
-                        assert.deepEqual(tokenJoinUpdateActivityActual, tokenJoinUpdateActivityExpected);
+                        assert.deepEqual(tokenJoinUpdateActivityActual.data, tokenJoinUpdateActivityExpected);
                     });
 
                     test('Fail - 40001 - Bad request - missing required property "level"', async function () {
@@ -2569,7 +2579,9 @@ suite('Users', function () {
                             assert.deepEqual(resBody, resBodyExpected);
 
                             const userActivities = (await activityLib.activitiesRead(agentCreator, creator.id)).body.data;
-                            const tokenJoinLevelUpdateActivityActual = userActivities[0].data;
+                            const tokenJoinLevelUpdateActivityActual = userActivities.find(function (activity) {
+                                return activity.data.type === 'Update' && activity.data.object.groupId === group.id;
+                            });
 
                             const tokenJoinLevelUpdateActivityExpected = {
                                 "type": "Update",
@@ -2600,7 +2612,7 @@ suite('Users', function () {
                                 ]
                             };
 
-                            assert.deepEqual(tokenJoinLevelUpdateActivityActual, tokenJoinLevelUpdateActivityExpected);
+                            assert.deepEqual(tokenJoinLevelUpdateActivityActual.data, tokenJoinLevelUpdateActivityExpected);
                         });
 
                         test('Fail - 40400 - Not found - invalid token', async function () {

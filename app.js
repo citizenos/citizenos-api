@@ -12,7 +12,6 @@ const log4js = require('log4js');
 const models = require('./db/models');
 const QueryStream = require('pg-query-stream');
 const morgan = require('morgan');
-const lodash = require('lodash');
 const Promise = require('bluebird');
 const moment = require('moment');
 const mu = require('mu2');
@@ -37,6 +36,7 @@ const notifications = require('./libs/notifications');
 const SlowDown = require('express-slow-down');
 const rateLimit = require('express-rate-limit')
 const { createClient } = require('redis');
+const which = require('which');
 
 let rateLimitStore, speedLimitStore;
 if (config.rateLimit && config.rateLimit.storageType === 'redis') {
@@ -183,7 +183,6 @@ if (config.storage?.type.toLowerCase() === 's3') {
 }
 
 app.set('url', require('url'));
-app.set('lodash', lodash);
 app.set('validator', require('validator'));
 app.set('Promise', Promise);
 app.set('fs', fs);
@@ -200,7 +199,19 @@ app.set('etherpadClient', etherpadClient);
 app.set('superagent', superagent);
 app.set('moment', moment);
 app.set('striptags', striptags);
+
+// Add 7zip binary check
+try {
+    which.sync('7z');
+} catch (err) {
+    console.log(err);
+    logger.error('7zip (7z) is not installed on the system. Please install 7zip command line tool.');
+    // You can either throw an error or continue without 7z functionality
+    // throw new Error('7zip (7z) is not installed. Please install it before running the application.');
+}
+
 app.set('SevenZip', SevenZip);
+
 app.set('busboy', Busboy);
 app.set('stream_upload', StreamUpload);
 
@@ -217,6 +228,8 @@ app.set('util', require('./libs/util'));
 app.set('cosEtherpad', require('./libs/cosEtherpad')(app));
 app.set('cosJwt', require('./libs/cosJwt')(app));
 app.set('cosUpload', require('./libs/cosUpload')(app));
+
+app.set('cryptoLib', require('./libs/crypto'));
 
 //Config smartId
 const smartId = require('smart-id-rest')();
@@ -249,7 +262,6 @@ config.email.layout = config.email.layout || path.join(EMAIL_TEMPLATE_ROOT, 'lay
 app.set('emailClient', require('./libs/campaign/emailClient')(config.email));
 app.set('email', require('./libs/email')(app));
 
-app.set('cryptoLib', require('./libs/crypto'));
 // Authentication with Passport - http://passportjs.org/guide/
 const passport = require('passport');
 app.set('passport', passport);

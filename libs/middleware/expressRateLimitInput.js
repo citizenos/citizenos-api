@@ -1,5 +1,5 @@
 'use strict';
-const _ = require('lodash');
+
 const { RateLimiterMemory, RateLimiterRedis } = require('rate-limiter-flexible'); // FIXME: Allow configurable RateLimiter...
 const assert = require('assert');
 const { createClient } = require('redis');
@@ -23,7 +23,7 @@ function ExpressRateLimitInput(app) {
     /**
      * Express Rate Limit Input middleware - rate limiting middleware for doing rate limiting based on input.
      *
-     * @param {Array<String>} properties Array of strings in dot notation for the properties to look at from Express request object (req). Using Lodash GET internally (https://lodash.com/docs/4.17.15#get)
+     * @param {Array<String>} properties Array of strings in dot notation for the properties to look at from Express request object (req).
      * @param {number} windowMs Window size in milliseconds.
      * @param {number} max Maximum number of events in given window.
      *
@@ -33,7 +33,6 @@ function ExpressRateLimitInput(app) {
      * @see https://github.com/animir/node-rate-limiter-flexible/wiki/Overall-example
      * @see https://expressjs.com/en/4x/api.html
      * @see https://expressjs.com/en/guide/writing-middleware.html
-     * @see https://lodash.com/docs/4.17.15#get
      */
     return function expressRateLimitInput(properties, windowMs, max) {
         assert(properties && Array.isArray(properties), `Parameter "properties" is required and must be an array of dot notation strings of properties. Value: ${properties}`);
@@ -59,11 +58,15 @@ function ExpressRateLimitInput(app) {
                 points: max
             });
         }
+        function _get(object, path, defval = null) {
+            if (typeof path === "string") path = path.split(".");
+            return path.reduce((xs, x) => (xs && xs[x] ? xs[x] : defval), object);
+        }
 
         return function (req, res, next) {
             let propsAndValues = [];
             properties.forEach(prop => {
-                const propValue = _.get(req, prop);
+                const propValue = _get(req, prop);
                 // NOTE: We assume that ANY property in the "properties" array is REQUIRED. If the value does not exist, we consider it as a bad request!
                 if (!propValue) {
                     logger.error('expressRateLimitInput', `No value for property "${prop}" found in Express request object (req)!`);

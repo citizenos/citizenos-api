@@ -383,7 +383,7 @@ module.exports = function (app) {
         } else if (validator.isEmail(userId)) {
             const user = await User.findOne({
                 where: {
-                    email: userId
+                    email: cryptoLib.privateEncrypt(userId.toLowerCase())
                 },
                 attributes: ['id']
             });
