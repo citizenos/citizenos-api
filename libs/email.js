@@ -653,7 +653,7 @@ module.exports = function (app) {
             .all([toUsersPromise, fromUserPromise, topicPromise])
         const fromUser = fromUserRes.toJSON();
         const topic = topicRes.toJSON();
-        console.log()
+
         if (toUsers && toUsers.length) {
             const promisesToResolve = [];
             const memberCount = await TopicMemberUser.count({

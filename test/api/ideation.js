@@ -4590,7 +4590,7 @@ suite('Users', function () {
                 test('Fail - anonymous - new session', async function () {
                     const statement = 'TEST idea';
                     const description = 'This idea is just for testing';
-                    const idea = (await ideationIdeaCreate(agent, user.id, topic.id, ideation.id, statement, description)).body.data;
+                    const idea = (await ideationIdeaCreate(agent, user.id, topic.id, ideation.id, statement, description, null, 'published')).body.data;
                     const updatedStatement = 'Test idea Update';
                     const updatedDescription = 'Updated description';
                     const agent3 = request.agent(app);
