@@ -1007,15 +1007,11 @@ module.exports = function (app) {
                     nest: true
                 }
             );
+        moderators = await _getTopicMemberUsers(commentInfo.topic.id, TopicMemberUser.LEVELS.admin);
         if (commentInfo.topic.visibility === Topic.VISIBILITY.public) {
             logger.debug('Topic is public, sending e-mails to registered partner moderators', commentInfo);
 
-            moderators = await _getModerators(commentInfo.topic.sourcePartnerId);
-        } else {
-            logger.debug('Topic is NOT public, sending e-mails to Users with admin permissions', commentInfo);
-            // Private Topics will have moderation by admin Users
-
-            moderators = await _getTopicMemberUsers(commentInfo.topic.id, TopicMemberUser.LEVELS.admin);
+            moderators = moderators.concat(await _getModerators(commentInfo.topic.sourcePartnerId));
         }
         const promisesToResolve = [];
 
@@ -1164,16 +1160,14 @@ module.exports = function (app) {
                     nest: true
                 }
             );
+
+        moderators = await _getTopicMemberUsers(commentInfo.topic.id, TopicMemberUser.LEVELS.admin);
         if (commentInfo.topic.visibility === Topic.VISIBILITY.public) {
             logger.debug('Topic is public, sending e-mails to registered partner moderators', commentInfo);
 
-            moderators = await _getModerators(commentInfo.topic.sourcePartnerId);
-        } else {
-            logger.debug('Topic is NOT public, sending e-mails to Users with admin permissions', commentInfo);
-            // Private Topics will have moderation by admin Users
-
-            moderators = await _getTopicMemberUsers(commentInfo.topic.id, TopicMemberUser.LEVELS.admin);
+            moderators = moderators.concat(await _getModerators(commentInfo.topic.sourcePartnerId));
         }
+
         const promisesToResolve = [];
 
         // Comment creator e-mail - TODO: Comment back in when comment editing goes live!
@@ -1326,16 +1320,14 @@ module.exports = function (app) {
                 }
             );
 
+
+        moderators = await _getTopicMemberUsers(ideaInfo.topic.id, TopicMemberUser.LEVELS.admin);
         if (ideaInfo.topic.visibility === Topic.VISIBILITY.public) {
             logger.debug('Topic is public, sending e-mails to registered partner moderators', ideaInfo);
 
-            moderators = await _getModerators(ideaInfo.topic.sourcePartnerId);
-        } else {
-            logger.debug('Topic is NOT public, sending e-mails to Users with admin permissions', ideaInfo);
-            // Private Topics will have moderation by admin Users
-
-            moderators = await _getTopicMemberUsers(ideaInfo.topic.id, TopicMemberUser.LEVELS.admin);
+            moderators = moderators.concat(await _getModerators(ideaInfo.topic.sourcePartnerId));
         }
+
         const promisesToResolve = [];
 
         // Comment creator e-mail - TODO: Comment back in when comment editing goes live!
@@ -2317,8 +2309,8 @@ module.exports = function (app) {
                 visibility: handleTranslation(template.translations, 'TXT_TOPIC_VISIBILITY_' + topic.visibility.toUpperCase()),
                 topic: topic,
                 message: request.text,
-                linkAcceptTopic: linkAcceptTopic+ '?token=' + encodeURIComponent(token),
-                linkRejectTopic: linkRejectTopic+ '?token=' + encodeURIComponent(token),
+                linkAcceptTopic: linkAcceptTopic + '?token=' + encodeURIComponent(token),
+                linkRejectTopic: linkRejectTopic + '?token=' + encodeURIComponent(token),
                 linkViewTopic: linkViewTopic,
                 linkToApplication: linkToApplication,
                 provider: EMAIL_OPTIONS_DEFAULT.provider,
