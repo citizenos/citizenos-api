@@ -35,7 +35,7 @@ module.exports = function (app) {
         const userConnectionInfo = await UserConnection.findOne({
             where: {
                 connectionId: connectionId,
-                connectionUserId: sourceId
+                connectionUserId: cryptoLib.privateEncrypt(sourceId)
             },
             include: [User]
         });
