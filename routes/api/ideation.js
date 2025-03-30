@@ -1157,7 +1157,7 @@ module.exports = function (app) {
             ideas.forEach((idea) => {
                 if (!idea.author.id || (ideation.allowAnonymous && idea.status !== 'draft')) {
                     delete idea.author;
-                } else {
+                } else if (idea.author.email) {
                     idea.author.email = cryptoLib.privateDecrypt(idea.author.email);
                 }
                 delete idea.countTotal
