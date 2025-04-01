@@ -306,7 +306,6 @@ module.exports = function (app) {
         if (cookieAuthorization) {
             token = cookieAuthorization;
         }
-
         // Partners use "Authorization: Bearer <JWT>. Partner JWT always overrides app cookie JWT
         const headerAuthorization = req.headers.authorization;
         if (headerAuthorization) {
@@ -347,12 +346,12 @@ module.exports = function (app) {
         })(req, res);
     });
 
-    app.get('/api/auth/logout', asyncMiddleware(async function (req, res) {
+    app.get('/api/auth/logout', loginCheck(), asyncMiddleware(async function (req, res) {
         await clearSessionCookies(req, res);
         return res.ok({});
     }));
 
-    app.post('/api/auth/logout', asyncMiddleware(async function (req, res) {
+    app.post('/api/auth/logout', loginCheck(), asyncMiddleware(async function (req, res) {
         await clearSessionCookies(req, res);
         return res.ok({});
     }));
