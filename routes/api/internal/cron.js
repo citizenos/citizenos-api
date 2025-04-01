@@ -7,6 +7,7 @@ module.exports = function (app) {
     const Vote = models.Vote;
     const TopicVote = models.TopicVote;
     const emailLib = app.get('email');
+    const cryptoLib = app.get('cryptoLib');
     const topicLib = require('../topic')(app);
     const moment = require('moment');
 
@@ -76,6 +77,11 @@ module.exports = function (app) {
                         nest: true
                     }
                 );
+
+            users.forEach(user => {
+                user.email = cryptoLib.privateDecrypt(user.email);
+            });
+
             return users;
         } catch (err) {
             console.log(err);
