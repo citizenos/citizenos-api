@@ -681,6 +681,7 @@ module.exports = function (app) {
             toUsers.forEach((user) => {
                 const topicObject = { ...topic };
                 if (user.email) {
+                    user.email = cryptoLib.privateDecrypt(user.email);
                     const template = resolveTemplate('inviteTopic', user.language);
                     // TODO: Could use Mu here....
                     const subject = template.translations.INVITE_TOPIC.SUBJECT
@@ -806,7 +807,7 @@ module.exports = function (app) {
                 logger.info('Skipping invite e-mail to user as there is no email on the profile', toUser.email);
                 return Promise.resolve();
             }
-
+            toUser.email = cryptoLib.privateDecrypt(toUser.email);
             const template = resolveTemplate(templateName, toUser.language);
             // TODO: could use Mu here...
             const subject = template.translations.INVITE_GROUP.SUBJECT
@@ -829,6 +830,7 @@ module.exports = function (app) {
                     file: path.join(templateRoot, 'images/Warning.png')
                 }].concat(EMAIL_OPTIONS_DEFAULT.images);
 
+            toUser.email = cryptoLib.privateDecrypt(toUser.email);
             const emailOptions = {
                 // from: from, - comes from emailClient.js configuration
                 subject: subject,
@@ -911,6 +913,7 @@ module.exports = function (app) {
 
             toUsers.forEach((user) => {
                 if (user.email) {
+                    user.email = cryptoLib.privateDecrypt(user.email);
                     const template = resolveTemplate('inviteGroup', user.language);
 
                     // TODO: could use Mu here...
@@ -1013,6 +1016,7 @@ module.exports = function (app) {
             const template = resolveTemplate('reportCommentCreator', commentInfo.comment.creator.language);
             const linkViewTopic = urlLib.getFe('/topics/:topicId', { topicId: commentInfo.topic.id });
 
+            commentInfo.comment.creator.email = cryptoLib.privateDecrypt(commentInfo.comment.creator.email);
             const emailOptions = {
                 ...structuredClone(EMAIL_OPTIONS_DEFAULT),
                 subject: template.translations.REPORT_COMMENT_CREATOR.SUBJECT,
@@ -1053,6 +1057,7 @@ module.exports = function (app) {
 
             moderators.forEach((moderator) => {
                 if (moderator.email) {
+                    moderator.email = cryptoLib.privateDecrypt(moderator.email);
                     const template = resolveTemplate('reportCommentModerator', moderator.language);
 
                     const token = cosJwt.getTokenRestrictedUse(
@@ -1161,6 +1166,7 @@ module.exports = function (app) {
         // Comment creator e-mail - TODO: Comment back in when comment editing goes live!
         let commentCreatorInformed = true;
         if (commentInfo.comment.creator.email) {
+            commentInfo.comment.creator.email = cryptoLib.privateDecrypt(commentInfo.comment.creator.email);
             const template = resolveTemplate('reportIdeaCommentCreator', commentInfo.comment.creator.language);
             const linkViewTopic = urlLib.getFe('/topics/:topicId', { topicId: commentInfo.topic.id });
 
@@ -1207,6 +1213,7 @@ module.exports = function (app) {
 
             moderators.forEach((moderator) => {
                 if (moderator.email) {
+                    moderator.email = cryptoLib.privateDecrypt(moderator.email);
                     const template = resolveTemplate('reportIdeaCommentModerator', moderator.language);
 
                     const token = cosJwt.getTokenRestrictedUse(
@@ -1319,6 +1326,7 @@ module.exports = function (app) {
         // Comment creator e-mail - TODO: Comment back in when comment editing goes live!
         let ideaAuthorInformed = true;
         if (ideaInfo.idea.author?.email) {
+            ideaInfo.idea.author.email = cryptoLib.privateDecrypt(ideaInfo.idea.author.email);
             const template = resolveTemplate('reportIdeaCreator', ideaInfo.idea.author.language);
             const linkViewTopic = urlLib.getFe('/topics/:topicId', { topicId: ideaInfo.topic.id });
 
@@ -1364,6 +1372,7 @@ module.exports = function (app) {
 
             moderators.forEach((moderator) => {
                 if (moderator.email) {
+                    moderator.email = cryptoLib.privateDecrypt(moderator.email);
                     const template = resolveTemplate('reportIdeaModerator', moderator.language);
 
                     const token = cosJwt.getTokenRestrictedUse(
@@ -1492,6 +1501,7 @@ module.exports = function (app) {
         topicMemberList.forEach((topicMemberUser) => {
             if (topicMemberUser.email) {
                 const sendTopicMemberEmail = async () => {
+                    topicMemberUser.email = cryptoLib.privateDecrypt(topicMemberUser.email);
                     const template = resolveTemplate('reportTopicReportMember', topicMemberUser.language);
                     const subject = template.translations.REPORT_TOPIC_REPORT_MEMBER.SUBJECT
                         .replace('{{report.id}}', topicReport.id);
@@ -1526,6 +1536,7 @@ module.exports = function (app) {
         // 1.3 To the Moderators - https://app.citizenos.com/en/topics/ac8b66a4-ca56-4d02-8406-5e19da73d7ce?argumentsPage=1
         topicModerators.forEach((userModerator) => {
             if (userModerator.email) {
+                userModerator.email = cryptoLib.privateDecrypt(userModerator.email);
                 const sendTopicModeratorEmail = async () => {
                     const template = resolveTemplate('reportTopicReportModerator', userModerator.language);
                     const subject = template.translations.REPORT_TOPIC_REPORT_MODERATOR.SUBJECT
@@ -1635,6 +1646,7 @@ module.exports = function (app) {
         // 2.2 To admin/edit Members of the topic - https://app.citizenos.com/en/topics/ac8b66a4-ca56-4d02-8406-5e19da73d7ce?argumentsPage=1
         topicMemberList.forEach((topicMemberUser) => {
             if (topicMemberUser.email) {
+                topicMemberUser.email = cryptoLib.privateDecrypt(topicMemberUser.email);
                 const sendTopicMemberEmail = async () => {
                     const template = resolveTemplate('reportTopicModerateMember', topicMemberUser.language);
                     const subject = template.translations.REPORT_TOPIC_MODERATE_MEMBER.SUBJECT
@@ -1697,6 +1709,7 @@ module.exports = function (app) {
 
         topicModerators.forEach((userModerator) => {
             if (userModerator.email) {
+                userModerator.email = cryptoLib.privateDecrypt(userModerator.email);
                 const sendTopicModeratorEmail = async () => {
                     const template = resolveTemplate('reportTopicReportReviewModerator', userModerator.language);
                     const subject = template.translations.REPORT_TOPIC_REPORT_REVIEW_MODERATOR.SUBJECT
@@ -1804,6 +1817,7 @@ module.exports = function (app) {
         // 4.2 To admin/edit Members of the topic - https://app.citizenos.com/en/topics/ac8b66a4-ca56-4d02-8406-5e19da73d7ce?argumentsPage=1
         topicMemberList.forEach((topicMemberUser) => {
             if (topicMemberUser.email) {
+                topicMemberUser.email = cryptoLib.privateDecrypt(topicMemberUser.email);
                 const sendTopicMemberEmail = async () => {
                     const template = resolveTemplate('reportTopicReportResolveMember', topicMemberUser.language);
                     const subject = template.translations.REPORT_TOPIC_REPORT_RESOLVE_MEMBER.SUBJECT
@@ -2175,6 +2189,7 @@ module.exports = function (app) {
                         logger.info('Skipping invite e-mail to user as there is no email on the profile', toUser.email);
                         return Promise.resolve();
                     }
+                    toUser.email = cryptoLib.privateDecrypt(toUser.email);
 
                     await models.UserNewsletter.create({
                         userId: toUser.id,
@@ -2249,7 +2264,7 @@ module.exports = function (app) {
                 logger.info('Skipping invite e-mail to user as there is no email on the profile', toUser.email);
                 return Promise.resolve();
             }
-
+            toUser.email = cryptoLib.privateDecrypt(toUser.email);
             const template = resolveTemplate(templateName, toUser.language);
 
             const subject = Mustache.render(handleTranslation(template.translations, 'REQUEST_ADD_TOPIC_TO_GROUP.SUBJECT'), { group });
