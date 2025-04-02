@@ -1998,6 +1998,7 @@ module.exports = function (app) {
             isVisible = false;
         }
         users.forEach((user) => {
+            user.email = cryptoLib.privateDecrypt(user.email);
             const template = resolveTemplate('topicNotification', user.language || 'en');
             const translateValues = notification.values;
             let notificationText = '';
