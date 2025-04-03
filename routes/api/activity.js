@@ -201,7 +201,12 @@ module.exports = function (app) {
          * @todo Think of how to handle anonymous ideas.
          * @todo Think of how to move this to the SQL query.
         */
-        const activities = allActivities.filter((it) => it.data.actor.id !== null)
+        let activities = allActivities.filter((it) => it.data.actor.id !== null)
+
+        /**
+         * Filter out activities with draft status.
+         */
+        activities = activities.filter((it) => it.data.object.status !== "draft")
 
         const returnList = [];
         activities.forEach((activity) => {
