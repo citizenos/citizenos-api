@@ -2326,12 +2326,10 @@ module.exports = function (app) {
         }
 
         let dataForModeratorAndAdmin = '';
-        let groupForAdmin = '';
         if (req.user?.moderator) {
             dataForModeratorAndAdmin = `
             tm.email,
             `;
-            groupForAdmin = `, uc."connectionData"::jsonb `;
         }
 
         try {
@@ -2394,7 +2392,7 @@ module.exports = function (app) {
                     AND tmg."deletedAt" IS NULL
                 ) tmg ON tmg."topicId" = :topicId AND (tmg."userId" = tm.id)
                 ${where}
-                GROUP BY tm.id, tm.level, tmu.level, tm.name, tm.company, tm."imageUrl", tm.email ${groupForAdmin}
+                GROUP BY tm.id, tm.level, tmu.level, tm.name, tm.company, tm."imageUrl", tm.email
                 ${sortSql}
                 LIMIT :limit
                 OFFSET :offset
