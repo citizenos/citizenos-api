@@ -13,7 +13,7 @@ const fs = require('fs');
 const fsExtra = require('fs-extra');
 const https = require('https');
 const path = require('path');
-const sizeOf = require('image-size');
+const { imageSizeFromFile } = require('image-size');
 const mime = require('mime-types');
 const { AlignmentType, Document, HeadingLevel, Packer, Paragraph, TextRun, ImageRun, ExternalHyperlink, LevelFormat } = docx;
 
@@ -430,9 +430,9 @@ function CosHtmlToDocx(html, title, intro, resPath) {
         }
     }
 
-    const scaleImage = (path) => {
+    const scaleImage = async (path) => {
         try {
-            let dimensions = sizeOf(path);
+            let dimensions = await imageSizeFromFile(path);
             if (dimensions.width > 605) {
                 const scale = (605 / dimensions.width) * 100 / 100;
                 dimensions.width = Math.round(dimensions.width * scale);
@@ -460,7 +460,7 @@ function CosHtmlToDocx(html, title, intro, resPath) {
         if (_isElement(item, 'img')) {
             const path = await getImageFile(item.attribs.src, resPath);
             if (path) {
-                const imagesize = scaleImage(path);
+                const imagesize = await scaleImage(path);
                 const image = {
                     children: [
                         new ImageRun({
