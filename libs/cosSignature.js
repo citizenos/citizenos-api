@@ -459,20 +459,21 @@ module.exports = function (app) {
                             type: SIGNATURE_FILE.mimeType,
                             hash: hash
                         });
-
+                        const hashString = hash.toString();
                         await VoteContainerFile.create(
                             {
                                 voteId: vote.id,
                                 fileName: SIGNATURE_FILE.name,
                                 mimeType: SIGNATURE_FILE.mimeType,
                                 content: docxBuffer,
-                                hash: hash.toString()
+                                hash: hashString
                             },
                             {
                                 transaction: transaction
                             }
                         );
-                        return resolve(hash.toString());
+
+                        return resolve(hashString);
                     });
             });
 
@@ -1078,7 +1079,7 @@ module.exports = function (app) {
                 const voteContainerFiles = await VoteContainerFile.findAll({
                     where: {
                         voteId: voteId,
-                        fileName: {[Op.ne]: SIGNATURE_FILE.name}
+                        fileName: { [Op.ne]: SIGNATURE_FILE.name }
                     }
                 });
 

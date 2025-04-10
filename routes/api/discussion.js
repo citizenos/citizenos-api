@@ -36,7 +36,7 @@ module.exports = function (app) {
     const DiscussionComment = models.DiscussionComment;
     const Discussion = models.Discussion;
 
-    const topicLib = require('./topic')(app);
+    const topicService = require('../../services/topic')(app);
 
     const isCommentCreator = function () {
         return async function (req, res, next) {
@@ -66,7 +66,7 @@ module.exports = function (app) {
     /**
      * Create a Discussion
      */
-    app.post('/api/users/:userId/topics/:topicId/discussions', loginCheck(['partner']), topicLib.hasPermission(TopicMemberUser.LEVELS.admin, null, [Topic.STATUSES.draft, Topic.STATUSES.ideation, Topic.STATUSES.inProgress]), async (req, res, next) => {
+    app.post('/api/users/:userId/topics/:topicId/discussions', loginCheck(['partner']), topicService.hasPermission(TopicMemberUser.LEVELS.admin, null, [Topic.STATUSES.draft, Topic.STATUSES.ideation, Topic.STATUSES.inProgress]), async (req, res, next) => {
         const question = req.body.question;
         const deadline = req.body.deadline;
         const topicId = req.params.topicId;
@@ -240,7 +240,7 @@ module.exports = function (app) {
         }
     };
 
-    app.get('/api/users/:userId/topics/:topicId/discussions/:discussionId/participants', loginCheck(['partner']), topicLib.hasPermission(TopicMemberUser.LEVELS.read, true), async (req, res, next) => {
+    app.get('/api/users/:userId/topics/:topicId/discussions/:discussionId/participants', loginCheck(['partner']), topicService.hasPermission(TopicMemberUser.LEVELS.read, true), async (req, res, next) => {
         try {
             const discussion = await Discussion.findOne({
                 where: {
@@ -318,14 +318,14 @@ module.exports = function (app) {
         }
     });
 
-    app.get('/api/users/:userId/topics/:topicId/discussions/:discussionId', loginCheck(['partner']), topicLib.hasPermission(TopicMemberUser.LEVELS.read, true), async (req, res, next) => {
+    app.get('/api/users/:userId/topics/:topicId/discussions/:discussionId', loginCheck(['partner']), topicService.hasPermission(TopicMemberUser.LEVELS.read, true), async (req, res, next) => {
         _readDiscussion(req, res, next);
     });
 
     /**
      * Update a discussion
      */
-    app.put('/api/users/:userId/topics/:topicId/discussions/:discussionId', loginCheck(['partner']), topicLib.hasPermission(TopicMemberUser.LEVELS.admin, null, [Topic.STATUSES.draft, Topic.STATUSES.inProgress]), async (req, res, next) => {
+    app.put('/api/users/:userId/topics/:topicId/discussions/:discussionId', loginCheck(['partner']), topicService.hasPermission(TopicMemberUser.LEVELS.admin, null, [Topic.STATUSES.draft, Topic.STATUSES.inProgress]), async (req, res, next) => {
         try {
             const topicId = req.params.topicId;
             const discussionId = req.params.discussionId;
@@ -409,7 +409,7 @@ module.exports = function (app) {
         }
     });
 
-    app.delete('/api/users/:userId/topics/:topicId/discussions/:discussionId', loginCheck(['partner']), topicLib.hasPermission(TopicMemberUser.LEVELS.admin), async (req, res, next) => {
+    app.delete('/api/users/:userId/topics/:topicId/discussions/:discussionId', loginCheck(['partner']), topicService.hasPermission(TopicMemberUser.LEVELS.admin), async (req, res, next) => {
         try {
             const discussionId = req.params.discussionId;
             const discussion = await Discussion.findOne({
@@ -451,7 +451,7 @@ module.exports = function (app) {
     /**
      * Create Topic Comment
      */
-    app.post('/api/users/:userId/topics/:topicId/discussions/:discussionId/comments', loginCheck(['partner']), topicLib.hasPermission(TopicMemberUser.LEVELS.read, true, [Topic.STATUSES.inProgress, Topic.STATUSES.voting, Topic.STATUSES.followUp]), asyncMiddleware(async function (req, res) {
+    app.post('/api/users/:userId/topics/:topicId/discussions/:discussionId/comments', loginCheck(['partner']), topicService.hasPermission(TopicMemberUser.LEVELS.read, true, [Topic.STATUSES.inProgress, Topic.STATUSES.voting, Topic.STATUSES.followUp]), asyncMiddleware(async function (req, res) {
         let type = req.body.type;
         const parentId = req.body.parentId;
         const topicId = req.params.topicId;
@@ -556,7 +556,7 @@ module.exports = function (app) {
                         );
                 }
 
-                await topicLib.addUserAsMember(req.user.id, topic.id, t);
+                await topicService.addUserAsMember(req.user.id, topic.id, t);
 
                 await DiscussionComment
                     .create(
@@ -997,17 +997,17 @@ module.exports = function (app) {
     /**
      * Read (List) Topic Comments
      */
-    app.get('/api/users/:userId/topics/:topicId/discussions/:discussionId/comments', loginCheck(['partner']), topicLib.hasPermission(TopicMemberUser.LEVELS.read, true), topicLib.isModerator(), topicCommentsList);
+    app.get('/api/users/:userId/topics/:topicId/discussions/:discussionId/comments', loginCheck(['partner']), topicService.hasPermission(TopicMemberUser.LEVELS.read, true), topicService.isModerator(), topicCommentsList);
 
     /**
      * Read (List) public Topic Comments
      */
-    app.get('/api/topics/:topicId/discussions/:discussionId/comments', topicLib.hasVisibility(Topic.VISIBILITY.public), topicLib.isModerator(), topicCommentsList);
+    app.get('/api/topics/:topicId/discussions/:discussionId/comments', topicService.hasVisibility(Topic.VISIBILITY.public), topicService.isModerator(), topicCommentsList);
 
     /**
      * Delete Topic Comment
      */
-    app.delete('/api/users/:userId/topics/:topicId/discussions/:discussionId/comments/:commentId', loginCheck(['partner']), isCommentCreator(), topicLib.hasPermission(TopicMemberUser.LEVELS.read, false, null, true));
+    app.delete('/api/users/:userId/topics/:topicId/discussions/:discussionId/comments/:commentId', loginCheck(['partner']), isCommentCreator(), topicService.hasPermission(TopicMemberUser.LEVELS.read, false, null, true));
 
     //WARNING: Don't mess up with order here! In order to use "next('route')" in the isCommentCreator, we have to have separate route definition
     //NOTE: If you have good ideas how to keep one route definition with several middlewares, feel free to share!
@@ -1353,7 +1353,7 @@ module.exports = function (app) {
     /**
      * Create a Comment Vote
      */
-    app.post('/api/topics/:topicId/discussions/:discussionId/comments/:commentId/votes', loginCheck(['partner']), topicLib.hasPermission(TopicMemberUser.LEVELS.read, true), async function (req, res, next) {
+    app.post('/api/topics/:topicId/discussions/:discussionId/comments/:commentId/votes', loginCheck(['partner']), topicService.hasPermission(TopicMemberUser.LEVELS.read, true), async function (req, res, next) {
         const value = parseInt(req.body.value, 10);
         try {
             const comment = await Comment
@@ -1378,7 +1378,7 @@ module.exports = function (app) {
                             transaction: t
                         });
 
-                    await topicLib.addUserAsMember(req.user.id, req.params.topicId, t);
+                    await topicService.addUserAsMember(req.user.id, req.params.topicId, t);
 
                     if (vote) {
                         //User already voted
@@ -1479,7 +1479,7 @@ module.exports = function (app) {
      * Read (List) Topic Comment votes
      */
 
-    app.get('/api/users/:userId/topics/:topicId/discussions/:discussionId/comments/:commentId/votes', loginCheck(['partner']), topicLib.hasPermission(TopicMemberUser.LEVELS.read, true), async function (req, res, next) {
+    app.get('/api/users/:userId/topics/:topicId/discussions/:discussionId/comments/:commentId/votes', loginCheck(['partner']), topicService.hasPermission(TopicMemberUser.LEVELS.read, true), async function (req, res, next) {
         try {
             const results = await db.query(
                 `
@@ -1583,7 +1583,7 @@ module.exports = function (app) {
             next(err);
         }
     }
-    app.post('/api/users/:userId/topics/:topicId/discussions/:discussionId/comments/:commentId/attachments/upload', loginCheck(['partner']), isCommentCreator(), topicLib.hasPermission(TopicMemberUser.LEVELS.admin, false, null, true), async function (req, res, next) {
+    app.post('/api/users/:userId/topics/:topicId/discussions/:discussionId/comments/:commentId/attachments/upload', loginCheck(['partner']), isCommentCreator(), topicService.hasPermission(TopicMemberUser.LEVELS.admin, false, null, true), async function (req, res, next) {
         return addCommentAttachment(req, res, next);
     });
 
@@ -1591,11 +1591,11 @@ module.exports = function (app) {
    * Add image to comment
    */
 
-    app.post('/api/users/:userId/topics/:topicId/discussions/:discussionId/comments/:commentId/image/upload', loginCheck(['partner']), topicLib.hasPermission(TopicMemberUser.LEVELS.read, true, [Topic.STATUSES.inProgress, Topic.STATUSES.voting, Topic.STATUSES.followUp]), async function (req, res, next) {
+    app.post('/api/users/:userId/topics/:topicId/discussions/:discussionId/comments/:commentId/image/upload', loginCheck(['partner']), topicService.hasPermission(TopicMemberUser.LEVELS.read, true, [Topic.STATUSES.inProgress, Topic.STATUSES.voting, Topic.STATUSES.followUp]), async function (req, res, next) {
         return addCommentAttachment(req, res, next, CommentAttachment.ATTACHMENT_TYPES.image);
     });
 
-    app.post('/api/users/:userId/topics/:topicId/discussions/:discussionId/comments/:commentId/attachments', loginCheck(['partner']), topicLib.hasPermission(TopicMemberUser.LEVELS.read, true, [Topic.STATUSES.inProgress, Topic.STATUSES.voting, Topic.STATUSES.followUp]), async function (req, res, next) {
+    app.post('/api/users/:userId/topics/:topicId/discussions/:discussionId/comments/:commentId/attachments', loginCheck(['partner']), topicService.hasPermission(TopicMemberUser.LEVELS.read, true, [Topic.STATUSES.inProgress, Topic.STATUSES.voting, Topic.STATUSES.followUp]), async function (req, res, next) {
         const commentId = req.params.commentId;
         const name = req.body.name;
         const type = req.body.type;
@@ -1697,7 +1697,7 @@ module.exports = function (app) {
         }
     });
 
-    app.put('/api/users/:userId/topics/:topicId/discussions/:discussionId/comments/:commentId/attachments/:attachmentId', loginCheck(['partner']), isCommentCreator(), topicLib.hasPermission(TopicMemberUser.LEVELS.read, true, [Topic.STATUSES.inProgress, Topic.STATUSES.voting, Topic.STATUSES.followUp]), async function (req, res, next) {
+    app.put('/api/users/:userId/topics/:topicId/discussions/:discussionId/comments/:commentId/attachments/:attachmentId', loginCheck(['partner']), isCommentCreator(), topicService.hasPermission(TopicMemberUser.LEVELS.read, true, [Topic.STATUSES.inProgress, Topic.STATUSES.voting, Topic.STATUSES.followUp]), async function (req, res, next) {
         const newName = req.body.name;
 
         if (!newName) {
@@ -1748,7 +1748,7 @@ module.exports = function (app) {
     /**
      * Delete Comment Attachment
      */
-    app.delete('/api/users/:userId/topics/:topicId/discussions/:discussionId/comments/:commentId/attachments/:attachmentId', loginCheck(['partner']), isCommentCreator(), topicLib.hasPermission(TopicMemberUser.LEVELS.read, true, [Topic.STATUSES.inProgress, Topic.STATUSES.voting, Topic.STATUSES.followUp]), async function (req, res, next) {
+    app.delete('/api/users/:userId/topics/:topicId/discussions/:discussionId/comments/:commentId/attachments/:attachmentId', loginCheck(['partner']), isCommentCreator(), topicService.hasPermission(TopicMemberUser.LEVELS.read, true, [Topic.STATUSES.inProgress, Topic.STATUSES.voting, Topic.STATUSES.followUp]), async function (req, res, next) {
         try {
             const attachment = await Attachment.findOne({
                 where: {
@@ -1825,8 +1825,8 @@ module.exports = function (app) {
         }
     };
 
-    app.get('/api/users/:userId/topics/:topicId/discussions/:discussionId/comments/:commentId/attachments', loginCheck(['partner']), topicLib.hasPermission(TopicMemberUser.LEVELS.read, true), topicLib.isModerator(), commentAttachmentsList);
-    app.get('/api/topics/:topicId/discussions/:discussionId/comments/:commentId/attachments', loginCheck(['partner']), topicLib.hasPermission(TopicMemberUser.LEVELS.read, true), topicLib.isModerator(), commentAttachmentsList);
+    app.get('/api/users/:userId/topics/:topicId/discussions/:discussionId/comments/:commentId/attachments', loginCheck(['partner']), topicService.hasPermission(TopicMemberUser.LEVELS.read, true), topicService.isModerator(), commentAttachmentsList);
+    app.get('/api/topics/:topicId/discussions/:discussionId/comments/:commentId/attachments', loginCheck(['partner']), topicService.hasPermission(TopicMemberUser.LEVELS.read, true), topicService.isModerator(), commentAttachmentsList);
 
     const readAttachment = async function (req, res, next) {
         try {
@@ -1872,8 +1872,8 @@ module.exports = function (app) {
         }
     };
 
-    app.get('/api/users/:userId/topics/:topicId/discussions/:discussionId/comments/:commentId/attachments/:attachmentId', loginCheck(['partner']), topicLib.hasPermission(TopicMemberUser.LEVELS.read, true), topicLib.isModerator(), readAttachment);
-    app.get('/api/topics/:topicId/discussions/:discussionId/comments/:commentId/attachments/:attachmentId', loginCheck(['partner']), topicLib.hasPermission(TopicMemberUser.LEVELS.read, true), topicLib.isModerator(), readAttachment);
+    app.get('/api/users/:userId/topics/:topicId/discussions/:discussionId/comments/:commentId/attachments/:attachmentId', loginCheck(['partner']), topicService.hasPermission(TopicMemberUser.LEVELS.read, true), topicService.isModerator(), readAttachment);
+    app.get('/api/topics/:topicId/discussions/:discussionId/comments/:commentId/attachments/:attachmentId', loginCheck(['partner']), topicService.hasPermission(TopicMemberUser.LEVELS.read, true), topicService.isModerator(), readAttachment);
 
 
     return {
