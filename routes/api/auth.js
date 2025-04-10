@@ -582,7 +582,7 @@ module.exports = function (app) {
                         ]
                     },
                     connectionUserId: {
-                        [Op.like]: '%' + personId + '%',
+                        [Op.like]: cryptoLib.privateEncrypt(`PNO${countryCode}-${personId}`),
                     }
                 },
                 order: [['createdAt', 'ASC']],
