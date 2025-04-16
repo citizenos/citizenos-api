@@ -52,7 +52,8 @@
       "SPAM": "Sisältää roskapostia tai ei liity aiheeseen",
       "HATE": "Sisältää vihapuhetta",
       "NETIQUETTE": "Rikkoo (n)etikettiä",
-      "DUPLICATE": "On kaksoiskappale"
+      "DUPLICATE": "On kaksoiskappale",
+      "OTHER": "Other"
     }
   },
   "REPORT_COMMENT": {
@@ -62,7 +63,8 @@
       "SPAM": "Sisältää roskaviestin tai ei liity aiheeseen",
       "HATE": "Sisältää vihapuhetta",
       "NETIQUETTE": "Rikkoo (n)etikettiä",
-      "DUPLICATE": "On kaksoiskappale"
+      "DUPLICATE": "On kaksoiskappale",
+      "OTHER": "Other"
     }
   },
   "REPORT_COMMENT_CREATOR": {
