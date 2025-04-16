@@ -4212,6 +4212,5 @@ COPY public."SequelizeMeta" (name) FROM stdin;
 20250215165905-alter-ideaa-add-demographics-fields.js
 20250131193905-draft-ideas.js
 20250319122353-alter-reports-update-type.js
-20250415194040-complete-encryption-migration.js
-20250415195023-fix-encryption-columns.js
+20250416191841-alter-topic-reports-update-type.js
 \.
