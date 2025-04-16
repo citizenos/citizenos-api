@@ -206,7 +206,7 @@ module.exports = function (app) {
                 JOIN (
                     SELECT "authorId",
                     COUNT(id) as "ideaCount"
-                    FROM "Ideas" i WHERE "ideationId" = :ideationId
+                    FROM "Ideas" i WHERE "ideationId" = :ideationId AND "status" != 'draft'
                     GROUP BY "authorId"
                 ) i ON u.id = i."authorId";
             `, {
