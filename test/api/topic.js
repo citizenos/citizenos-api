@@ -1740,7 +1740,7 @@ suite('Users', function () {
 
                         const voteList = [
                             {
-                                optionId: vote.options.rows.find(option => option.value === options[0].value).id
+                                optionId: vote.options.rows[0].id
                             }
                         ];
 

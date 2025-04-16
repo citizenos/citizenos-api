@@ -19,7 +19,7 @@ module.exports = function (app) {
     const emailLib = app.get('email');
     const util = app.get('util');
     const urlLib = app.get('urlLib');
-    const topicLib = require('./topic')(app);
+    const topicService = require('../../services/topic')(app);
     const authTokenRestrictedUse = app.get('middleware.authTokenRestrictedUse');
 
     const loginCheck = app.get('middleware.loginCheck');
@@ -2483,7 +2483,7 @@ module.exports = function (app) {
                 , tv."type" as "vote.type"
                 `;
                 groupBy += `tv."authType", tv."createdAt", tv."delegationIsAllowed", tv."description", tv."endsAt", tv."maxChoices", tv."minChoices", tv."type", `;
-                voteResults = topicLib.getAllVotesResults();
+                voteResults = topicService.getAllVotesResults();
             } else {
                 returncolumns += `, tv."voteId"`;
             }
@@ -3103,7 +3103,7 @@ module.exports = function (app) {
 
             await db.transaction(async (t) => {
                 let createRequestPromises = topics.map(async (request) => {
-                    const hasAccess = await topicLib._hasPermission(request.topicId, userId, TopicMemberGroup.LEVELS.admin);
+                    const hasAccess = await topicService._hasPermission(request.topicId, userId, TopicMemberGroup.LEVELS.admin);
                     if (hasAccess && hasAccess.topic.permissions.level === TopicMemberGroup.LEVELS.admin) {
                         const topicMember = await TopicMemberGroup.findOne({
                             where: {

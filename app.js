@@ -338,6 +338,15 @@ app.set('middleware.asyncMiddleware', require('./libs/middleware/asyncMiddleware
 // Bot header logger
 app.use(require('./libs/middleware/botHeaderLogger'));
 
+// Load all services
+const routesServices = './services/';
+fs.readdirSync(routesServices).forEach(function (file) {
+    if (!file.match(/\.js$/)) { // Exclude folders
+        return;
+    }
+    require(routesServices + file)(app);
+});
+
 // Load all API routes
 const routesApi = './routes/api/';
 fs.readdirSync(routesApi).forEach(function (file) {

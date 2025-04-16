@@ -10,7 +10,7 @@ module.exports = function (app) {
     const { injectReplacements } = require('sequelize/lib/utils/sql');
     const cosActivities = app.get('cosActivities');
     const loginCheck = app.get('middleware.loginCheck');
-    const topicLib = require('./topic')(app);
+    const topicService = require('../../services/topic')(app);
     const groupLib = require('./group')(app);
 
     const Activity = models.Activity;
@@ -534,7 +534,7 @@ module.exports = function (app) {
         return activitiesList(req, res, next);
     });
 
-    app.get('/api/users/:userId/topics/:topicId/activities', loginCheck(['partner']), topicLib.hasPermission(TopicMemberUser.LEVELS.read, true), function (req, res, next) {
+    app.get('/api/users/:userId/topics/:topicId/activities', loginCheck(['partner']), topicService.hasPermission(TopicMemberUser.LEVELS.read, true), function (req, res, next) {
         return topicActivitiesList(req, res, next);
     });
 
@@ -624,7 +624,7 @@ module.exports = function (app) {
         return topicUnreadActivitiesCount(req, res, next, 'public');
     });
 
-    app.get('/api/users/:userId/topics/:topicId/activities/unread', loginCheck(['partner']), topicLib.hasPermission(TopicMemberUser.LEVELS.read, true), function (req, res, next) {
+    app.get('/api/users/:userId/topics/:topicId/activities/unread', loginCheck(['partner']), topicService.hasPermission(TopicMemberUser.LEVELS.read, true), function (req, res, next) {
         return topicUnreadActivitiesCount(req, res, next);
     });
 
