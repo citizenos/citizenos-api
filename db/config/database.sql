@@ -2,8 +2,8 @@
 -- PostgreSQL database dump
 --
 
--- Dumped from database version 16.6 (Ubuntu 16.6-0ubuntu0.24.04.1)
--- Dumped by pg_dump version 16.6 (Ubuntu 16.6-0ubuntu0.24.04.1)
+-- Dumped from database version 16.8 (Ubuntu 16.8-0ubuntu0.24.04.1)
+-- Dumped by pg_dump version 16.8 (Ubuntu 16.8-0ubuntu0.24.04.1)
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -190,7 +190,8 @@ CREATE TYPE public."enum_Reports_type" AS ENUM (
     'spam',
     'hate',
     'netiquette',
-    'duplicate'
+    'duplicate',
+    'other'
 );
 
 
@@ -275,7 +276,8 @@ CREATE TYPE public."enum_TopicReports_moderatedReasonType" AS ENUM (
     'spam',
     'hate',
     'netiquette',
-    'duplicate'
+    'duplicate',
+    'other'
 );
 
 
@@ -289,7 +291,8 @@ CREATE TYPE public."enum_TopicReports_type" AS ENUM (
     'spam',
     'hate',
     'netiquette',
-    'duplicate'
+    'duplicate',
+    'other'
 );
 
 
@@ -360,6 +363,15 @@ CREATE TYPE public."enum_Votes_type" AS ENUM (
     'regular',
     'multiple'
 );
+
+
+--
+-- Name: ueberdb_insert_or_update(character varying, text); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.ueberdb_insert_or_update(character varying, text) RETURNS void
+    LANGUAGE plpgsql
+    AS $_$ BEGIN   IF EXISTS( SELECT * FROM store WHERE key = $1 ) THEN     UPDATE store SET value = $2 WHERE key = $1;   ELSE     INSERT INTO store(key,value) VALUES( $1, $2 );   END IF;   RETURN; END; $_$;
 
 
 SET default_tablespace = '';
@@ -1142,6 +1154,7 @@ CREATE TABLE public."Ideas" (
     "deletedReasonType" public."enum_Ideas_deletedReasonType",
     "deletedReasonText" character varying(2048),
     "deletedByReportId" uuid,
+    demographics jsonb,
     "createdAt" timestamp with time zone NOT NULL,
     "updatedAt" timestamp with time zone NOT NULL,
     "deletedAt" timestamp with time zone
@@ -1226,6 +1239,13 @@ COMMENT ON COLUMN public."Ideas"."deletedByReportId" IS 'Report ID due to which 
 
 
 --
+-- Name: COLUMN "Ideas".demographics; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."Ideas".demographics IS 'Demographics fields';
+
+
+--
 -- Name: Ideations; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -1236,6 +1256,8 @@ CREATE TABLE public."Ideations" (
     deadline timestamp with time zone,
     "disableReplies" boolean DEFAULT false NOT NULL,
     "allowAnonymous" boolean DEFAULT false NOT NULL,
+    template text,
+    "demographicsConfig" jsonb,
     "createdAt" timestamp with time zone NOT NULL,
     "updatedAt" timestamp with time zone NOT NULL,
     "deletedAt" timestamp with time zone
@@ -1275,6 +1297,20 @@ COMMENT ON COLUMN public."Ideations"."disableReplies" IS 'Disable replies';
 --
 
 COMMENT ON COLUMN public."Ideations"."allowAnonymous" IS 'Allow anonymous ideas';
+
+
+--
+-- Name: COLUMN "Ideations".template; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."Ideations".template IS 'Allow idea template';
+
+
+--
+-- Name: COLUMN "Ideations"."demographicsConfig"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."Ideations"."demographicsConfig" IS 'Configuration for demographics data fields';
 
 
 --
@@ -4171,5 +4207,11 @@ COPY public."SequelizeMeta" (name) FROM stdin;
 20240829073146-argument-idea-attachments.js
 20250108215519-alter-ideation-disable-replies.js
 20250119150407-alter-ideation-allow-anonymous-ideas.js
+20250210180745-alter-ideation-add-template.js
+20250212225513-alter-ideation-add-demographic-config.js
+20250215165905-alter-ideaa-add-demographics-fields.js
 20250131193905-draft-ideas.js
+20250319122353-alter-reports-update-type.js
+20250415194040-complete-encryption-migration.js
+20250415195023-fix-encryption-columns.js
 \.

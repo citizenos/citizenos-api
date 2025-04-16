@@ -20,7 +20,8 @@ module.exports = function (sequelize, DataTypes) {
         spam: 'spam', // contains spam or is unrelated to topic
         hate: 'hate', // contains hate speech
         netiquette: 'netiquette', // infringes (n)etiquette
-        duplicate: 'duplicate' // duplicate
+        duplicate: 'duplicate', // duplicate
+        other: 'other' // other
     };
 
     var Report = sequelize.define(
