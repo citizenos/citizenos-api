@@ -3702,9 +3702,6 @@ module.exports = function (app) {
             if (!ideation.allowAnonymous && idea.authorId !== req.user.id) {
                 return res.forbidden();
             }
-            if (ideation.allowAnonymous && idea.status !== 'draft' && idea.sessionId !== sessToken) {
-                return res.forbidden();
-            }
             if (!idea) {
                 return res.badRequest('Matching idea not found', 3);
             }

@@ -79,7 +79,7 @@ module.exports = function (sequelize, DataTypes) {
         Attachment.belongsTo(models.User, {
             foreignKey: {
                 fieldName: 'creatorId',
-                allowNull: false
+                allowNull: true
             },
             as: 'creator'
         });
