@@ -5,6 +5,8 @@
   },
   "db": {
     "url": "postgres://citizenos:citizenos@localhost:5432/citizenos",
+    "secret": "your-super-secret-encryption-key",
+    "iv": "your-initialization-vector",
     "options": {
       "logging": true,
       "sync": {
