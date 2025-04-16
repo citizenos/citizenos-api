@@ -561,6 +561,12 @@ module.exports = function (app) {
 
                     return signedDocInfo;
                 } catch (err) {
+                    // Check if the error is due to missing signature file, which is expected initially
+                    if (err.message && err.message.includes('Vote file with hash')) {
+                        // This is expected during initial poll, not a real error
+                        return { status: 'RUNNING', message: 'Waiting for signature file to be created' };
+                    }
+
                     let statusCode;
                     if (err.result && err.result.endResult) {
                         statusCode = err.result.endResult;
@@ -578,6 +584,11 @@ module.exports = function (app) {
             }
 
             const signedDocInfo = await getStatus();
+
+            // If we're still waiting for the signature file, return a "signing in progress" response
+            if (signedDocInfo.status === 'RUNNING') {
+                return res.ok('Signing in progress', 1);
+            }
 
             await db.transaction(async function (t) {
                 await handleHardVotingFinalization(req, userId, topicId, voteId, idSignFlowData, req.method + ' ' + req.path, t);

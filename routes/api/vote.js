@@ -174,8 +174,8 @@ module.exports = function (app) {
                     voteOptionsCreated.forEach(function (option) {
                         vote.dataValues.VoteOptions.push(option.dataValues);
                     });
-                    await cosEtherpad.syncTopicWithPad(resTopic.id);
-                    await cosSignature.createVoteFiles(resTopic, vote, voteOptionsCreated, t);
+                    const rtopic = await cosEtherpad.syncTopicWithPad(resTopic.id);
+                    await cosSignature.createVoteFiles(rtopic, vote, voteOptionsCreated, t);
                     t.afterCommit(() => {
                         return res.created(vote.toJSON());
                     });
