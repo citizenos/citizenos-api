@@ -52,7 +52,8 @@
       "SPAM": "Contains spam or is unrelated to topic",
       "HATE": "Contains hate speech",
       "NETIQUETTE": "Infringes (n)etiquette",
-      "DUPLICATE": "Is a duplicate"
+      "DUPLICATE": "Is a duplicate",
+      "OTHER": "Other"
     }
   },
   "REPORT_COMMENT": {
@@ -62,7 +63,8 @@
       "SPAM": "Contains spam or is unrelated to topic",
       "HATE": "Contains hate speech",
       "NETIQUETTE": "Infringes (n)etiquette",
-      "DUPLICATE": "Is a duplicate"
+      "DUPLICATE": "Is a duplicate",
+      "OTHER": "Other"
     }
   },
   "REPORT_COMMENT_CREATOR": {
