@@ -52,7 +52,8 @@
       "SPAM": "Mengandung spam atau tidak berhubungan dengan topik",
       "HATE": "Mengandung ujaran kebencian",
       "NETIQUETTE": "Melanggar (n)etiket",
-      "DUPLICATE": "Merupakan duplikat"
+      "DUPLICATE": "Merupakan duplikat",
+      "OTHER": "Other"
     }
   },
   "REPORT_COMMENT": {
@@ -62,7 +63,8 @@
       "SPAM": "Mengandung spam atau tidak berhubungan dengan topik",
       "HATE": "Mengandung ujaran kebencian",
       "NETIQUETTE": "Melanggar etika",
-      "DUPLICATE": "Merupakan duplikat"
+      "DUPLICATE": "Merupakan duplikat",
+      "OTHER": "Other"
     }
   },
   "REPORT_COMMENT_CREATOR": {

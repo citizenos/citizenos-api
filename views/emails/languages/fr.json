@@ -52,7 +52,8 @@
       "SPAM": "Contient des spams ou est hors sujet",
       "HATE": "Contient un discours de haine",
       "NETIQUETTE": "Enfreint la (n)etiquette",
-      "DUPLICATE": "Est un doublon"
+      "DUPLICATE": "Est un doublon",
+      "OTHER": "Other"
     }
   },
   "REPORT_COMMENT": {
@@ -62,7 +63,8 @@
       "SPAM": "Contient du spam ou est hors sujet",
       "HATE": "Contient un discours de haine",
       "NETIQUETTE": "Enfreint la (n)etiquette",
-      "DUPLICATE": "Est un doublon"
+      "DUPLICATE": "Est un doublon",
+      "OTHER": "Other"
     }
   },
   "REPORT_COMMENT_CREATOR": {

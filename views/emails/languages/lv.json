@@ -52,7 +52,8 @@
       "SPAM": "Satur spamu vai nav saistīts ar tematu",
       "HATE": "Satur naida runu",
       "NETIQUETTE": "Pārkāpj etiķetes normas",
-      "DUPLICATE": "Ir dublikāts"
+      "DUPLICATE": "Ir dublikāts",
+      "OTHER": "Other"
     }
   },
   "REPORT_COMMENT": {
@@ -62,7 +63,8 @@
       "SPAM": "Satur spamu vai nav saistīts ar tematu",
       "HATE": "Satur naida runu",
       "NETIQUETTE": "Pārkāpj etiķetes normas",
-      "DUPLICATE": "Ir dublikāts"
+      "DUPLICATE": "Ir dublikāts",
+      "OTHER": "Other"
     }
   },
   "REPORT_COMMENT_CREATOR": {

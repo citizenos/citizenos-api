@@ -52,7 +52,8 @@
       "SPAM": "Contiene spam o no está relacionado con el tema",
       "HATE": "Contiene lenguaje inflamatorio",
       "NETIQUETTE": "Infringe las normas básicas o de la red",
-      "DUPLICATE": "Es un duplicado"
+      "DUPLICATE": "Es un duplicado",
+      "OTHER": "Other"
     }
   },
   "REPORT_COMMENT": {
@@ -62,7 +63,8 @@
       "SPAM": "Contiene spam o no está relacionado con el tema",
       "HATE": "Contiene declaraciones que incitan al odio",
       "NETIQUETTE": "Infringe la etiqueta de Internet",
-      "DUPLICATE": "Es un duplicado"
+      "DUPLICATE": "Es un duplicado",
+      "OTHER": "Other"
     }
   },
   "REPORT_COMMENT_CREATOR": {

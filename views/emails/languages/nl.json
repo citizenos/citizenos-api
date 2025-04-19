@@ -52,7 +52,8 @@
       "SPAM": "Bevat spam of houdt geen verband met de topic",
       "HATE": "Bevat haatdragende taal",
       "NETIQUETTE": "Schending van de etiquette/nettiquette",
-      "DUPLICATE": "Is een duplicaat"
+      "DUPLICATE": "Is een duplicaat",
+      "OTHER": "Other"
     }
   },
   "REPORT_COMMENT": {
@@ -62,7 +63,8 @@
       "SPAM": "Bevat spam of houdt geen verband met het onderwerp",
       "HATE": "Bevat haatdragende taal",
       "NETIQUETTE": "Schending van de etiquette/nettiquette",
-      "DUPLICATE": "Het is een duplicaat"
+      "DUPLICATE": "Het is een duplicaat",
+      "OTHER": "Other"
     }
   },
   "REPORT_COMMENT_CREATOR": {

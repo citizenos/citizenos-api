@@ -52,7 +52,8 @@
       "SPAM": "Obsahuje spam nebo nesouvisí s tématem",
       "HATE": "Obsahuje nenávistný projev",
       "NETIQUETTE": "Porušuje (n)etiketu",
-      "DUPLICATE": "Je duplicitní"
+      "DUPLICATE": "Je duplicitní",
+      "OTHER": "Other"
     }
   },
   "REPORT_COMMENT": {
@@ -62,7 +63,8 @@
       "SPAM": "Obsahuje spam nebo nesouvisí s tématem",
       "HATE": "Obsahuje nenávistný projev",
       "NETIQUETTE": "Porušuje (n)etiketu",
-      "DUPLICATE": "Je duplicitní"
+      "DUPLICATE": "Je duplicitní",
+      "OTHER": "Other"
     }
   },
   "REPORT_COMMENT_CREATOR": {
