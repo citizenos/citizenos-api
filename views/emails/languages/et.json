@@ -52,7 +52,8 @@
       "SPAM": "Sisaldab reklaami või pole teemaga seotud",
       "HATE": "Õhutab vaenu",
       "NETIQUETTE": "Ei vasta headele tavadele",
-      "DUPLICATE": "Duplikaat"
+      "DUPLICATE": "Duplikaat",
+      "OTHER": "Other"
     }
   },
   "REPORT_COMMENT": {
@@ -62,7 +63,8 @@
       "SPAM": "Sisaldab reklaami või pole seotud teemaga",
       "HATE": "Õhutab vaenu",
       "NETIQUETTE": "Ei vasta headele tavadele",
-      "DUPLICATE": "Duplikaat"
+      "DUPLICATE": "Duplikaat",
+      "OTHER": "Other"
     }
   },
   "REPORT_COMMENT_CREATOR": {

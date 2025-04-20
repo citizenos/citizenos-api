@@ -52,7 +52,8 @@
       "SPAM": "广告或无关信息",
       "HATE": "仇恨言论",
       "NETIQUETTE": "违反礼仪",
-      "DUPLICATE": "重复内容"
+      "DUPLICATE": "重复内容",
+      "OTHER": "Other"
     }
   },
   "REPORT_COMMENT": {
@@ -62,7 +63,8 @@
       "SPAM": "广告或无关信息",
       "HATE": "仇恨言论",
       "NETIQUETTE": "违反礼仪",
-      "DUPLICATE": "重复内容"
+      "DUPLICATE": "重复内容",
+      "OTHER": "Other"
     }
   },
   "REPORT_COMMENT_CREATOR": {
