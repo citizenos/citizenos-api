@@ -378,7 +378,7 @@ module.exports = function (app) {
         if (user.moderator) {
             returncolumns += `
             , c.email as "creator.email"
-            , uc."connectionData" AS "creator.connectionData"
+            , uc."connectionData"::jsonb->'phoneNumber' AS "creator.phoneNumber"
             `;
 
             returncolumns += `
@@ -640,17 +640,6 @@ module.exports = function (app) {
 
         if (!topic.report.id) {
             delete topic.report;
-        }
-
-        if (topic.creator.email) {
-            topic.creator.email = cryptoLib.privateDecrypt(topic.creator.email);
-        }
-        if (topic.creator.connectionData) {
-            const data = cryptoLib.privateDecrypt(topic.creator.connectionData);
-            if (data.phoneNumber) {
-                topic.creator.phoneNumber = data.phoneNumber;
-            }
-            delete topic.creator.connectionData;
         }
 
         return topic;
@@ -2326,10 +2315,15 @@ module.exports = function (app) {
         }
 
         let dataForModeratorAndAdmin = '';
+        let joinForAdmin = '';
+        let groupForAdmin = '';
         if (req.user?.moderator) {
             dataForModeratorAndAdmin = `
             tm.email,
+            uc."connectionData"::jsonb->>'phoneNumber' AS "phoneNumber",
             `;
+            joinForAdmin = ` LEFT JOIN "UserConnections" uc ON (uc."userId" = tm.id AND uc."connectionId" = 'esteid') `;
+            groupForAdmin = `, uc."connectionData"::jsonb `;
         }
 
         try {
@@ -2391,8 +2385,9 @@ module.exports = function (app) {
                     WHERE gm."deletedAt" IS NULL
                     AND tmg."deletedAt" IS NULL
                 ) tmg ON tmg."topicId" = :topicId AND (tmg."userId" = tm.id)
+                ${joinForAdmin}
                 ${where}
-                GROUP BY tm.id, tm.level, tmu.level, tm.name, tm.company, tm."imageUrl", tm.email
+                GROUP BY tm.id, tm.level, tmu.level, tm.name, tm.company, tm."imageUrl", tm.email ${groupForAdmin}
                 ${sortSql}
                 LIMIT :limit
                 OFFSET :offset
@@ -3261,7 +3256,6 @@ module.exports = function (app) {
         const inviteMessage = members[0].inviteMessage;
         const validEmailMembers = [];
         let validUserIdMembers = [];
-        asyncMiddleware
         // userId can be actual UUID or e-mail, sort to relevant buckets
         members.forEach((m) => {
             if (m.userId) {
@@ -3280,7 +3274,7 @@ module.exports = function (app) {
             }
         });
 
-        const validEmails = validEmailMembers.map(m => cryptoLib.privateEncrypt(m.userId));
+        const validEmails = validEmailMembers.map(m => m.userId);
         if (validEmails.length) {
             // Find out which e-mails already exist
             const usersExistingEmail = await User
@@ -3307,6 +3301,7 @@ module.exports = function (app) {
                 }
             });
         }
+
         await db.transaction(async function (t) {
             let createdUsers;
 
@@ -3345,12 +3340,14 @@ module.exports = function (app) {
                 createdUsers.forEach((u) => {
                     const member = {
                         userId: u.id
-                    };asyncMiddleware
+                    };
+
                     // Sequelize defaultValue has no effect if "undefined" or "null" is set for attribute...
                     const level = validEmailMembers.find(m => m.userId === u.email).level;
                     if (level) {
                         member.level = level;
                     }
+
                     validUserIdMembers.push(member);
                 });
             }
@@ -3369,7 +3366,8 @@ module.exports = function (app) {
                 where: {
                     topicId: topicId
                 }
-            });asyncMiddleware
+            });
+
             const createInvitePromises = validUserIdMembers.map(async function (member) {
                 const addedMember = currentMembers.find(cmember => cmember.userId === member.userId );
 
