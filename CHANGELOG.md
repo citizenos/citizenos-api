@@ -1,3 +1,11 @@
+## 2025-04-21 - v5.1.4
+  * Fix: Issue FE #1861: ID VOTING: User got a 500 error when digitally signing
+  * Fix: Issue FE #2087: IDEA GATHERING: Images not added to anonymous ideas and HTTP error
+  * Fix: Issue FE #2138: IDEAS: Filter by participant showing names of some (KK) anonymous idea contributors
+  * Fix: Issue FE #2200: MODERATION: Reporting a topic with reason "Other" option did not generate relevant emails
+  * Chore: Refactored some code to services, trying to introduce this pattern to the codebase to make api files smaller and more readable
+  * Update: Some packages updated to latest versions
+
 ## 2025-03-15 - v5.1.3
   * Fix: Issue FE #2043: Add "other" type option to reports
   * Fix: Issue FE #2043: Ensure moderation emails are always sent to admins
