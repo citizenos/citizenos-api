@@ -27,6 +27,12 @@ module.exports = function (app) {
     const rateLimiter = app.get('rateLimiter');
     const expressRateLimitInput = app.get('middleware.expressRateLimitInput');
 
+    const {
+        setResetPasswordToken,
+        getResetPasswordToken,
+        deleteResetPasswordToken
+    } = app.get('redis')
+
     const User = models.User;
     const UserConnection = models.UserConnection;
     const UserConsent = models.UserConsent;
@@ -35,6 +41,9 @@ module.exports = function (app) {
 
     const COOKIE_NAME_OPENID_AUTH_STATE = 'cos.authStateOpenId';
     const COOKIE_NAME_COS_AUTH_STATE = 'cos.authState';
+
+    const cachedResetCodeKey = (userId) => `${userId}:resetPasswordToken`;
+    const CACHED_RESET_TOKEN_TTL = 3600;
 
     /**
      * Set state cookie with all in req.query when it does not exist
@@ -421,7 +430,6 @@ module.exports = function (app) {
         return res.ok();
     }));
 
-
     app.post('/api/auth/password/reset/send', asyncMiddleware(async function (req, res) {
         const email = req.body.email;
         if (!email || !validator.isEmail(email)) {
@@ -436,11 +444,22 @@ module.exports = function (app) {
             return res.ok('Success! Please check your email :email to complete your password recovery.'.replace(':email', email));
         }
 
-        user.passwordResetCode = true; // Model will generate new code
+        const key = cachedResetCodeKey(user.id)
+        const cachedResetCode = await getResetPasswordToken(key);
+    
+        if (!cachedResetCode) {
+            user.passwordResetCode = true; // Model will generate new code
+            await user.save({ fields: ["passwordResetCode"] });
+            await setResetPasswordToken(key, CACHED_RESET_TOKEN_TTL, user.passwordResetCode);
+        }
+    
+        const passwordResetCode = cachedResetCode || user.passwordResetCode;
+    
+        const emailResult = await emailLib.sendPasswordReset(
+            user.email,
+            passwordResetCode
+        );
 
-        await user.save({fields: ['passwordResetCode']});
-
-        const emailResult = await emailLib.sendPasswordReset(user.email, user.passwordResetCode);
         if (emailResult.done.length === 0 && emailResult.errors.length) {
             return res.badRequest(emailResult.errors[0].details)
         }
@@ -462,15 +481,25 @@ module.exports = function (app) {
             }
         });
 
+        const cachedResetCode = await getResetPasswordToken(cachedResetCodeKey(user.id));
+    
         // !user.passwordResetCode avoids the situation where passwordResetCode has not been sent (null), but user posts null to API
-        if (!user || !user.passwordResetCode) {
-            return res.badRequest('Invalid email, password or password reset code.');
+        if (
+              !user ||
+              !user.passwordResetCode ||
+              !cachedResetCode ||
+              user.passwordResetCode !== cachedResetCode
+        ) {
+            return res.badRequest(
+              "Invalid email, password or password reset code."
+            );
         }
 
         user.password = password; // Hash is created by the model hooks
-        user.passwordResetCode = true; // Model will generate new code so that old code cannot be used again - https://github.com/citizenos/citizenos-api/issues/68
 
-        await user.save({fields: ['password', 'passwordResetCode']});
+        await user.save({fields: ['password']});
+        await deleteResetPasswordToken(cachedResetCodeKey(user.id));
+
         //TODO: Logout all existing sessions for the User!
         return res.ok();
     }));
