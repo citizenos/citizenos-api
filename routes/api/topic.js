@@ -16,6 +16,7 @@ module.exports = function (app) {
     const emailLib = app.get('email');
     const cosSignature = app.get('cosSignature');
     const cosActivities = app.get('cosActivities');
+    const cryptoLib = app.get('cryptoLib');
 
     const cosEtherpad = app.get('cosEtherpad');
 
@@ -3242,249 +3243,249 @@ module.exports = function (app) {
      *
      * @see /api/users/:userId/topics/:topicId/members/users "Auto accept" - Adds a Member to the Topic instantly and sends a notification to the User.
      */
-    app.post('/api/users/:userId/topics/:topicId/invites/users', loginCheck(), topicService.hasPermission(TopicMemberUser.LEVELS.admin, false, [Topic.STATUSES.draft, Topic.STATUSES.ideation, Topic.STATUSES.inProgress, Topic.STATUSES.voting, Topic.STATUSES.followUp]), rateLimiter(5, false), speedLimiter(1, false), asyncMiddleware(async function (req, res) {
+    app.post('/api/users/:userId/topics/:topicId/invites/users', loginCheck(), topicService.hasPermission(TopicMemberUser.LEVELS.admin, false, [Topic.STATUSES.draft, Topic.STATUSES.ideation, Topic.STATUSES.inProgress, Topic.STATUSES.voting, Topic.STATUSES.followUp]), rateLimiter(5, false), speedLimiter(1, false), async function (req, res) {
         //NOTE: userId can be actual UUID or e-mail - it is comfort for the API user, but confusing in the BE code.
-       try {
-        const topicId = req.params.topicId;
-        const userId = req.user.userId;
-        let members = req.body;
-        const MAX_LENGTH = 50;
+        try {
+            const topicId = req.params.topicId;
+            const userId = req.user.userId;
+            let members = req.body;
+            const MAX_LENGTH = 50;
 
-        if (!Array.isArray(members)) {
-            members = [members];
-        }
-
-        if (members.length > MAX_LENGTH) {
-            return res.badRequest("Maximum user limit reached");
-        }
-
-        const inviteMessage = members[0].inviteMessage;
-        const validEmailMembers = [];
-        let validUserIdMembers = [];
-
-        // userId can be actual UUID or e-mail, sort to relevant buckets
-        members.forEach((m) => {
-            if (m.userId) {
-                m.userId = m.userId.trim();
-                // Is it an e-mail?
-                if (validator.isEmail(m.userId)) {
-                    m.userId = m.userId.toLowerCase(); // https://github.com/citizenos/citizenos-api/issues/234
-                    validEmailMembers.push(m); // The whole member object with level
-                } else if (validator.isUUID(m.userId)) {
-                    validUserIdMembers.push(m);
-                } else {
-                    logger.warn('Invalid member ID, is not UUID or email thus ignoring', req.method, req.path, m, req.body);
-                }
-            } else {
-                logger.warn('Missing member id, ignoring', req.method, req.path, m, req.body);
-            }
-        });
-
-        const validEmails = validEmailMembers.map(m => cryptoLib.privateEncrypt(m.userId));
-        if (validEmails.length) {
-            // Find out which e-mails already exist
-            const usersExistingEmail = await User
-                .findAll({
-                    where: {
-                        email: {
-                            [Op.iLike]: {
-                                [Op.any]: validEmails
-                            }
-                        }
-                    },
-                    attributes: ['id', 'email']
-                });
-
-            usersExistingEmail.forEach((u) => {
-                const member = validEmailMembers.find(m => {
-                    return m.userId === u.email
-                });
-                if (member) {
-                    const index = validEmailMembers.findIndex(m => m.userId === u.email);
-                    member.userId = u.id;
-                    validUserIdMembers.push(member);
-                    validEmailMembers.splice(index, 1) // Remove the e-mail, so that by the end of the day only e-mails that did not exist remain.
-                }
-            });
-        }
-        await db.transaction(async function (t) {
-            let createdUsers;
-
-            // The leftovers are e-mails for which User did not exist
-            if (validEmailMembers.length) {
-                const usersToCreate = [];
-                validEmailMembers.forEach((m) => {
-                    usersToCreate.push({
-                        email: m.userId,
-                        language: m.language,
-                        password: null,
-                        name: util.emailToDisplayName(m.userId),
-                        source: User.SOURCES.citizenos
-                    });
-                });
-
-                createdUsers = await User.bulkCreate(usersToCreate);
-
-                const createdUsersActivitiesCreatePromises = createdUsers.map(async function (user) {
-                    return cosActivities.createActivity(
-                        user,
-                        null,
-                        {
-                            type: 'System',
-                            ip: req.ip
-                        },
-                        req.method + ' ' + req.path,
-                        t
-                    );
-                });
-
-                await Promise.all(createdUsersActivitiesCreatePromises);
+            if (!Array.isArray(members)) {
+                members = [members];
             }
 
-            // Go through the newly created users and add them to the validUserIdMembers list so that they get invited
-            if (createdUsers && createdUsers.length) {
-                createdUsers.forEach((u) => {
-                    const member = {
-                        userId: u.id
-                    };
-
-                    // Sequelize defaultValue has no effect if "undefined" or "null" is set for attribute...
-                    const level = validEmailMembers.find(m => m.userId === u.email).level;
-                    if (level) {
-                        member.level = level;
-                    }
-                    validUserIdMembers.push(member);
-                });
+            if (members.length > MAX_LENGTH) {
+                return res.badRequest("Maximum user limit reached");
             }
 
-            // Need the Topic just for the activity
-            const topic = await Topic.findOne({
-                where: {
-                    id: topicId
-                }
-            });
+            const inviteMessage = members[0].inviteMessage;
+            const validEmailMembers = [];
+            let validUserIdMembers = [];
 
-            validUserIdMembers = validUserIdMembers.filter(function (member) {
-                return member.userId !== req.user.userId; // Make sure user does not invite self
-            });
-            const currentMembers = await TopicMemberUser.findAll({
-                where: {
-                    topicId: topicId
-                }
-            });
-
-            const createInvitePromises = validUserIdMembers.map(async function (member) {
-                const addedMember = currentMembers.find(cmember => cmember.userId === member.userId );
-
-                if (addedMember) {
-                    const LEVELS = {
-                        none: 0, // Enables to override inherited permissions.
-                        read: 1,
-                        edit: 2,
-                        admin: 3
-                    };
-                    if (addedMember.level !== member.level) {
-                        if (LEVELS[member.level] > LEVELS[addedMember.level]) {
-                            await addedMember.update({
-                                level: member.level
-                            });
-
-                            cosActivities.updateActivity(
-                                addedMember,
-                                null,
-                                {
-                                    type: 'User',
-                                    id: req.user.userId,
-                                    ip: req.ip
-                                },
-                                req.method + ' ' + req.path,
-                                t
-                            );
-
-                            return;
-                        }
-
-                        return;
+            // userId can be actual UUID or e-mail, sort to relevant buckets
+            members.forEach((m) => {
+                if (m.userId) {
+                    m.userId = m.userId.trim();
+                    // Is it an e-mail?
+                    if (validator.isEmail(m.userId)) {
+                        m.userId = m.userId.toLowerCase(); // https://github.com/citizenos/citizenos-api/issues/234
+                        validEmailMembers.push(m); // The whole member object with level
+                    } else if (validator.isUUID(m.userId)) {
+                        validUserIdMembers.push(m);
                     } else {
-                        return;
+                        logger.warn('Invalid member ID, is not UUID or email thus ignoring', req.method, req.path, m, req.body);
                     }
                 } else {
-                    const deletedCount = await TopicInviteUser
-                        .destroy(
-                            {
-                                where: {
-                                    userId: member.userId,
-                                    topicId: topicId
+                    logger.warn('Missing member id, ignoring', req.method, req.path, m, req.body);
+                }
+            });
+
+            const validEmails = validEmailMembers.map(m => cryptoLib.encrypt(m.userId));
+            if (validEmails.length) {
+                // Find out which e-mails already exist
+                const usersExistingEmail = await User
+                    .findAll({
+                        where: {
+                            email: {
+                                [Op.iLike]: {
+                                    [Op.any]: validEmails
                                 }
                             }
-                        );
-                    logger.info(`Removed ${deletedCount} invites`);
-                    const topicInvite = await TopicInviteUser.create(
-                        {
-                            topicId: topicId,
-                            creatorId: userId,
-                            userId: member.userId,
-                            level: member.level
                         },
-                        {
-                            transaction: t
-                        }
-                    );
-
-                    const userInvited = User.build({ id: topicInvite.userId });
-                    userInvited.dataValues.level = topicInvite.level; // FIXME: HACK? Invite event, putting level here, not sure it belongs here, but.... https://github.com/citizenos/citizenos-fe/issues/112 https://github.com/w3c/activitystreams/issues/506
-                    userInvited.dataValues.inviteId = topicInvite.id; // FIXME: HACK? Invite event, pu
-
-                    await cosActivities.inviteActivity(
-                        topic,
-                        userInvited,
-                        {
-                            type: 'User',
-                            id: req.user.userId,
-                            ip: req.ip
-                        },
-                        req.method + ' ' + req.path,
-                        t
-                    );
-
-                    return topicInvite;
-                }
-            });
-
-            let createdInvites = await Promise.all(createInvitePromises);
-
-            createdInvites = createdInvites.filter(function (invite) {
-                return !!invite;
-            });
-
-            for (let invite of createdInvites) {
-                invite.inviteMessage = inviteMessage;
-            }
-
-            t.afterCommit(async () => {
-                if (createdInvites.length) {
-                    await emailLib.sendTopicMemberUserInviteCreate(createdInvites);
-                    return res.created({
-                        count: createdInvites.length,
-                        rows: createdInvites
+                        attributes: ['id', 'email']
                     });
-                } else {
-                    return res.badRequest('No invites were created. Possibly because no valid userId-s (uuidv4s or emails) were provided.', 1);
+
+                usersExistingEmail.forEach((u) => {
+                    const member = validEmailMembers.find(m => {
+                        return m.userId === u.email
+                    });
+                    if (member) {
+                        const index = validEmailMembers.findIndex(m => m.userId === u.email);
+                        member.userId = u.id;
+                        validUserIdMembers.push(member);
+                        validEmailMembers.splice(index, 1) // Remove the e-mail, so that by the end of the day only e-mails that did not exist remain.
+                    }
+                });
+            }
+            await db.transaction(async function (t) {
+                let createdUsers;
+
+                // The leftovers are e-mails for which User did not exist
+                if (validEmailMembers.length) {
+                    const usersToCreate = [];
+                    validEmailMembers.forEach((m) => {
+                        usersToCreate.push({
+                            email: m.userId,
+                            language: m.language,
+                            password: null,
+                            name: util.emailToDisplayName(m.userId),
+                            source: User.SOURCES.citizenos
+                        });
+                    });
+
+                    createdUsers = await User.bulkCreate(usersToCreate);
+
+                    const createdUsersActivitiesCreatePromises = createdUsers.map(async function (user) {
+                        return cosActivities.createActivity(
+                            user,
+                            null,
+                            {
+                                type: 'System',
+                                ip: req.ip
+                            },
+                            req.method + ' ' + req.path,
+                            t
+                        );
+                    });
+
+                    await Promise.all(createdUsersActivitiesCreatePromises);
                 }
+
+                // Go through the newly created users and add them to the validUserIdMembers list so that they get invited
+                if (createdUsers && createdUsers.length) {
+                    createdUsers.forEach((u) => {
+                        const member = {
+                            userId: u.id
+                        };
+
+                        // Sequelize defaultValue has no effect if "undefined" or "null" is set for attribute...
+                        const level = validEmailMembers.find(m => m.userId === u.email).level;
+                        if (level) {
+                            member.level = level;
+                        }
+                        validUserIdMembers.push(member);
+                    });
+                }
+
+                // Need the Topic just for the activity
+                const topic = await Topic.findOne({
+                    where: {
+                        id: topicId
+                    }
+                });
+
+                validUserIdMembers = validUserIdMembers.filter(function (member) {
+                    return member.userId !== req.user.userId; // Make sure user does not invite self
+                });
+                const currentMembers = await TopicMemberUser.findAll({
+                    where: {
+                        topicId: topicId
+                    }
+                });
+
+                const createInvitePromises = validUserIdMembers.map(async function (member) {
+                    const addedMember = currentMembers.find(cmember => cmember.userId === member.userId );
+
+                    if (addedMember) {
+                        const LEVELS = {
+                            none: 0, // Enables to override inherited permissions.
+                            read: 1,
+                            edit: 2,
+                            admin: 3
+                        };
+                        if (addedMember.level !== member.level) {
+                            if (LEVELS[member.level] > LEVELS[addedMember.level]) {
+                                await addedMember.update({
+                                    level: member.level
+                                });
+
+                                cosActivities.updateActivity(
+                                    addedMember,
+                                    null,
+                                    {
+                                        type: 'User',
+                                        id: req.user.userId,
+                                        ip: req.ip
+                                    },
+                                    req.method + ' ' + req.path,
+                                    t
+                                );
+
+                                return;
+                            }
+
+                            return;
+                        } else {
+                            return;
+                        }
+                    } else {
+                        const deletedCount = await TopicInviteUser
+                            .destroy(
+                                {
+                                    where: {
+                                        userId: member.userId,
+                                        topicId: topicId
+                                    }
+                                }
+                            );
+                        logger.info(`Removed ${deletedCount} invites`);
+                        const topicInvite = await TopicInviteUser.create(
+                            {
+                                topicId: topicId,
+                                creatorId: userId,
+                                userId: member.userId,
+                                level: member.level
+                            },
+                            {
+                                transaction: t
+                            }
+                        );
+
+                        const userInvited = User.build({ id: topicInvite.userId });
+                        userInvited.dataValues.level = topicInvite.level; // FIXME: HACK? Invite event, putting level here, not sure it belongs here, but.... https://github.com/citizenos/citizenos-fe/issues/112 https://github.com/w3c/activitystreams/issues/506
+                        userInvited.dataValues.inviteId = topicInvite.id; // FIXME: HACK? Invite event, pu
+
+                        await cosActivities.inviteActivity(
+                            topic,
+                            userInvited,
+                            {
+                                type: 'User',
+                                id: req.user.userId,
+                                ip: req.ip
+                            },
+                            req.method + ' ' + req.path,
+                            t
+                        );
+
+                        return topicInvite;
+                    }
+                });
+
+                let createdInvites = await Promise.all(createInvitePromises);
+
+                createdInvites = createdInvites.filter(function (invite) {
+                    return !!invite;
+                });
+
+                for (let invite of createdInvites) {
+                    invite.inviteMessage = inviteMessage;
+                }
+
+                t.afterCommit(async () => {
+                    if (createdInvites.length) {
+                        await emailLib.sendTopicMemberUserInviteCreate(createdInvites);
+                        return res.created({
+                            count: createdInvites.length,
+                            rows: createdInvites
+                        });
+                    } else {
+                        return res.badRequest('No invites were created. Possibly because no valid userId-s (uuidv4s or emails) were provided.', 1);
+                    }
+                });
             });
-        });
-    } catch (err) {
-        if (err.errors) {
-            let resErrors = {};
-            Object.keys(err.errors).forEach(key => {
-                resErrors[err.errors[key].path] = err.errors[key].message;
-            });
-            return res.badRequest(resErrors);
-        } else {
-            logger.error('Error creating user:', err);
-            return res.internalServerError(err);
+        } catch (err) {
+            if (err.errors) {
+                let resErrors = {};
+                Object.keys(err.errors).forEach(key => {
+                    resErrors[err.errors[key].path] = err.errors[key].message;
+                });
+                return res.badRequest(resErrors);
+            } else {
+                logger.error('Error creating user:', err);
+                return res.internalServerError(err);
+            }
         }
-    }
     });
 
     app.get('/api/users/:userId/topics/:topicId/invites/users', loginCheck(), asyncMiddleware(async function (req, res) {
