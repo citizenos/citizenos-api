@@ -3,7 +3,6 @@
 const config = require('config');
 const express = require('express');
 const session = require('express-session');
-const RedisStoreSession = require("connect-redis").default
 const path = require('path');
 const cookieParser = require('cookie-parser');
 const bodyParser = require('body-parser');
@@ -36,38 +35,11 @@ const StreamUpload = require('stream_upload');
 const notifications = require('./libs/notifications');
 const SlowDown = require('express-slow-down');
 const rateLimit = require('express-rate-limit')
-const { createClient } = require('redis');
 
-let rateLimitStore, speedLimitStore;
-if (config.rateLimit && config.rateLimit.storageType === 'redis') {
-    const { RedisStore } = require('rate-limit-redis');
-    const redisUrl = config.rateLimit.client?.url;
-    const redisOptions = config.rateLimit.client?.options;
-    const redisConf = Object.assign({ url: process.env.REDIS_URL || redisUrl }, redisOptions);
-    const client = createClient(redisConf);
+const app = express();
+app.set('redis', require('./libs/redis')(app));
 
-    client.on('error', err => logger.error('Redis Client Error', err))
-    client.on('end', () => {
-        logger.log('Redis connection ended');
-    });
-    client.connect();
-    rateLimitStore = new RedisStore({
-        client,
-        prefix: 'rl',
-        sendCommand: (...args) => client.sendCommand(args)
-    });
-
-    speedLimitStore = new RedisStore({
-        client,
-        prefix: 'sl',
-        sendCommand: (...args) => client.sendCommand(args)
-    });
-
-    /*Set Redis Session store*/
-    config.session.store = new RedisStoreSession({
-        client
-    });
-}
+const { rateLimitStore, speedLimitStore } = app.get('redis');
 
 const rateLimiter = function (allowedRequests, blockTime, skipSuccess) {
     if (app.get('env') === 'test') {
@@ -107,8 +79,6 @@ const speedLimiter = function (allowedRequests, skipSuccess, blockTime, delay) {
         }
     })
 };
-
-const app = express();
 
 // Express settings
 // TODO: Would be nice if conf had express.settings.* and all from there would be set
