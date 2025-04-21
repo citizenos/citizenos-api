@@ -8,9 +8,8 @@ module.exports = function (app) {
     const logger = app.get('logger');
     const models = app.get('models');
     const db = models.sequelize;
-    //  const Promise = app.get('Promise');
     const urlLib = app.get('urlLib');
-    const _ = app.get('lodash');
+    const cryptoLib = app.get('cryptoLib');
     const config = app.get('config');
     const fs = app.get('fs');
     const path = require('path');
@@ -37,7 +36,6 @@ module.exports = function (app) {
     logger.debug('Using email header logo from', emailHeaderLogo);
 
     // Default e-mail sending options common to all e-mails
-    // NOTE: ALWAYS CLONE (_.cloneDeep) this, do not modify!
     const EMAIL_OPTIONS_DEFAULT = {
         images: [
             {
@@ -337,19 +335,17 @@ module.exports = function (app) {
 
     const _sendHelpRequest = async (debugData) => {
         const template = resolveTemplate('helpRequest');
-        const emailOptions = Object.assign(
-            _.cloneDeep(EMAIL_OPTIONS_DEFAULT), // Deep clone to guarantee no funky business messing with the class level defaults, cant use Object.assign({}.. as this is not a deep clone.
-            {
-                subject: 'Help request',
-                to: ['support@citizenos.com'],
-                replyTo: debugData.email,
-                from: "no-reply@citizenos.com",
-                linkedData: {
-                    translations: template.translations,
-                },
-                provider: EMAIL_OPTIONS_DEFAULT.provider,
-            }
-        );
+        const emailOptions = {
+            ...structuredClone(EMAIL_OPTIONS_DEFAULT), // Native deep clone
+            subject: 'Help request',
+            to: ['support@citizenos.com'],
+            replyTo: debugData.email,
+            from: "no-reply@citizenos.com",
+            linkedData: {
+                translations: template.translations,
+            },
+            provider: EMAIL_OPTIONS_DEFAULT.provider,
+        };
 
         Object.keys(debugData).forEach((key) => {
             emailOptions[key] = debugData[key];
@@ -365,20 +361,18 @@ module.exports = function (app) {
 
     const _sendFeedback = async (data) => {
         const template = resolveTemplate('feedback');
-        const emailOptions = Object.assign(
-            _.cloneDeep(EMAIL_OPTIONS_DEFAULT), // Deep clone to guarantee no funky business messing with the class level defaults, cant use Object.assign({}.. as this is not a deep clone.
-            {
-                subject: 'Feedback',
-                to: ['support@citizenos.com'],
-                from: "no-reply@citizenos.com",
-                linkedData: {
-                    translations: template.translations,
-                },
-                provider: EMAIL_OPTIONS_DEFAULT.provider,
-                message: data.message,
-                userId: data.userId
-            }
-        );
+        const emailOptions = {
+            ...structuredClone(EMAIL_OPTIONS_DEFAULT), // Native deep clone
+            subject: 'Feedback',
+            to: ['support@citizenos.com'],
+            from: "no-reply@citizenos.com",
+            linkedData: {
+                translations: template.translations,
+            },
+            provider: EMAIL_OPTIONS_DEFAULT.provider,
+            message: data.message,
+            userId: data.userId
+        };
 
         // https://github.com/bevacqua/campaign#email-sending-option
         return emailClient.sendString(template.body, emailOptions);
@@ -397,7 +391,9 @@ module.exports = function (app) {
     const _sendAccountVerification = async (to, emailVerificationCode, token) => {
         const users = await User
             .findAll({
-                where: db.where(db.fn('lower', db.col('email')), db.fn('lower', to))
+                where: {
+                    email: cryptoLib.privateEncrypt(to)
+                }
             })
         const promisesToResolve = [];
 
@@ -405,17 +401,15 @@ module.exports = function (app) {
             const template = resolveTemplate('accountVerification', user.language);
             const linkVerify = urlLib.getApi('/api/auth/verify/:code', { code: emailVerificationCode }, { token: token });
 
-            const emailOptions = Object.assign(
-                _.cloneDeep(EMAIL_OPTIONS_DEFAULT), // Deep clone to guarantee no funky business messing with the class level defaults, cant use Object.assign({}.. as this is not a deep clone.
-                {
-                    subject: template.translations.ACCOUNT_VERIFICATION.SUBJECT,
-                    to: user.email,
-                    from: "no-reply@citizenos.com",
-                    //Placeholders
-                    toUser: user,
-                    linkVerify: linkVerify
-                }
-            );
+            const emailOptions = {
+                ...structuredClone(EMAIL_OPTIONS_DEFAULT), // Deep clone to guarantee no funky business messing with the class level defaults, cant use Object.assign({}.. as this is not a deep clone.
+                subject: template.translations.ACCOUNT_VERIFICATION.SUBJECT,
+                to: user.email,
+                from: "no-reply@citizenos.com",
+                //Placeholders
+                toUser: user,
+                linkVerify: linkVerify
+            };
 
             emailOptions.linkedData.translations = template.translations;
             // https://github.com/bevacqua/campaign#email-sending-option
@@ -440,22 +434,23 @@ module.exports = function (app) {
     const _sendPasswordReset = async (to, passwordResetCode) => {
         const users = await User
             .findAll({
-                where: db.where(db.fn('lower', db.col('email')), db.fn('lower', to))
+                where: {
+                    email: cryptoLib.privateEncrypt(to)
+                }
             })
         const promisesToResolve = [];
         users.forEach((user) => {
             const template = resolveTemplate('passwordReset', user.language);
-            const emailOptions = Object.assign(
-                _.cloneDeep(EMAIL_OPTIONS_DEFAULT), // Deep clone to guarantee no funky business messing with the class level defaults, cant use Object.assign({}.. as this is not a deep clone.
-                {
-                    subject: template.translations.PASSWORD_RESET.SUBJECT,
-                    to: user.email,
-                    from: "no-reply@citizenos.com",
-                    //Placeholders..
-                    toUser: user,
-                    linkReset: urlLib.getFe('/account/password/reset/:passwordResetCode', { passwordResetCode: passwordResetCode }, { email: user.email })
-                }
-            );
+            const emailOptions = {
+                ...structuredClone(EMAIL_OPTIONS_DEFAULT), // Deep clone to guarantee no funky business messing with the class level defaults, cant use Object.assign({}.. as this is not a deep clone.
+
+                subject: template.translations.PASSWORD_RESET.SUBJECT,
+                to: user.email,
+                from: "no-reply@citizenos.com",
+                //Placeholders..
+                toUser: user,
+                linkReset: urlLib.getFe('/account/password/reset/:passwordResetCode', { passwordResetCode: passwordResetCode }, { email: user.email })
+            }
 
             emailOptions.linkedData.translations = template.translations;
             const userEmailPromise = emailClient.sendString(template.body, emailOptions);
@@ -544,7 +539,7 @@ module.exports = function (app) {
                 logger.info('Skipping invite e-mail to user as there is no email on the profile', toUser.email);
                 return Promise.resolve();
             }
-
+            toUser.email = cryptoLib.privateDecrypt(toUser.email);
             const template = resolveTemplate(templateName, toUser.language);
 
             // Handle Partner links
@@ -658,7 +653,7 @@ module.exports = function (app) {
             .all([toUsersPromise, fromUserPromise, topicPromise])
         const fromUser = fromUserRes.toJSON();
         const topic = topicRes.toJSON();
-        console.log()
+
         if (toUsers && toUsers.length) {
             const promisesToResolve = [];
             const memberCount = await TopicMemberUser.count({
@@ -684,8 +679,9 @@ module.exports = function (app) {
                     }
                 );
             toUsers.forEach((user) => {
-                const topicObject = Object.assign({}, topic);
+                const topicObject = { ...topic };
                 if (user.email) {
+                    user.email = cryptoLib.privateDecrypt(user.email);
                     const template = resolveTemplate('inviteTopic', user.language);
                     // TODO: Could use Mu here....
                     const subject = template.translations.INVITE_TOPIC.SUBJECT
@@ -706,21 +702,19 @@ module.exports = function (app) {
                             name: 'Warning.png',
                             file: path.join(templateRoot, 'images/Warning.png')
                         }].concat(EMAIL_OPTIONS_DEFAULT.images);
-                    const emailOptions = Object.assign(
-                        _.cloneDeep(EMAIL_OPTIONS_DEFAULT),
-                        {
-                            subject: subject,
-                            to: user.email,
-                            images,
-                            toUser: user,
-                            fromUser: fromUser,
-                            topic: topicObject,
-                            topicTitle: topic.title,
-                            linkViewTopic: linkViewTopic,
-                            memberCount: memberCount,
-                            latestActivity: moment(lastActivity[0].createdAt).format('YYYY-MM-DD hh:mm')
-                        }
-                    );
+                    const emailOptions = {
+                        ...structuredClone(EMAIL_OPTIONS_DEFAULT),
+                        subject: subject,
+                        to: user.email,
+                        images,
+                        toUser: user,
+                        fromUser: fromUser,
+                        topic: topicObject,
+                        topicTitle: topic.title,
+                        linkViewTopic: linkViewTopic,
+                        memberCount: memberCount,
+                        latestActivity: moment(lastActivity[0].createdAt).format('YYYY-MM-DD hh:mm')
+                    };
                     emailOptions.linkedData.translations = template.translations;
                     const sendEmailPromise = emailClient.sendString(template.body, emailOptions);
 
@@ -813,7 +807,7 @@ module.exports = function (app) {
                 logger.info('Skipping invite e-mail to user as there is no email on the profile', toUser.email);
                 return Promise.resolve();
             }
-
+            toUser.email = cryptoLib.privateDecrypt(toUser.email);
             const template = resolveTemplate(templateName, toUser.language);
             // TODO: could use Mu here...
             const subject = template.translations.INVITE_GROUP.SUBJECT
@@ -836,6 +830,7 @@ module.exports = function (app) {
                     file: path.join(templateRoot, 'images/Warning.png')
                 }].concat(EMAIL_OPTIONS_DEFAULT.images);
 
+            toUser.email = cryptoLib.privateDecrypt(toUser.email);
             const emailOptions = {
                 // from: from, - comes from emailClient.js configuration
                 subject: subject,
@@ -918,6 +913,7 @@ module.exports = function (app) {
 
             toUsers.forEach((user) => {
                 if (user.email) {
+                    user.email = cryptoLib.privateDecrypt(user.email);
                     const template = resolveTemplate('inviteGroup', user.language);
 
                     // TODO: could use Mu here...
@@ -929,26 +925,25 @@ module.exports = function (app) {
                             name: 'Warning.png',
                             file: path.join(templateRoot, 'images/Warning.png')
                         }].concat(EMAIL_OPTIONS_DEFAULT.images);
-                    const emailOptions = Object.assign(
-                        _.cloneDeep(EMAIL_OPTIONS_DEFAULT),
-                        {
-                            subject: subject,
-                            to: user.email,
-                            images,
-                            //Placeholders..
-                            toUser: user,
-                            fromUser: fromUser,
-                            group: group,
-                            linkViewGroup: urlLib.getApi(
-                                '/api/invite/view',
-                                null,
-                                {
-                                    email: user.email,
-                                    groupId: group.id
-                                }
-                            )
-                        }
-                    );
+                    const emailOptions = {
+                        ...structuredClone(EMAIL_OPTIONS_DEFAULT),
+                        subject: subject,
+                        to: user.email,
+                        images,
+                        //Placeholders..
+                        toUser: user,
+                        fromUser: fromUser,
+                        group: group,
+                        linkViewGroup: urlLib.getApi(
+                            '/api/invite/view',
+                            null,
+                            {
+                                email: user.email,
+                                groupId: group.id
+                            }
+                        )
+                    };
+
                     emailOptions.linkedData.translations = template.translations;
                     const userEmailPromise = emailClient.sendString(template.body, emailOptions);
 
@@ -1021,22 +1016,21 @@ module.exports = function (app) {
             const template = resolveTemplate('reportCommentCreator', commentInfo.comment.creator.language);
             const linkViewTopic = urlLib.getFe('/topics/:topicId', { topicId: commentInfo.topic.id });
 
-            const emailOptions = Object.assign(
-                _.cloneDeep(EMAIL_OPTIONS_DEFAULT),
-                {
-                    subject: template.translations.REPORT_COMMENT_CREATOR.SUBJECT,
-                    to: commentInfo.comment.creator.email,
-                    //Placeholders
-                    comment: commentInfo.comment,
-                    topic: commentInfo.topic,
-                    toUser: commentInfo.comment.creator,
-                    report: {
-                        type: template.translations.REPORT_COMMENT.REPORT_TYPE[report.type.toUpperCase()],
-                        text: report.text
-                    },
-                    linkViewTopic: linkViewTopic
-                }
-            );
+            commentInfo.comment.creator.email = cryptoLib.privateDecrypt(commentInfo.comment.creator.email);
+            const emailOptions = {
+                ...structuredClone(EMAIL_OPTIONS_DEFAULT),
+                subject: template.translations.REPORT_COMMENT_CREATOR.SUBJECT,
+                to: commentInfo.comment.creator.email,
+                //Placeholders
+                comment: commentInfo.comment,
+                topic: commentInfo.topic,
+                toUser: commentInfo.comment.creator,
+                report: {
+                    type: template.translations.REPORT_COMMENT.REPORT_TYPE[report.type.toUpperCase()],
+                    text: report.text
+                },
+                linkViewTopic: linkViewTopic
+            };
             emailOptions.images.push(
                 {
                     name: 'icon_argument.png',
@@ -1063,6 +1057,7 @@ module.exports = function (app) {
 
             moderators.forEach((moderator) => {
                 if (moderator.email) {
+                    moderator.email = cryptoLib.privateDecrypt(moderator.email);
                     const template = resolveTemplate('reportCommentModerator', moderator.language);
 
                     const token = cosJwt.getTokenRestrictedUse(
@@ -1081,23 +1076,21 @@ module.exports = function (app) {
                         ]
                     );
 
-                    const emailOptions = Object.assign(
-                        _.cloneDeep(EMAIL_OPTIONS_DEFAULT),
-                        {
-                            subject: template.translations.REPORT_COMMENT_MODERATOR.SUBJECT,
-                            to: moderator.email,
-                            userModerator: moderator,
-                            //Placeholders...
-                            comment: commentInfo.comment,
-                            topic: commentInfo.topic,
-                            report: {
-                                type: template.translations.REPORT_COMMENT.REPORT_TYPE[report.type.toUpperCase()],
-                                text: report.text
-                            },
-                            linkModerate: linkModerate + '?token=' + encodeURIComponent(token),
-                            isUserNotified: commentCreatorInformed
-                        }
-                    );
+                    const emailOptions = {
+                        ...structuredClone(EMAIL_OPTIONS_DEFAULT),
+                        subject: template.translations.REPORT_COMMENT_MODERATOR.SUBJECT,
+                        to: moderator.email,
+                        userModerator: moderator,
+                        //Placeholders...
+                        comment: commentInfo.comment,
+                        topic: commentInfo.topic,
+                        report: {
+                            type: template.translations.REPORT_COMMENT.REPORT_TYPE[report.type.toUpperCase()],
+                            text: report.text
+                        },
+                        linkModerate: linkModerate + '?token=' + encodeURIComponent(token),
+                        isUserNotified: commentCreatorInformed
+                    };
                     emailOptions.images.push(
                         {
                             name: 'icon_argument.png',
@@ -1173,25 +1166,25 @@ module.exports = function (app) {
         // Comment creator e-mail - TODO: Comment back in when comment editing goes live!
         let commentCreatorInformed = true;
         if (commentInfo.comment.creator.email) {
+            commentInfo.comment.creator.email = cryptoLib.privateDecrypt(commentInfo.comment.creator.email);
             const template = resolveTemplate('reportIdeaCommentCreator', commentInfo.comment.creator.language);
             const linkViewTopic = urlLib.getFe('/topics/:topicId', { topicId: commentInfo.topic.id });
 
-            const emailOptions = Object.assign(
-                _.cloneDeep(EMAIL_OPTIONS_DEFAULT),
-                {
-                    subject: template.translations.REPORT_IDEA_COMMENT_CREATOR.SUBJECT,
-                    to: commentInfo.comment.creator.email,
-                    //Placeholders
-                    comment: commentInfo.comment,
-                    topic: commentInfo.topic,
-                    toUser: commentInfo.comment.creator,
-                    report: {
-                        type: template.translations.REPORT_COMMENT.REPORT_TYPE[report.type.toUpperCase()],
-                        text: report.text
-                    },
-                    linkViewTopic: linkViewTopic
-                }
-            );
+            const emailOptions = {
+                ...structuredClone(EMAIL_OPTIONS_DEFAULT),
+                subject: template.translations.REPORT_IDEA_COMMENT_CREATOR.SUBJECT,
+                to: commentInfo.comment.creator.email,
+                //Placeholders
+                comment: commentInfo.comment,
+                topic: commentInfo.topic,
+                toUser: commentInfo.comment.creator,
+                report: {
+                    type: template.translations.REPORT_COMMENT.REPORT_TYPE[report.type.toUpperCase()],
+                    text: report.text
+                },
+                linkViewTopic: linkViewTopic
+            };
+
             emailOptions.images.push(
                 {
                     name: 'icon_argument.png',
@@ -1220,6 +1213,7 @@ module.exports = function (app) {
 
             moderators.forEach((moderator) => {
                 if (moderator.email) {
+                    moderator.email = cryptoLib.privateDecrypt(moderator.email);
                     const template = resolveTemplate('reportIdeaCommentModerator', moderator.language);
 
                     const token = cosJwt.getTokenRestrictedUse(
@@ -1243,23 +1237,22 @@ module.exports = function (app) {
                         ]
                     );
 
-                    const emailOptions = Object.assign(
-                        _.cloneDeep(EMAIL_OPTIONS_DEFAULT),
-                        {
-                            subject: template.translations.REPORT_IDEA_COMMENT_MODERATOR.SUBJECT,
-                            to: moderator.email,
-                            userModerator: moderator,
-                            //Placeholders...
-                            comment: commentInfo.comment,
-                            topic: commentInfo.topic,
-                            report: {
-                                type: template.translations.REPORT_COMMENT.REPORT_TYPE[report.type.toUpperCase()],
-                                text: report.text
-                            },
-                            linkModerate: linkModerate + '?token=' + encodeURIComponent(token),
-                            isUserNotified: commentCreatorInformed
-                        }
-                    );
+                    const emailOptions = {
+                        ...structuredClone(EMAIL_OPTIONS_DEFAULT),
+                        subject: template.translations.REPORT_IDEA_COMMENT_MODERATOR.SUBJECT,
+                        to: moderator.email,
+                        userModerator: moderator,
+                        //Placeholders...
+                        comment: commentInfo.comment,
+                        topic: commentInfo.topic,
+                        report: {
+                            type: template.translations.REPORT_COMMENT.REPORT_TYPE[report.type.toUpperCase()],
+                            text: report.text
+                        },
+                        linkModerate: linkModerate + '?token=' + encodeURIComponent(token),
+                        isUserNotified: commentCreatorInformed
+                    };
+
                     emailOptions.images.push(
                         {
                             name: 'icon_argument.png',
@@ -1333,25 +1326,25 @@ module.exports = function (app) {
         // Comment creator e-mail - TODO: Comment back in when comment editing goes live!
         let ideaAuthorInformed = true;
         if (ideaInfo.idea.author?.email) {
+            ideaInfo.idea.author.email = cryptoLib.privateDecrypt(ideaInfo.idea.author.email);
             const template = resolveTemplate('reportIdeaCreator', ideaInfo.idea.author.language);
             const linkViewTopic = urlLib.getFe('/topics/:topicId', { topicId: ideaInfo.topic.id });
 
-            const emailOptions = Object.assign(
-                _.cloneDeep(EMAIL_OPTIONS_DEFAULT),
-                {
-                    subject: template.translations.REPORT_IDEA_CREATOR.SUBJECT,
-                    to: ideaInfo.idea.author.email,
-                    //Placeholders
-                    idea: ideaInfo.idea,
-                    topic: ideaInfo.topic,
-                    toUser: ideaInfo.idea.author,
-                    report: {
-                        type: template.translations.REPORT_COMMENT.REPORT_TYPE[report.type.toUpperCase()],
-                        text: report.text
-                    },
-                    linkViewTopic: linkViewTopic
-                }
-            );
+            const emailOptions = {
+                ...structuredClone(EMAIL_OPTIONS_DEFAULT),
+                subject: template.translations.REPORT_IDEA_CREATOR.SUBJECT,
+                to: ideaInfo.idea.author.email,
+                //Placeholders
+                idea: ideaInfo.idea,
+                topic: ideaInfo.topic,
+                toUser: ideaInfo.idea.author,
+                report: {
+                    type: template.translations.REPORT_COMMENT.REPORT_TYPE[report.type.toUpperCase()],
+                    text: report.text
+                },
+                linkViewTopic: linkViewTopic
+            };
+
             emailOptions.images.push(
                 {
                     name: 'icon_ideation.png',
@@ -1379,6 +1372,7 @@ module.exports = function (app) {
 
             moderators.forEach((moderator) => {
                 if (moderator.email) {
+                    moderator.email = cryptoLib.privateDecrypt(moderator.email);
                     const template = resolveTemplate('reportIdeaModerator', moderator.language);
 
                     const token = cosJwt.getTokenRestrictedUse(
@@ -1400,23 +1394,21 @@ module.exports = function (app) {
                         ]
                     );
 
-                    const emailOptions = Object.assign(
-                        _.cloneDeep(EMAIL_OPTIONS_DEFAULT),
-                        {
-                            subject: template.translations.REPORT_IDEA_MODERATOR.SUBJECT,
-                            to: moderator.email,
-                            userModerator: moderator,
-                            //Placeholders...
-                            idea: ideaInfo.idea,
-                            topic: ideaInfo.topic,
-                            report: {
-                                type: template.translations.REPORT_COMMENT.REPORT_TYPE[report.type.toUpperCase()],
-                                text: report.text
-                            },
-                            linkModerate: linkModerate + '?token=' + encodeURIComponent(token),
-                            isUserNotified: ideaAuthorInformed
-                        }
-                    );
+                    const emailOptions = {
+                        ...structuredClone(EMAIL_OPTIONS_DEFAULT),
+                        subject: template.translations.REPORT_IDEA_MODERATOR.SUBJECT,
+                        to: moderator.email,
+                        userModerator: moderator,
+                        //Placeholders...
+                        idea: ideaInfo.idea,
+                        topic: ideaInfo.topic,
+                        report: {
+                            type: template.translations.REPORT_COMMENT.REPORT_TYPE[report.type.toUpperCase()],
+                            text: report.text
+                        },
+                        linkModerate: linkModerate + '?token=' + encodeURIComponent(token),
+                        isUserNotified: ideaAuthorInformed
+                    };
                     emailOptions.images.push(
                         {
                             name: 'icon_ideation.png',
@@ -1480,7 +1472,7 @@ module.exports = function (app) {
                     .replace('{{report.id}}', topicReport.id);
 
                 const emailOptions = Object.assign(
-                    _.cloneDeep(EMAIL_OPTIONS_DEFAULT),
+                    structuredClone(EMAIL_OPTIONS_DEFAULT),
                     {
                         subject: subject,
                         to: userReporter.email,
@@ -1509,12 +1501,13 @@ module.exports = function (app) {
         topicMemberList.forEach((topicMemberUser) => {
             if (topicMemberUser.email) {
                 const sendTopicMemberEmail = async () => {
+                    topicMemberUser.email = cryptoLib.privateDecrypt(topicMemberUser.email);
                     const template = resolveTemplate('reportTopicReportMember', topicMemberUser.language);
                     const subject = template.translations.REPORT_TOPIC_REPORT_MEMBER.SUBJECT
                         .replace('{{report.id}}', topicReport.id);
 
                     const emailOptions = Object.assign(
-                        _.cloneDeep(EMAIL_OPTIONS_DEFAULT),
+                        structuredClone(EMAIL_OPTIONS_DEFAULT),
                         {
                             subject: subject,
                             to: topicMemberUser.email,
@@ -1543,13 +1536,14 @@ module.exports = function (app) {
         // 1.3 To the Moderators - https://app.citizenos.com/en/topics/ac8b66a4-ca56-4d02-8406-5e19da73d7ce?argumentsPage=1
         topicModerators.forEach((userModerator) => {
             if (userModerator.email) {
+                userModerator.email = cryptoLib.privateDecrypt(userModerator.email);
                 const sendTopicModeratorEmail = async () => {
                     const template = resolveTemplate('reportTopicReportModerator', userModerator.language);
                     const subject = template.translations.REPORT_TOPIC_REPORT_MODERATOR.SUBJECT
                         .replace('{{report.id}}', topicReport.id);
 
                     const emailOptions = Object.assign(
-                        _.cloneDeep(EMAIL_OPTIONS_DEFAULT),
+                        structuredClone(EMAIL_OPTIONS_DEFAULT),
                         {
                             subject: subject,
                             to: userModerator.email,
@@ -1618,7 +1612,7 @@ module.exports = function (app) {
                     .replace('{{report.id}}', topicReport.id);
 
                 const emailOptions = Object.assign(
-                    _.cloneDeep(EMAIL_OPTIONS_DEFAULT),
+                    structuredClone(EMAIL_OPTIONS_DEFAULT),
                     {
                         subject: subject,
                         to: userReporter.email,
@@ -1652,13 +1646,14 @@ module.exports = function (app) {
         // 2.2 To admin/edit Members of the topic - https://app.citizenos.com/en/topics/ac8b66a4-ca56-4d02-8406-5e19da73d7ce?argumentsPage=1
         topicMemberList.forEach((topicMemberUser) => {
             if (topicMemberUser.email) {
+                topicMemberUser.email = cryptoLib.privateDecrypt(topicMemberUser.email);
                 const sendTopicMemberEmail = async () => {
                     const template = resolveTemplate('reportTopicModerateMember', topicMemberUser.language);
                     const subject = template.translations.REPORT_TOPIC_MODERATE_MEMBER.SUBJECT
                         .replace('{{report.id}}', topicReport.id);
 
                     const emailOptions = Object.assign(
-                        _.cloneDeep(EMAIL_OPTIONS_DEFAULT),
+                        structuredClone(EMAIL_OPTIONS_DEFAULT),
                         {
                             subject: subject,
                             to: topicMemberUser.email,
@@ -1714,13 +1709,14 @@ module.exports = function (app) {
 
         topicModerators.forEach((userModerator) => {
             if (userModerator.email) {
+                userModerator.email = cryptoLib.privateDecrypt(userModerator.email);
                 const sendTopicModeratorEmail = async () => {
                     const template = resolveTemplate('reportTopicReportReviewModerator', userModerator.language);
                     const subject = template.translations.REPORT_TOPIC_REPORT_REVIEW_MODERATOR.SUBJECT
                         .replace('{{report.id}}', topicReport.id);
 
                     const emailOptions = Object.assign(
-                        _.cloneDeep(EMAIL_OPTIONS_DEFAULT),
+                        structuredClone(EMAIL_OPTIONS_DEFAULT),
                         {
                             subject: subject,
                             to: userModerator.email,
@@ -1795,21 +1791,19 @@ module.exports = function (app) {
                 const subject = template.translations.REPORT_TOPIC_REPORT_RESOLVE_REPORTER.SUBJECT
                     .replace('{{report.id}}', topicReport.id);
 
-                const emailOptions = Object.assign(
-                    _.cloneDeep(EMAIL_OPTIONS_DEFAULT),
-                    {
-                        subject: subject,
-                        to: userReporter.email,
-                        //Placeholders
-                        userReporter: userReporter,
-                        report: {
-                            createdAt: moment(topicReport.createdAt).locale(template.language).format('LLL Z')
-                        },
-                        topic: topic,
-                        linkViewTopic: linkViewTopic,
-                        linkViewModerationGuidelines: config.email.linkViewModerationGuidelines
-                    }
-                );
+                const emailOptions = {
+                    ...structuredClone(EMAIL_OPTIONS_DEFAULT),
+                    subject: subject,
+                    to: userReporter.email,
+                    //Placeholders
+                    userReporter: userReporter,
+                    report: {
+                        createdAt: moment(topicReport.createdAt).locale(template.language).format('LLL Z')
+                    },
+                    topic: topic,
+                    linkViewTopic: linkViewTopic,
+                    linkViewModerationGuidelines: config.email.linkViewModerationGuidelines
+                };
                 emailOptions.linkedData.translations = template.translations;
 
                 return await emailClient.sendString(template.body, emailOptions);
@@ -1823,23 +1817,22 @@ module.exports = function (app) {
         // 4.2 To admin/edit Members of the topic - https://app.citizenos.com/en/topics/ac8b66a4-ca56-4d02-8406-5e19da73d7ce?argumentsPage=1
         topicMemberList.forEach((topicMemberUser) => {
             if (topicMemberUser.email) {
+                topicMemberUser.email = cryptoLib.privateDecrypt(topicMemberUser.email);
                 const sendTopicMemberEmail = async () => {
                     const template = resolveTemplate('reportTopicReportResolveMember', topicMemberUser.language);
                     const subject = template.translations.REPORT_TOPIC_REPORT_RESOLVE_MEMBER.SUBJECT
                         .replace('{{report.id}}', topicReport.id);
 
-                    const emailOptions = Object.assign(
-                        _.cloneDeep(EMAIL_OPTIONS_DEFAULT),
-                        {
-                            subject: subject,
-                            to: topicMemberUser.email,
-                            //Placeholders
-                            userMember: topicMemberUser,
-                            topic: topic,
-                            linkViewTopic: linkViewTopic,
-                            linkViewModerationGuidelines: config.email.linkViewModerationGuidelines
-                        }
-                    );
+                    const emailOptions = {
+                        ...structuredClone(EMAIL_OPTIONS_DEFAULT),
+                        subject: subject,
+                        to: topicMemberUser.email,
+                        //Placeholders
+                        userMember: topicMemberUser,
+                        topic: topic,
+                        linkViewTopic: linkViewTopic,
+                        linkViewModerationGuidelines: config.email.linkViewModerationGuidelines
+                    };
                     emailOptions.linkedData.translations = template.translations;
 
                     return await emailClient.sendString(template.body, emailOptions);
@@ -2005,6 +1998,7 @@ module.exports = function (app) {
             isVisible = false;
         }
         users.forEach((user) => {
+            user.email = cryptoLib.privateDecrypt(user.email);
             const template = resolveTemplate('topicNotification', user.language || 'en');
             const translateValues = notification.values;
             let notificationText = '';
@@ -2026,7 +2020,7 @@ module.exports = function (app) {
                 }].concat(EMAIL_OPTIONS_DEFAULT.images);
 
             const emailOptions = Object.assign(
-                _.cloneDeep(EMAIL_OPTIONS_DEFAULT), // Deep clone to guarantee no funky business messing with the class level defaults, cant use Object.assign({}.. as this is not a deep clone.
+                structuredClone(EMAIL_OPTIONS_DEFAULT), // Deep clone to guarantee no funky business messing with the class level defaults, cant use Object.assign({}.. as this is not a deep clone.
                 {
                     subject: Mustache.render(handleTranslation(template.translations, 'NOTIFICATIONS.SUBJECT'), translateValues),
                     to: user.email,
@@ -2196,6 +2190,7 @@ module.exports = function (app) {
                         logger.info('Skipping invite e-mail to user as there is no email on the profile', toUser.email);
                         return Promise.resolve();
                     }
+                    toUser.email = cryptoLib.privateDecrypt(toUser.email);
 
                     await models.UserNewsletter.create({
                         userId: toUser.id,
@@ -2270,7 +2265,7 @@ module.exports = function (app) {
                 logger.info('Skipping invite e-mail to user as there is no email on the profile', toUser.email);
                 return Promise.resolve();
             }
-
+            toUser.email = cryptoLib.privateDecrypt(toUser.email);
             const template = resolveTemplate(templateName, toUser.language);
 
             const subject = Mustache.render(handleTranslation(template.translations, 'REQUEST_ADD_TOPIC_TO_GROUP.SUBJECT'), { group });

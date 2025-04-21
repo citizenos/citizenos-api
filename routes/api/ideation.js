@@ -8,6 +8,7 @@ module.exports = function (app) {
     const config = app.get('config');
     const logger = app.get('logger');
     const loginCheck = app.get('middleware.loginCheck');
+    const cryptoLib = app.get('cryptoLib');
     const models = app.get('models');
     const cosActivities = app.get('cosActivities');
     const authTokenRestrictedUse = app.get('middleware.authTokenRestrictedUse');
@@ -40,12 +41,13 @@ module.exports = function (app) {
     const IdeaReport = models.IdeaReport;
     const IdeaAttachment = models.IdeaAttachment;
     const Attachment = models.Attachment;
-    const topicLib = require('./topic')(app);
+    const topicService = require('../../services/topic')(app);
+
     const discussionLib = require('./discussion')(app);
     /**
      * Create an Ideation
      */
-    app.post('/api/users/:userId/topics/:topicId/ideations', loginCheck(['partner']), topicLib.hasPermission(TopicMemberUser.LEVELS.admin, null, [Topic.STATUSES.draft]), async (req, res, next) => {
+    app.post('/api/users/:userId/topics/:topicId/ideations', loginCheck(['partner']), topicService.hasPermission(TopicMemberUser.LEVELS.admin, null, [Topic.STATUSES.draft]), async (req, res, next) => {
         const question = req.body.question;
         const deadline = req.body.deadline;
         const topicId = req.params.topicId;
@@ -230,7 +232,7 @@ module.exports = function (app) {
         }
     };
 
-    app.get('/api/users/:userId/topics/:topicId/ideations/:ideationId/participants', loginCheck(['partner']), topicLib.hasPermission(TopicMemberUser.LEVELS.read, true), async (req, res, next) => {
+    app.get('/api/users/:userId/topics/:topicId/ideations/:ideationId/participants', loginCheck(['partner']), topicService.hasPermission(TopicMemberUser.LEVELS.read, true), async (req, res, next) => {
         try {
             const ideation = await Ideation.findOne({
                 where: {
@@ -308,7 +310,7 @@ module.exports = function (app) {
         }
     });
 
-    app.get('/api/users/:userId/topics/:topicId/ideations/:ideationId/download', loginCheck(['partner']), topicLib.hasPermission(TopicMemberUser.LEVELS.read, true), async (req, res, next) => {
+    app.get('/api/users/:userId/topics/:topicId/ideations/:ideationId/download', loginCheck(['partner']), topicService.hasPermission(TopicMemberUser.LEVELS.read, true), async (req, res, next) => {
         try {
             const ideationId = req.params.ideationId;
             const connectionManager = db.connectionManager;
@@ -403,14 +405,14 @@ module.exports = function (app) {
 
     });
 
-    app.get('/api/users/:userId/topics/:topicId/ideations/:ideationId', loginCheck(['partner']), topicLib.hasPermission(TopicMemberUser.LEVELS.read, true), async (req, res, next) => {
+    app.get('/api/users/:userId/topics/:topicId/ideations/:ideationId', loginCheck(['partner']), topicService.hasPermission(TopicMemberUser.LEVELS.read, true), async (req, res, next) => {
         _readIdeation(req, res, next);
     });
 
     /**
      * Update an Ideation
      */
-    app.put('/api/users/:userId/topics/:topicId/ideations/:ideationId', loginCheck(['partner']), topicLib.hasPermission(TopicMemberUser.LEVELS.admin, null, [Topic.STATUSES.draft, Topic.STATUSES.ideation]), async (req, res, next) => {
+    app.put('/api/users/:userId/topics/:topicId/ideations/:ideationId', loginCheck(['partner']), topicService.hasPermission(TopicMemberUser.LEVELS.admin, null, [Topic.STATUSES.draft, Topic.STATUSES.ideation]), async (req, res, next) => {
         try {
             const topicId = req.params.topicId;
             const ideationId = req.params.ideationId;
@@ -482,9 +484,11 @@ module.exports = function (app) {
                     LEFT JOIN (
                         SELECT
                             "ideationId",
+                            "status",
                             COUNT("ideationId") as count
                         FROM "Ideas"
-                        GROUP BY "ideationId"
+                        GROUP BY "ideationId", "status"
+                        HAVING "status" != 'draft'
                     ) AS ii ON ii."ideationId" = i.id
                     LEFT JOIN (
                         SELECT
@@ -513,7 +517,7 @@ module.exports = function (app) {
         }
     });
 
-    app.delete('/api/users/:userId/topics/:topicId/ideations/:ideationId', loginCheck(['partner']), topicLib.hasPermission(TopicMemberUser.LEVELS.admin), async (req, res, next) => {
+    app.delete('/api/users/:userId/topics/:topicId/ideations/:ideationId', loginCheck(['partner']), topicService.hasPermission(TopicMemberUser.LEVELS.admin), async (req, res, next) => {
         try {
             const ideationId = req.params.ideationId;
             const ideation = await Ideation.findOne({
@@ -555,7 +559,7 @@ module.exports = function (app) {
     /**
      * Create an Idea
      */
-    app.post('/api/users/:userId/topics/:topicId/ideations/:ideationId/ideas', loginCheck(['partner']), topicLib.hasPermission(TopicMemberUser.LEVELS.read, true, [Topic.STATUSES.ideation]), async (req, res, next) => {
+    app.post('/api/users/:userId/topics/:topicId/ideations/:ideationId/ideas', loginCheck(['partner']), topicService.hasPermission(TopicMemberUser.LEVELS.read, true, [Topic.STATUSES.ideation]), async (req, res, next) => {
         const ideationId = req.params.ideationId;
         const topicId = req.params.topicId;
         const statement = req.body.statement;
@@ -589,13 +593,13 @@ module.exports = function (app) {
             await db
                 .transaction(async function (t) {
 
-                    await topicLib.addUserAsMember(req.user.id, topicId, t);
+                    await topicService.addUserAsMember(req.user.id, topicId, t);
 
                     const sessToken = createHash('sha256').update(req.cookies[config.session.name]).digest('base64');
 
                     const idea = Idea.build({
                         authorId: (ideation.allowAnonymous && status !== 'draft') ? null : req.user.id,
-                        sessionId: (ideation.allowAnonymous && status !== 'draft') ? null : sessToken,
+                        sessionId: (ideation.allowAnonymous && status !== 'draft') ? sessToken : null,
                         statement,
                         description,
                         imageUrl,
@@ -624,6 +628,7 @@ module.exports = function (app) {
                             where: {
                                 id: idea.id
                             },
+                            attributes: ['id', 'ideationId', 'statement', 'sessionId', 'description', 'imageUrl', 'status', 'createdAt', 'updatedAt', 'deletedById', 'deletedByReportId', 'deletedAt', 'deletedReasonType', 'deletedReasonText', 'authorId', 'demographics'],
                             include: [
                                 {
                                     model: User,
@@ -773,6 +778,11 @@ module.exports = function (app) {
             if (ideation.allowAnonymous) {
                 delete idea[0].author;
             }
+
+            if (idea[0].author?.email) {
+                idea[0].author.email = cryptoLib.privateDecrypt(idea[0].author.email);
+            }
+
             return res.ok(idea[0]);
 
         } catch (err) {
@@ -805,14 +815,14 @@ module.exports = function (app) {
             next(err);
         }
     })
-    app.get('/api/users/:userId/topics/:topicId/ideations/:ideationId/ideas/:ideaId', loginCheck(['partner']), topicLib.hasPermission(TopicMemberUser.LEVELS.read, true), async (req, res, next) => {
+    app.get('/api/users/:userId/topics/:topicId/ideations/:ideationId/ideas/:ideaId', loginCheck(['partner']), topicService.hasPermission(TopicMemberUser.LEVELS.read, true), async (req, res, next) => {
         return _readIdeationIdea(req, res, next);
     });
 
     /**
      * Update an Idea
      */
-    app.put('/api/users/:userId/topics/:topicId/ideations/:ideationId/ideas/:ideaId', loginCheck(['partner']), topicLib.hasPermission(TopicMemberUser.LEVELS.read, null, [Topic.STATUSES.ideation]), async (req, res, next) => {
+    app.put('/api/users/:userId/topics/:topicId/ideations/:ideationId/ideas/:ideaId', loginCheck(['partner']), topicService.hasPermission(TopicMemberUser.LEVELS.read, null, [Topic.STATUSES.ideation]), async (req, res, next) => {
         try {
             const topicId = req.params.topicId;
             const ideationId = req.params.ideationId;
@@ -825,6 +835,7 @@ module.exports = function (app) {
                 where: {
                     id: ideaId
                 },
+                attributes: ['id', 'ideationId', 'statement', 'description', 'imageUrl', 'status', 'createdAt', 'updatedAt', 'deletedById', 'deletedByReportId', 'deletedAt', 'deletedReasonType', 'deletedReasonText', 'authorId', 'demographics'],
                 include: [
                     {
                         model: User,
@@ -855,7 +866,7 @@ module.exports = function (app) {
                 return res.notFound();
             }
 
-            if ((!ideation.allowAnonymous && idea.authorId !== req.user.id) || (ideation.allowAnonymous && idea.status !== 'draft' && idea.sessionId !== sessToken)) return res.forbidden();
+            if ((!ideation.allowAnonymous && idea.authorId !== req.user.id) || (ideation.allowAnonymous && ((idea.status !== 'draft' && idea.sessionId !== sessToken) || (idea.status === 'draft' && idea.authorId !== req.user.id)))) return res.forbidden();
 
             await db.transaction(async function (t) {
                 fields.forEach(function (field) {
@@ -901,7 +912,7 @@ module.exports = function (app) {
         }
     });
 
-    app.delete('/api/users/:userId/topics/:topicId/ideations/:ideationId/ideas/:ideaId', loginCheck(['partner']), topicLib.hasPermission(TopicMemberUser.LEVELS.read), async (req, res, next) => {
+    app.delete('/api/users/:userId/topics/:topicId/ideations/:ideationId/ideas/:ideaId', loginCheck(['partner']), topicService.hasPermission(TopicMemberUser.LEVELS.read), async (req, res, next) => {
         try {
             const ideaId = req.params.ideaId;
             const ideationId = req.params.ideationId;
@@ -1147,6 +1158,8 @@ module.exports = function (app) {
             ideas.forEach((idea) => {
                 if (!idea.author.id || (ideation.allowAnonymous && idea.status !== 'draft')) {
                     delete idea.author;
+                } else if (idea.author.email) {
+                    idea.author.email = cryptoLib.privateDecrypt(idea.author.email);
                 }
                 delete idea.countTotal
             });
@@ -1194,7 +1207,7 @@ module.exports = function (app) {
         }
     });
 
-    app.get('/api/users/:userId/topics/:topicId/ideations/:ideationId/ideas', loginCheck(['partner']), topicLib.hasPermission(TopicMemberUser.LEVELS.read, true), async (req, res, next) => {
+    app.get('/api/users/:userId/topics/:topicId/ideations/:ideationId/ideas', loginCheck(['partner']), topicService.hasPermission(TopicMemberUser.LEVELS.read, true), async (req, res, next) => {
         return _readIdeationIdeas(req, res, next);
     });
 
@@ -1203,7 +1216,7 @@ module.exports = function (app) {
     /**
      * Create a folder
      */
-    app.post('/api/users/:userId/topics/:topicId/ideations/:ideationId/folders', loginCheck(['partner']), topicLib.hasPermission(TopicMemberUser.LEVELS.admin, null), async (req, res, next) => {
+    app.post('/api/users/:userId/topics/:topicId/ideations/:ideationId/folders', loginCheck(['partner']), topicService.hasPermission(TopicMemberUser.LEVELS.admin, null), async (req, res, next) => {
         const ideationId = req.params.ideationId;
         const topicId = req.params.topicId;
         const name = req.body.name;
@@ -1262,7 +1275,7 @@ module.exports = function (app) {
     /**
      * Read a folder
      */
-    app.get('/api/users/:userId/topics/:topicId/ideations/:ideationId/folders/:folderId', loginCheck(['partner']), topicLib.hasPermission(TopicMemberUser.LEVELS.read, true), async (req, res, next) => {
+    app.get('/api/users/:userId/topics/:topicId/ideations/:ideationId/folders/:folderId', loginCheck(['partner']), topicService.hasPermission(TopicMemberUser.LEVELS.read, true), async (req, res, next) => {
         const folderId = req.params.folderId;
         const offset = req.query.offset || 0;
         const limit = req.query.limit || 8;
@@ -1299,6 +1312,7 @@ module.exports = function (app) {
                     where: {
                         ideationId: req.params.ideationId
                     },
+                    attributes: ['id', 'ideationId', 'statement', 'description', 'imageUrl', 'status', 'createdAt', 'updatedAt', 'deletedById', 'deletedByReportId', 'deletedAt', 'deletedReasonType', 'deletedReasonText', 'authorId', 'demographics'],
                     include: [
                         {
                             model: User,
@@ -1365,6 +1379,7 @@ module.exports = function (app) {
                     where: {
                         ideationId: req.params.ideationId
                     },
+                    attributes: ['id', 'ideationId', 'statement', 'description', 'imageUrl', 'status', 'createdAt', 'updatedAt', 'deletedById', 'deletedByReportId', 'deletedAt', 'deletedReasonType', 'deletedReasonText', 'authorId', 'demographics'],
                     include: [
                         {
                             model: User,
@@ -1404,6 +1419,7 @@ module.exports = function (app) {
                 where: {
                     ideationId: req.params.ideationId
                 },
+                attributes: ['id', 'ideationId', 'statement', 'description', 'imageUrl', 'status', 'createdAt', 'updatedAt', 'deletedById', 'deletedByReportId', 'deletedAt', 'deletedReasonType', 'deletedReasonText', 'authorId', 'demographics'],
                 include: [
                     {
                         model: User,
@@ -1456,12 +1472,12 @@ module.exports = function (app) {
             next(err);
         }
     })
-    app.get('/api/users/:userId/topics/:topicId/ideations/:ideationId/folders/:folderId/ideas', loginCheck(['partner']), topicLib.hasPermission(TopicMemberUser.LEVELS.read, true), async (req, res, next) => {
+    app.get('/api/users/:userId/topics/:topicId/ideations/:ideationId/folders/:folderId/ideas', loginCheck(['partner']), topicService.hasPermission(TopicMemberUser.LEVELS.read, true), async (req, res, next) => {
         return _readIdeationFolder(req, res, next);
     });
 
     /* Add ideas to folder*/
-    app.post('/api/users/:userId/topics/:topicId/ideations/:ideationId/folders/:folderId/ideas', loginCheck(['partner']), topicLib.hasPermission(TopicMemberUser.LEVELS.read, true), async (req, res, next) => {
+    app.post('/api/users/:userId/topics/:topicId/ideations/:ideationId/folders/:folderId/ideas', loginCheck(['partner']), topicService.hasPermission(TopicMemberUser.LEVELS.read, true), async (req, res, next) => {
         let ideas = req.body;
         const topicId = req.params.topicId;
         const ideationId = req.params.ideationId;
@@ -1571,7 +1587,7 @@ module.exports = function (app) {
     /**
     * Delete Idea from folder
     */
-    app.delete('/api/users/:userId/topics/:topicId/ideations/:ideationId/folders/:folderId/ideas/:ideaId', loginCheck(['partner']), topicLib.hasPermission(TopicMemberUser.LEVELS.admin), async function (req, res, next) {
+    app.delete('/api/users/:userId/topics/:topicId/ideations/:ideationId/folders/:folderId/ideas/:ideaId', loginCheck(['partner']), topicService.hasPermission(TopicMemberUser.LEVELS.admin), async function (req, res, next) {
         const folderId = req.params.folderId;
         const ideaId = req.params.ideaId;
         const topicId = req.params.topicId;
@@ -1619,7 +1635,7 @@ module.exports = function (app) {
     /**
      * Update a folder
      */
-    app.put('/api/users/:userId/topics/:topicId/ideations/:ideationId/folders/:folderId', loginCheck(['partner']), topicLib.hasPermission(TopicMemberUser.LEVELS.admin, null), async (req, res, next) => {
+    app.put('/api/users/:userId/topics/:topicId/ideations/:ideationId/folders/:folderId', loginCheck(['partner']), topicService.hasPermission(TopicMemberUser.LEVELS.admin, null), async (req, res, next) => {
         try {
             const topicId = req.params.topicId;
             const ideationId = req.params.ideationId;
@@ -1687,7 +1703,7 @@ module.exports = function (app) {
         }
     });
 
-    app.delete('/api/users/:userId/topics/:topicId/ideations/:ideationId/folders/:folderId', loginCheck(['partner']), topicLib.hasPermission(TopicMemberUser.LEVELS.admin), async (req, res, next) => {
+    app.delete('/api/users/:userId/topics/:topicId/ideations/:ideationId/folders/:folderId', loginCheck(['partner']), topicService.hasPermission(TopicMemberUser.LEVELS.admin), async (req, res, next) => {
         try {
             const folderId = req.params.folderId;
             const ideationId = req.params.ideationId;
@@ -1872,7 +1888,7 @@ module.exports = function (app) {
         }
     });
 
-    app.get('/api/users/:userId/topics/:topicId/ideations/:ideationId/ideas/:ideaId/folders', loginCheck(['partner']), topicLib.hasPermission(TopicMemberUser.LEVELS.read, true), async (req, res, next) => {
+    app.get('/api/users/:userId/topics/:topicId/ideations/:ideationId/ideas/:ideaId/folders', loginCheck(['partner']), topicService.hasPermission(TopicMemberUser.LEVELS.read, true), async (req, res, next) => {
         try {
             const ideationId = req.params.ideationId;
             const ideaId = req.params.ideaId;
@@ -1944,7 +1960,7 @@ module.exports = function (app) {
         }
     });
 
-    app.post('/api/users/:userId/topics/:topicId/ideations/:ideationId/ideas/:ideaId/folders', loginCheck(['partner']), topicLib.hasPermission(TopicMemberUser.LEVELS.read, true), async (req, res, next) => {
+    app.post('/api/users/:userId/topics/:topicId/ideations/:ideationId/ideas/:ideaId/folders', loginCheck(['partner']), topicService.hasPermission(TopicMemberUser.LEVELS.read, true), async (req, res, next) => {
         let folders = req.body;
         const topicId = req.params.topicId;
         const ideationId = req.params.ideationId;
@@ -2086,7 +2102,7 @@ module.exports = function (app) {
         }
     });
 
-    app.get('/api/users/:userId/topics/:topicId/ideations/:ideationId/folders', loginCheck(['partner']), topicLib.hasPermission(TopicMemberUser.LEVELS.read, true), async (req, res, next) => {
+    app.get('/api/users/:userId/topics/:topicId/ideations/:ideationId/folders', loginCheck(['partner']), topicService.hasPermission(TopicMemberUser.LEVELS.read, true), async (req, res, next) => {
         return _readIdeationFolders(req, res, next);
     });
 
@@ -2094,13 +2110,12 @@ module.exports = function (app) {
      * Read (List) Idea votes
      */
 
-    app.get('/api/users/:userId/topics/:topicId/ideations/:ideationId/ideas/:ideaId/votes', loginCheck(['partner']), topicLib.hasPermission(TopicMemberUser.LEVELS.read, true), async function (req, res, next) {
+    app.get('/api/users/:userId/topics/:topicId/ideations/:ideationId/ideas/:ideaId/votes', loginCheck(['partner']), topicService.hasPermission(TopicMemberUser.LEVELS.read, true), async function (req, res, next) {
         try {
             const results = await db.query(
                 `
                 SELECT
                     u.name,
-                    u.company,
                     u."imageUrl",
                     CAST(CASE
                         WHEN iv.value=1 Then 'up'
@@ -2139,7 +2154,7 @@ module.exports = function (app) {
             const topicId = req.params.topicId;
             const userId = req.user?.id;
             if (userId) {
-                const authorizationResult = await topicLib._hasPermission(topicId, userId, TopicMemberUser.LEVELS.read, true);
+                const authorizationResult = await topicService._hasPermission(topicId, userId, TopicMemberUser.LEVELS.read, true);
                 // Add "req.locals" to store info collected from authorization for further use in the request. Might save a query or two for some use cases.
                 // Naming convention ".locals" is inspired by "res.locals" - http://expressjs.com/api.html#res.locals
                 if (!authorizationResult) {
@@ -2160,7 +2175,6 @@ module.exports = function (app) {
                 `
                 SELECT
                     u.name,
-                    u.company,
                     u."imageUrl",
                     CAST(CASE
                         WHEN iv.value=1 Then 'up'
@@ -2197,7 +2211,7 @@ module.exports = function (app) {
     /**
      * Create an idea Vote
      */
-    app.post('/api/users/:userId/topics/:topicId/ideations/:ideationId/ideas/:ideaId/votes', loginCheck(['partner']), topicLib.hasPermission(TopicMemberUser.LEVELS.read, true, [Topic.STATUSES.ideation]), async function (req, res, next) {
+    app.post('/api/users/:userId/topics/:topicId/ideations/:ideationId/ideas/:ideaId/votes', loginCheck(['partner']), topicService.hasPermission(TopicMemberUser.LEVELS.read, true, [Topic.STATUSES.ideation]), async function (req, res, next) {
         const value = parseInt(req.body.value, 10);
         const topicId = req.params.topicId;
         try {
@@ -2214,7 +2228,7 @@ module.exports = function (app) {
 
             await db
                 .transaction(async function (t) {
-                    await topicLib.addUserAsMember(req.user.id, topicId, t);
+                    await topicService.addUserAsMember(req.user.id, topicId, t);
 
                     const vote = await IdeaVote
                         .findOne({
@@ -2388,7 +2402,7 @@ module.exports = function (app) {
     /**
      * Create Idea Comment
      */
-    app.post('/api/users/:userId/topics/:topicId/ideations/:ideationId/ideas/:ideaId/comments', loginCheck(['partner']), topicLib.hasPermission(TopicMemberUser.LEVELS.read, true), async (req, res, next) => {
+    app.post('/api/users/:userId/topics/:topicId/ideations/:ideationId/ideas/:ideaId/comments', loginCheck(['partner']), topicService.hasPermission(TopicMemberUser.LEVELS.read, true), async (req, res, next) => {
         try {
             const ideation = await Ideation.findOne({
                 where: {
@@ -2434,7 +2448,7 @@ module.exports = function (app) {
 
             await db
                 .transaction(async function (t) {
-                    await topicLib.addUserAsMember(req.user.id, topicId, t);
+                    await topicService.addUserAsMember(req.user.id, topicId, t);
 
                     await comment.save({ transaction: t });
                     const idea = await Idea.findOne({
@@ -2547,7 +2561,7 @@ module.exports = function (app) {
             types = types.filter((type) => Comment.TYPES[type]);
         }
 
-        if (types && types.length) {
+        if (types?.length) {
             where += ` AND ic.type IN (:types) `
         }
 
@@ -2557,7 +2571,6 @@ module.exports = function (app) {
             if (req.user.moderator) {
                 dataForModerator = `
                 , 'email', u.email
-                , 'phoneNumber', uc."connectionData"::jsonb->>'phoneNumber'
                 `;
             }
         }
@@ -2583,7 +2596,7 @@ module.exports = function (app) {
                     c.subject,
                     c.text,
                     pg_temp.editCreatedAtToJson(c.edits) as edits,
-                    jsonb_build_object('id', u.id,'name',u.name, 'imageUrl', u."imageUrl", 'company', u.company ${dataForModerator}) as creator,
+                    jsonb_build_object('id', u.id,'name',u.name, 'imageUrl', u."imageUrl" ${dataForModerator}) as creator,
                     CASE
                         WHEN c."deletedById" IS NOT NULL THEN jsonb_build_object('id', c."deletedById", 'name', dbu.name )
                         ELSE jsonb_build_object('id', c."deletedById")
@@ -2621,7 +2634,7 @@ module.exports = function (app) {
                     c.subject,
                     c.text,
                     pg_temp.editCreatedAtToJson(c.edits) as edits,
-                    jsonb_build_object('id', u.id,'name',u.name, 'imageUrl', u."imageUrl", 'company', u.company ${dataForModerator}) as creator,
+                    jsonb_build_object('id', u.id,'name',u.name, 'imageUrl', u."imageUrl" ${dataForModerator}) as creator,
                     CASE
                         WHEN c."deletedById" IS NOT NULL THEN jsonb_build_object('id', c."deletedById", 'name', dbu.name )
                         ELSE jsonb_build_object('id', c."deletedById")
@@ -2888,6 +2901,24 @@ module.exports = function (app) {
                     countRes[item.type] = item.count;
                 });
             }
+
+            const decryptEmail = (reply) => {
+                if (reply.creator?.email) {
+                    reply.creator.email = cryptoLib.privateDecrypt(reply.creator.email);
+                }
+                if (reply.replies.rows.length) {
+                    reply.replies.rows.forEach((r) => decryptEmail(r));
+                }
+            }
+            comments.forEach((comment) => {
+                if (comment.creator?.email) {
+                    comment.creator.email = cryptoLib.privateDecrypt(comment.creator.email);
+                }
+                comment.replies.rows.forEach((reply) => {
+                    decryptEmail(reply);
+                })
+            });
+
             countRes.total = countRes.pro + countRes.con + countRes.poi + countRes.reply;
             return res.ok({
                 count: countRes,
@@ -2902,17 +2933,17 @@ module.exports = function (app) {
     /**
      * Read (List) Topic Comments
      */
-    app.get('/api/users/:userId/topics/:topicId/ideations/:ideationId/ideas/:ideaId/comments', loginCheck(['partner']), topicLib.hasPermission(TopicMemberUser.LEVELS.read, true), topicLib.isModerator(), ideaCommentsList);
+    app.get('/api/users/:userId/topics/:topicId/ideations/:ideationId/ideas/:ideaId/comments', loginCheck(['partner']), topicService.hasPermission(TopicMemberUser.LEVELS.read, true), topicService.isModerator(), ideaCommentsList);
 
     /**
      * Read (List) public Topic Comments
      */
-    app.get('/api/topics/:topicId/ideations/:ideationId/ideas/:ideaId/comments', topicLib.hasVisibility(Topic.VISIBILITY.public), topicLib.isModerator(), ideaCommentsList);
+    app.get('/api/topics/:topicId/ideations/:ideationId/ideas/:ideaId/comments', topicService.hasVisibility(Topic.VISIBILITY.public), topicService.isModerator(), ideaCommentsList);
 
     /**
      * Delete Idea Comment
      */
-    app.delete('/api/users/:userId/topics/:topicId/ideations/:ideationId/ideas/:ideaId/comments/:commentId', loginCheck(['partner']), discussionLib.isCommentCreator(), topicLib.hasPermission(TopicMemberUser.LEVELS.read, false, null, true));
+    app.delete('/api/users/:userId/topics/:topicId/ideations/:ideationId/ideas/:ideaId/comments/:commentId', loginCheck(['partner']), discussionLib.isCommentCreator(), topicService.hasPermission(TopicMemberUser.LEVELS.read, false, null, true));
 
     //WARNING: Don't mess up with order here! In order to use "next('route')" in the isCommentCreator, we have to have separate route definition
     //NOTE: If you have good ideas how to keep one route definition with several middlewares, feel free to share!
@@ -3505,13 +3536,12 @@ module.exports = function (app) {
         }
     });
 
-    app.get('/api/users/:userId/topics/:topicId/ideations/:ideationId/ideas/:ideaId/comments/:commentId/votes', loginCheck(['partner']), topicLib.hasPermission(TopicMemberUser.LEVELS.read, true), async function (req, res, next) {
+    app.get('/api/users/:userId/topics/:topicId/ideations/:ideationId/ideas/:ideaId/comments/:commentId/votes', loginCheck(['partner']), topicService.hasPermission(TopicMemberUser.LEVELS.read, true), async function (req, res, next) {
         try {
             const results = await db.query(
                 `
                 SELECT
                     u.name,
-                    u.company,
                     u."imageUrl",
                     CAST(CASE
                         WHEN cv.value=1 Then 'up'
@@ -3548,7 +3578,7 @@ module.exports = function (app) {
     /**
      * Create a Comment Vote
      */
-    app.post('/api/topics/:topicId/ideations/:ideationId/ideas/:ideaId/comments/:commentId/votes', loginCheck(['partner']), topicLib.hasPermission(TopicMemberUser.LEVELS.read, true), async function (req, res, next) {
+    app.post('/api/topics/:topicId/ideations/:ideationId/ideas/:ideaId/comments/:commentId/votes', loginCheck(['partner']), topicService.hasPermission(TopicMemberUser.LEVELS.read, true), async function (req, res, next) {
         const value = parseInt(req.body.value, 10);
 
         try {
@@ -3573,7 +3603,7 @@ module.exports = function (app) {
                     const topicId = req.params.topicId;
                     idea.topicId = topicId;
 
-                    await topicLib.addUserAsMember(req.user.id, topicId, t);
+                    await topicService.addUserAsMember(req.user.id, topicId, t);
 
                     const vote = await CommentVote
                         .findOne({
@@ -3754,7 +3784,7 @@ module.exports = function (app) {
             next(err);
         }
     }
-    app.post('/api/users/:userId/topics/:topicId/ideations/:ideationId/ideas/:ideaId/attachments/upload', loginCheck(['partner']), topicLib.hasPermission(TopicMemberUser.LEVELS.read, null, [Topic.STATUSES.ideation]), async function (req, res, next) {
+    app.post('/api/users/:userId/topics/:topicId/ideations/:ideationId/ideas/:ideaId/attachments/upload', loginCheck(['partner']), topicService.hasPermission(TopicMemberUser.LEVELS.read, null, [Topic.STATUSES.ideation]), async function (req, res, next) {
         return addIdeaAttachment(req, res, next);
     });
 
@@ -3762,12 +3792,12 @@ module.exports = function (app) {
    * Add image to idea
    */
 
-    app.post('/api/users/:userId/topics/:topicId/ideations/:ideationId/ideas/:ideaId/image/upload', loginCheck(['partner']), topicLib.hasPermission(TopicMemberUser.LEVELS.read, null, [Topic.STATUSES.ideation]), async function (req, res, next) {
+    app.post('/api/users/:userId/topics/:topicId/ideations/:ideationId/ideas/:ideaId/image/upload', loginCheck(['partner']), topicService.hasPermission(TopicMemberUser.LEVELS.read, null, [Topic.STATUSES.ideation]), async function (req, res, next) {
         return addIdeaAttachment(req, res, next, IdeaAttachment.ATTACHMENT_TYPES.image);
     });
 
 
-    app.post('/api/users/:userId/topics/:topicId/ideations/:ideationId/ideas/:ideaId/attachments', loginCheck(['partner']), topicLib.hasPermission(TopicMemberUser.LEVELS.read, null, [Topic.STATUSES.ideation]), async function (req, res, next) {
+    app.post('/api/users/:userId/topics/:topicId/ideations/:ideationId/ideas/:ideaId/attachments', loginCheck(['partner']), topicService.hasPermission(TopicMemberUser.LEVELS.read, null, [Topic.STATUSES.ideation]), async function (req, res, next) {
         const ideaId = req.params.ideaId;
         const name = req.body.name;
         const type = req.body.type;
@@ -3791,7 +3821,7 @@ module.exports = function (app) {
         });
         const [ideation, idea] = await Promise.all([ideationPromise, ideaPromise]);
 
-        if ((ideation.allowAnonymous && idea.sessionId !== sessToken) || (!ideation.allowAnonymous && req.user.id !== req.params.userId)) {
+        if ((ideation.allowAnonymous && ((idea.sessionId && idea.sessionId !== sessToken) || idea.authorId !== req.user.id)) && (!ideation.allowAnonymous && idea.authorId !== req.userId)) {
             return res.forbidden();
         }
 
@@ -3885,7 +3915,7 @@ module.exports = function (app) {
         }
     });
 
-    app.put('/api/users/:userId/topics/:topicId/ideations/:ideationId/ideas/:ideaId/attachments/:attachmentId', loginCheck(['partner']), topicLib.hasPermission(TopicMemberUser.LEVELS.read, null, [Topic.STATUSES.ideation]), async function (req, res, next) {
+    app.put('/api/users/:userId/topics/:topicId/ideations/:ideationId/ideas/:ideaId/attachments/:attachmentId', loginCheck(['partner']), topicService.hasPermission(TopicMemberUser.LEVELS.read, null, [Topic.STATUSES.ideation]), async function (req, res, next) {
         const newName = req.body.name;
 
         if (!newName) {
@@ -3957,7 +3987,7 @@ module.exports = function (app) {
     /**
      * Delete Idea Attachment
      */
-    app.delete('/api/users/:userId/topics/:topicId/ideations/:ideationId/ideas/:ideaId/attachments/:attachmentId', loginCheck(['partner']), topicLib.hasPermission(TopicMemberUser.LEVELS.read, null, [Topic.STATUSES.ideation]), async function (req, res, next) {
+    app.delete('/api/users/:userId/topics/:topicId/ideations/:ideationId/ideas/:ideaId/attachments/:attachmentId', loginCheck(['partner']), topicService.hasPermission(TopicMemberUser.LEVELS.read, null, [Topic.STATUSES.ideation]), async function (req, res, next) {
         try {
             const sessToken = createHash('sha256').update(req.cookies[config.session.name]).digest('base64');
             const attachmentPromise = Attachment.findOne({
@@ -4060,8 +4090,8 @@ module.exports = function (app) {
         }
     };
 
-    app.get('/api/users/:userId/topics/:topicId/ideations/:ideationId/ideas/:ideaId/attachments', loginCheck(['partner']), topicLib.hasPermission(TopicMemberUser.LEVELS.read, true), ideaAttachmentsList);
-    app.get('/api/topics/:topicId/ideations/:ideationId/ideas/:ideaId/attachments', topicLib.hasVisibility(Topic.VISIBILITY.public), ideaAttachmentsList);
+    app.get('/api/users/:userId/topics/:topicId/ideations/:ideationId/ideas/:ideaId/attachments', loginCheck(['partner']), topicService.hasPermission(TopicMemberUser.LEVELS.read, true), ideaAttachmentsList);
+    app.get('/api/topics/:topicId/ideations/:ideationId/ideas/:ideaId/attachments', topicService.hasVisibility(Topic.VISIBILITY.public), ideaAttachmentsList);
 
     const readAttachment = async function (req, res, next) {
         try {
@@ -4107,7 +4137,7 @@ module.exports = function (app) {
         }
     };
 
-    app.get('/api/users/:userId/topics/:topicId/ideations/:ideationId/ideas/:ideaId/attachments/:attachmentId', loginCheck(['partner']), topicLib.hasPermission(TopicMemberUser.LEVELS.read, true), readAttachment);
-    app.get('/api/topics/:topicId/ideations/:ideationId/ideas/:ideaId/attachments/:attachmentId', topicLib.hasVisibility(Topic.VISIBILITY.public), readAttachment);
+    app.get('/api/users/:userId/topics/:topicId/ideations/:ideationId/ideas/:ideaId/attachments/:attachmentId', loginCheck(['partner']), topicService.hasPermission(TopicMemberUser.LEVELS.read, true), readAttachment);
+    app.get('/api/topics/:topicId/ideations/:ideationId/ideas/:ideaId/attachments/:attachmentId', topicService.hasVisibility(Topic.VISIBILITY.public), readAttachment);
 
 }

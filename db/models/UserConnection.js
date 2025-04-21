@@ -1,6 +1,6 @@
 'use strict';
 
-var _ = require('lodash');
+const cryptoLib = require('../../libs/crypto');
 
 /**
  * UserConnection
@@ -41,23 +41,83 @@ module.exports = function (sequelize, DataTypes) {
             },
             connectionId: {
                 type: DataTypes.ENUM,
-                values: _.values(CONNECTION_IDS),
+                values: Object.values(CONNECTION_IDS),
                 allowNull: false,
                 comment: 'User connection identificator.',
                 primaryKey: true
             },
             connectionUserId: {
-                type: DataTypes.STRING,
+                type: DataTypes.TEXT,
                 allowNull: false,
-                comment: 'User id in the connected system. For Facebook their user id, for Google their user id and so on, PID for Estonian ID infra etc.'
+                comment: 'User id in the connected system (encrypted). For Facebook their user id, for Google their user id and so on, PID for Estonian ID infra etc.',
+                set: function(v) {
+                    if (!v) {
+                        this.setDataValue('connectionUserId', null);
+                        return;
+                    }
+                    this.setDataValue('connectionUserId', cryptoLib.privateEncrypt(v));
+                },
+                get: function() {
+                    const value = this.getDataValue('connectionUserId');
+                    if (!value) return null;
+
+                    try {
+                        return cryptoLib.privateDecrypt(value);
+                    } catch (err) {
+                        console.error('Decryption error:', err);
+                        return null;
+                    }
+                }
             },
             connectionData: {
-                type: DataTypes.JSONB,
+                type: DataTypes.TEXT,
                 allowNull: true,
-                comment: 'Connection specific data you want to store.'
+                comment: 'Connection specific data (encrypted).',
+                set: function(v) {
+                    if (!v) {
+                        this.setDataValue('connectionData', null);
+                        return;
+                    }
+                    this.setDataValue('connectionData', cryptoLib.privateEncrypt(JSON.stringify(v)));
+                },
+                get: function() {
+                    const value = this.getDataValue('connectionData');
+                    if (!value) return null;
+
+                    try {
+                        const decrypted = cryptoLib.privateDecrypt(value);
+                        return JSON.parse(decrypted);
+                    } catch (err) {
+                        console.error('Decryption error:', err);
+                        return null;
+                    }
+                }
             }
         }
     );
+
+    // Add beforeCreate hook for encryption
+    UserConnection.beforeCreate(async (connection) => {
+        // Handle connectionUserId encryption
+        if (connection.getDataValue('_connectionUserId_raw')) {
+            const value = connection.getDataValue('_connectionUserId_raw');
+            connection.setDataValue('connectionUserId', cryptoLib.privateEncrypt(value));
+            connection.setDataValue('_connectionUserId_raw', null);
+        }
+
+        // Handle connectionData encryption
+        if (connection.getDataValue('_connectionData_raw')) {
+            const value = JSON.stringify(connection.getDataValue('_connectionData_raw'));
+            connection.setDataValue('connectionData', cryptoLib.privateEncrypt(value));
+            connection.setDataValue('_connectionData_raw', null);
+        }
+    });
+
+    // Add beforeUpdate hook for encryption
+    UserConnection.beforeUpdate(async (connection) => {
+        // Same encryption logic as beforeCreate
+        await UserConnection.beforeCreate(connection);
+    });
 
     UserConnection.associate = function (models) {
         UserConnection.belongsTo(models.User, {
@@ -73,6 +133,19 @@ module.exports = function (sequelize, DataTypes) {
         };
 
         return user;
+    };
+
+    // Add a method to get decrypted values
+    UserConnection.prototype.getDecryptedFields = async function() {
+        const [connectionUserId, connectionData] = await Promise.all([
+            this.connectionUserId,
+            this.connectionData
+        ]);
+        return {
+            ...this.toJSON(),
+            connectionUserId,
+            connectionData
+        };
     };
 
     UserConnection.CONNECTION_IDS = CONNECTION_IDS;

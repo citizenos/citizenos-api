@@ -5,6 +5,10 @@
   },
   "db": {
     "url": "DATABASE_URL",
+    "secret": "CITIZENOS_DB_ENCRYPTION_SECRET",
+    "iv": "CITIZENOS_DB_ENCRYPTION_IV",
+    "privateKey": "CITIZENOS_DB_ENCRYPTION_PRIVATE_KEY",
+    "publicKey": "CITIZENOS_DB_ENCRYPTION_PUBLIC_KEY",
     "options": {
       "__name": "DATABASE_OPTIONS",
       "__format": "json"

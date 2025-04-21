@@ -8,10 +8,9 @@ module.exports = function (app) {
     const models = app.get('models');
     const db = models.sequelize;
     const { injectReplacements } = require('sequelize/lib/utils/sql');
-    const _ = app.get('lodash');
     const cosActivities = app.get('cosActivities');
     const loginCheck = app.get('middleware.loginCheck');
-    const topicLib = require('./topic')(app);
+    const topicService = require('../../services/topic')(app);
     const groupLib = require('./group')(app);
 
     const Activity = models.Activity;
@@ -202,20 +201,22 @@ module.exports = function (app) {
          * @todo Think of how to handle anonymous ideas.
          * @todo Think of how to move this to the SQL query.
         */
-        const activities = allActivities.filter((it) => it.data.actor.id !== null)
+        let activities = allActivities.filter((it) => it.data.actor.id !== null)
+
+        /**
+         * Filter out activities with draft status.
+         */
+        activities = activities.filter((it) => it.data.object.status !== "draft")
 
         const returnList = [];
-        activities.forEach(function (activity) {
-            const returnActivity = _.cloneDeep(activity);
+        activities.forEach((activity) => {
+            const returnActivity = { ...activity };
 
             delete activity.data.actor.ip; // NEVER expose IP
 
             activity.actor = activity.data.actor;
             if (activity.data.actor.type === 'User') {
-                const actor = _.find(activity.users, function (o) {
-                    return o.id === activity.data.actor.id;
-                });
-                activity.actor.company = actor.company;
+                const actor = activity.users.find( o => o.id === activity.data.actor.id );
                 activity.actor.name = actor.name;
             }
             if (activity.data.object[0] && activity.data.object[0]['@type'] === 'VoteList') {
@@ -225,7 +226,7 @@ module.exports = function (app) {
                     company: null
                 };
             } else {
-                if (activity.data.actor && activity.data.actor.level) {
+                if (activity.data.actor?.level) {
                     activity.actor.level = activity.data.actor.level;
                 }
                 if (returnActivity.data.actor && returnActivity.data.actor.type === 'Moderator') {
@@ -236,7 +237,7 @@ module.exports = function (app) {
 
             const extraFields = ['object', 'origin', 'target'];
 
-            extraFields.forEach(function (field) {
+            extraFields.forEach((field) => {
                 let object = null;
                 let topic;
                 let group;
@@ -247,9 +248,7 @@ module.exports = function (app) {
                             delete returnActivity.data[field].creator;
                             delete returnActivity.data[field].description;
                             if (field === 'origin' && activity.data.type === 'Update') break;
-                            topic = _.find(activity.topics, function (t) {
-                                return t.id === activity.data[field].id
-                            });
+                            topic = activity.topics.find( t => t.id === activity.data[field].id );
                             object = Topic.build(topic).toJSON();
                             object['@type'] = activity.data[field]['@type'];
                             object.creatorId = topic.creatorId;
@@ -259,9 +258,7 @@ module.exports = function (app) {
                         case 'Group':
                             delete returnActivity.data[field].creator;
                             if (field === 'origin' && activity.data.type === 'Update') break;
-                            group = _.find(activity.groups, function (t) {
-                                return t.id === activity.data[field].id
-                            });
+                            group = activity.groups.find(t => t.id === activity.data[field].id );
                             object = Group.build(group).toJSON();
                             object['@type'] = activity.data[field]['@type'];
                             object.createdAt = activity.data[field].createdAt;
@@ -274,9 +271,14 @@ module.exports = function (app) {
                         case 'User':
                             delete returnActivity.data[field].language;
                             if (field === 'origin' && activity.data.type === 'Update') break;
-                            user = _.find(activity.users, function (t) {
-                                return t.id === activity.data[field].id
-                            });
+                            user = activity.users.find( t => t.id === activity.data[field].id );
+                     /*       try {
+                                if (user.email) {
+                                    user.email = cryptoLib.privateDecrypt(user.email);
+                                }
+                            } catch (err) {
+                                logger.log('Email already decrypted', err);
+                            }*/
                             object = User.build(user).toJSON();
                             object['@type'] = activity.data[field]['@type'];
                             if (activity.data[field].level) { // FIXME: HACK? Invite event, putting level here, not sure it belongs here, but.... https://github.com/citizenos/citizenos-fe/issues/112 https://github.com/w3c/activitystreams/issues/506
@@ -298,9 +300,7 @@ module.exports = function (app) {
                             delete returnActivity.data[field].creator;
                             delete returnActivity.data[field].description;
                             if (field === 'origin' && activity.data.type === 'Update') break;
-                            topic = _.find(activity.topics, function (t) {
-                                return t.id === activity.data[field].topicId
-                            });
+                            topic = activity.topics.find(t => t.id === activity.data[field].topicId );
                             object = Topic.build(topic).toJSON();
                             object['@type'] = activity.data[field]['@type'];
                             object.creatorId = topic.creatorId;
@@ -395,8 +395,14 @@ module.exports = function (app) {
             returnList.push(returnActivity);
         });
 
-        _.sortBy(returnList, function (activity) {
-            return activity.updatedAt;
+        returnList.sort(function (a, b) {
+            if (a.updatedAt < b.updatedAt) {
+                return 1;
+            } else if (a.updatedAt > b.updatedAt) {
+                return -1;
+            } else {
+                return 0;
+            }
         });
 
         return returnList;
@@ -528,7 +534,7 @@ module.exports = function (app) {
         return activitiesList(req, res, next);
     });
 
-    app.get('/api/users/:userId/topics/:topicId/activities', loginCheck(['partner']), topicLib.hasPermission(TopicMemberUser.LEVELS.read, true), function (req, res, next) {
+    app.get('/api/users/:userId/topics/:topicId/activities', loginCheck(['partner']), topicService.hasPermission(TopicMemberUser.LEVELS.read, true), function (req, res, next) {
         return topicActivitiesList(req, res, next);
     });
 
@@ -618,7 +624,7 @@ module.exports = function (app) {
         return topicUnreadActivitiesCount(req, res, next, 'public');
     });
 
-    app.get('/api/users/:userId/topics/:topicId/activities/unread', loginCheck(['partner']), topicLib.hasPermission(TopicMemberUser.LEVELS.read, true), function (req, res, next) {
+    app.get('/api/users/:userId/topics/:topicId/activities/unread', loginCheck(['partner']), topicService.hasPermission(TopicMemberUser.LEVELS.read, true), function (req, res, next) {
         return topicUnreadActivitiesCount(req, res, next);
     });
 
@@ -1207,7 +1213,7 @@ module.exports = function (app) {
                                 t
                             );
                     }
-                    
+
                     const finalResults = parseActivitiesResults(results);
 
                     t.afterCommit(() => {

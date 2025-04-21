@@ -9,7 +9,6 @@ module.exports = function (app) {
     const logger = app.get('logger');
     const models = app.get('models');
     const db = models.sequelize;
-    const { injectReplacements } = require('sequelize/lib/utils/sql');
     const Op = db.Sequelize.Op;
     const validator = app.get('validator');
     const util = app.get('util');
@@ -17,16 +16,11 @@ module.exports = function (app) {
     const emailLib = app.get('email');
     const cosSignature = app.get('cosSignature');
     const cosActivities = app.get('cosActivities');
-    const sanitizeFilename = app.get('sanitizeFilename');
-    const cryptoLib = app.get('cryptoLib');
+
     const cosEtherpad = app.get('cosEtherpad');
-    const smartId = app.get('smartId');
-    const mobileId = app.get('mobileId');
-    const jwt = app.get('jwt');
-    const cosJwt = app.get('cosJwt');
+
     const CosHtmlToDocx = app.get('cosHtmlToDocx');
     const https = require('https');
-    const crypto = require('crypto');
     const path = require('path');
     const stream = require('stream');
     const fs = require('fs');
@@ -39,7 +33,6 @@ module.exports = function (app) {
     const rateLimiter = app.get('rateLimiter');
     const cosUpload = app.get('cosUpload');
 
-    const authUser = require('./auth')(app);
     const User = models.User;
     const UserConnection = models.UserConnection;
     const Group = models.Group;
@@ -52,570 +45,22 @@ module.exports = function (app) {
     const TopicInviteUser = models.TopicInviteUser;
 
     const Vote = models.Vote;
-    const VoteOption = models.VoteOption;
-    const VoteUserContainer = models.VoteUserContainer;
-    const VoteContainerFile = models.VoteContainerFile;
-    const VoteList = models.VoteList;
-    const VoteDelegation = models.VoteDelegation;
+
 
     const TopicEvent = models.TopicEvent;
-    const TopicVote = models.TopicVote;
+
     const TopicAttachment = models.TopicAttachment;
     const Attachment = models.Attachment;
     const TopicFavourite = models.TopicFavourite;
     const UserNotificationSettings = models.UserNotificationSettings;
 
     const Ideation = models.Ideation;
-
-    const createDataHash = (dataToHash) => {
-        const hmac = crypto.createHmac('sha256', config.encryption.salt);
-
-        hmac.update(dataToHash);
-
-        return hmac.digest('hex');
-    };
-
-    const addUserAsMember = async (userId, topicId, t) => {
-        const isMember = await TopicMemberUser.findOne({
-            where: {
-                userId,
-                topicId
-            },
-            transaction: t
-        });
-        if (!isMember) {
-            await TopicMemberUser.create({
-                userId,
-                topicId,
-                level: TopicMemberUser.LEVELS.read
-            });
-        }
-    }
-
-    const _hasPermission = async function (topicId, userId, level, allowPublic, topicStatusesAllowed, allowSelf, partnerId) {
-        const LEVELS = {
-            none: 0, // Enables to override inherited permissions.
-            read: 1,
-            edit: 2,
-            admin: 3
-        };
-        const minRequiredLevel = level;
-
-        // TODO: That casting to "enum_TopicMemberUsers_level". Sequelize does not support naming enums, through inheritance I have 2 enums that are the same but with different name thus different type in PG. Feature request - https://github.com/sequelize/sequelize/issues/2577
-        const result = await db
-            .query(
-                `SELECT
-                    t.visibility = 'public' AS "isPublic",
-                    t.status,
-                    COALESCE(
-                        tmup.level,
-                        tmgp.level,
-                        CASE
-                            WHEN t.visibility = 'public' THEN 'read' ELSE NULL
-                        END,
-                        'none'
-                    ) as level,
-                    COALESCE(tmup.level, tmgp.level, 'none')::"enum_TopicMemberUsers_level" >= :level AS "hasDirectAccess",
-                    t."sourcePartnerId"
-                FROM "Topics" t
-                    LEFT JOIN (
-                        SELECT
-                            tmu."topicId",
-                            tmu."userId",
-                            tmu.level::text AS level
-                        FROM "TopicMemberUsers" tmu
-                        WHERE tmu."deletedAt" IS NULL
-                    ) AS tmup ON (tmup."topicId" = t.id AND tmup."userId" = :userId)
-                    LEFT JOIN (
-                        SELECT
-                            tmg."topicId",
-                            gm."userId",
-                            CASE WHEN t.status= 'draft' AND MAX(tmg.level) < 'edit' THEN 'none'
-                            ELSE MAX(tmg.level)::text END AS level
-                        FROM "TopicMemberGroups" tmg
-                            JOIN "GroupMemberUsers" gm ON (tmg."groupId" = gm."groupId")
-                            JOIN "Topics" t ON t.id = tmg."topicId"
-                        WHERE tmg."deletedAt" IS NULL
-                        AND gm."deletedAt" IS NULL
-                        GROUP BY "topicId", "userId", t.status
-                    ) AS tmgp ON (tmgp."topicId" = t.id AND tmgp."userId" = :userId)
-                WHERE t.id = :topicId
-                AND t."deletedAt" IS NULL;
-                `,
-                {
-                    replacements: {
-                        topicId: topicId,
-                        userId: userId,
-                        level: level
-                    },
-                    type: db.QueryTypes.SELECT,
-                    raw: true
-                }
-            );
-        if (result?.[0]) {
-            const isPublic = result[0].isPublic;
-            const status = result[0].status;
-            const hasDirectAccess = result[0].hasDirectAccess;
-            const level = result[0].level;
-            const sourcePartnerId = result[0].sourcePartnerId;
-            if (hasDirectAccess || (allowPublic && isPublic) || allowSelf) {
-                // If Topic status is not in the allowed list, deny access.
-                if (topicStatusesAllowed && topicStatusesAllowed.indexOf(status) <= -1) {
-                    logger.warn('Access denied to topic due to status mismatch! ', 'topicStatusesAllowed:', topicStatusesAllowed, 'status:', status);
-
-                    return false
-                }
-
-                // Don't allow Partner to edit other Partners topics
-                if (!isPublic && partnerId && sourcePartnerId) {
-                    if (partnerId !== sourcePartnerId) {
-                        logger.warn('Access denied to topic due to Partner mismatch! ', 'partnerId:', partnerId, 'sourcePartnerId:', sourcePartnerId);
-
-                        return false;
-                    }
-                }
-
-                if (!allowSelf && (LEVELS[minRequiredLevel] > LEVELS[level])) {
-                    logger.warn('Access denied to topic due to member without permissions trying to delete user! ', 'userId:', userId);
-
-                    return false
-                }
-
-                const authorizationResult = {
-                    topic: {
-                        id: topicId,
-                        isPublic: isPublic,
-                        sourcePartnerId: sourcePartnerId,
-                        status: status,
-                        permissions: {
-                            level: level,
-                            hasDirectAccess: hasDirectAccess
-                        }
-                    }
-                };
-
-                return authorizationResult;
-            } else {
-                return false
-            }
-        } else {
-            return false
-        }
-    };
-
-    /**
-     * Check if User has sufficient privileges to access the Object.
-     *
-     * @param {string} level One of TopicMemberUser.LEVELS
-     * @param {boolean} [allowPublic=false] Allow access to Topic with "public" visibility.
-     * @param {string[]} [topicStatusesAllowed=null] Allow access to Topic which is in one of the allowed statuses. IF null, then any status is OK
-     * @param {boolean} [allowSelf=false] Allow access when caller does action to is own user
-     *
-     * @returns {Function} Express middleware function
-     */
-    const hasPermission = function (level, allowPublic, topicStatusesAllowed, allowSelf) {
-        return async function (req, res, next) {
-            const userId = req.user?.userId || req.user?.id;
-            const partnerId = req.user?.partnerId;
-            const topicId = req.params.topicId;
-
-            allowPublic = allowPublic ? allowPublic : false;
-
-            if (req.user && req.user.moderator) {
-                allowPublic = true;
-            }
-            topicStatusesAllowed = topicStatusesAllowed ? topicStatusesAllowed : null;
-            let allowSelfDelete = allowSelf ? allowSelf : null;
-            if (allowSelfDelete && req.user?.userId !== req.params.memberId) {
-                allowSelfDelete = false;
-            }
-
-            if (topicStatusesAllowed && !Array.isArray(topicStatusesAllowed)) {
-                throw new Error('topicStatusesAllowed must be an array but was ', topicStatusesAllowed);
-            }
-
-            try {
-                const authorizationResult = await _hasPermission(topicId, userId, level, allowPublic, topicStatusesAllowed, allowSelfDelete, partnerId)
-                // Add "req.locals" to store info collected from authorization for further use in the request. Might save a query or two for some use cases.
-                // Naming convention ".locals" is inspired by "res.locals" - http://expressjs.com/api.html#res.locals
-                if (authorizationResult) {
-                    req.locals = authorizationResult;
-                    return next(null, req, res);
-                }
-
-                return res.forbidden('Insufficient permissions');
-            } catch (err) {
-                if (err) {
-                    return next(err);
-                }
-            }
-        };
-    };
-
-    const hasVisibility = function (visibility) {
-        return async function (req, res, next) {
-            try {
-                const count = await Topic.count({
-                    where: {
-                        id: req.params.topicId,
-                        visibility: visibility
-                    }
-                });
-
-                if (!count) {
-                    return res.notFound();
-                }
-
-                return next();
-            } catch (err) {
-                return next(err);
-            }
-        };
-    };
-
-    const _isModerator = async function (topicId, userId) {
-        const result = await db
-            .query(
-                `
-                SELECT
-                    t."id" as "topicId",
-                    m."userId",
-                    m."partnerId"
-                FROM "Topics" t
-                JOIN "Moderators" m
-                    ON (m."partnerId" = t."sourcePartnerId" OR m."partnerId" IS NULL)
-                    AND m."userId" = :userId
-                WHERE t.id = :topicId
-                AND t."deletedAt" IS NULL
-                AND m."deletedAt" IS NULL
-                ;`,
-                {
-                    replacements: {
-                        topicId: topicId,
-                        userId: userId
-                    },
-                    type: db.QueryTypes.SELECT,
-                    raw: true
-                }
-            );
-
-        if (result && result[0]) {
-            const isUserModerator = result[0].userId === userId;
-            const isTopicModerator = result[0].topicId === topicId;
-
-            if (isUserModerator && isTopicModerator) {
-                return { isModerator: result[0].partnerId ? result[0].partnerId : true };
-            }
-        }
-
-        return false;
-    };
-
-    /**
-     * NOTE! This does not block access in case of not being a Moderator, but only adds moderator flag to user object.
-     *
-     * @returns {Function} Express middleware function
-     */
-    const isModerator = function () {
-        return async function (req, res, next) {
-            const topicId = req.params.topicId;
-            let userId;
-
-            if (req.user) {
-                userId = req.user.userId;
-            }
-
-            if (!topicId || !userId) {
-                return next(null, req, res);
-            }
-
-            const result = await _isModerator(topicId, userId)
-            if (result) {
-                req.user.moderator = result.isModerator;
-            }
-
-            return next(null, req, res);
-        };
-    };
-
-    /**
-     * Middleware to check for Moderator permissions. Rejects request if there are no Moderator permissions.
-     *
-     * @returns {Function} Express middleware function
-     */
-    const hasPermissionModerator = function () {
-        return async function (req, res, next) {
-            const topicId = req.params.topicId;
-            let userId;
-
-            if (req.user) {
-                userId = req.user.userId;
-            }
-
-            if (!topicId || !userId) {
-                return res.unauthorised();
-            }
-            try {
-                const result = await _isModerator(topicId, userId);
-                if (result) {
-                    req.user.moderator = result.isModerator;
-
-                    return next(null, req, res);
-                } else {
-                    return res.unauthorised();
-                }
-            } catch (err) {
-                return next(err);
-            }
-        };
-    };
-
-    const getVoteResults = async function (voteId, userId) {
-        let includeVoted = '';
-        if (userId) {
-            includeVoted = ',(SELECT true FROM votes WHERE "userId" = :userId AND "optionId" = v."optionId") as "selected" ';
-        }
-
-        let sql = `
-            WITH
-            RECURSIVE delegations("voteId", "toUserId", "byUserId", depth) AS (
-                SELECT
-                        "voteId",
-                        "toUserId",
-                        "byUserId",
-                            1
-                        FROM "VoteDelegations" vd
-                        WHERE vd."voteId" = :voteId
-                            AND vd."deletedAt" IS NULL
-
-                        UNION ALL
-
-                        SELECT
-                            vd."voteId",
-                            vd."toUserId",
-                            dc."byUserId",
-                            dc.depth+1
-                        FROM delegations dc, "VoteDelegations" vd
-                        WHERE vd."byUserId" = dc."toUserId"
-                            AND vd."voteId" = dc."voteId"
-                            AND vd."deletedAt" IS NULL
-                    ),
-                    indirect_delegations("voteId", "toUserId", "byUserId", depth) AS (
-                        SELECT DISTINCT ON("byUserId")
-                            "voteId",
-                            "toUserId",
-                            "byUserId",
-                            depth
-                        FROM delegations
-                        ORDER BY "byUserId", depth DESC
-                    ),
-                    vote_groups("voteId", "userId", "optionGroupId", "updatedAt") AS (
-                        SELECT DISTINCT ON (vl."userId") vl."voteId", vl."userId", vli."optionGroupId", vl."updatedAt"
-                        FROM (
-                            SELECT DISTINCT ON (vl."userHash", MAX(vl."updatedAt"))
-                            vl."userId",
-                            vl."voteId",
-                            MAX(vl."updatedAt") as "updatedAt"
-                            FROM "VoteLists" vl
-                            WHERE vl."voteId" = :voteId
-                            AND vl."deletedAt" IS NULL
-                            GROUP BY vl."userHash", vl."userId", vl."voteId"
-                            ORDER BY MAX(vl."updatedAt") DESC
-                        ) vl
-                        JOIN "VoteLists" vli
-                        ON
-                            vli."userId" = vl."userId"
-                            AND vl."voteId" = vli."voteId"
-                            AND vli."updatedAt" = vl."updatedAt"
-                        WHERE vl."voteId" = :voteId
-                    ),
-                    votes("voteId", "userId", "optionId", "optionGroupId") AS (
-                        SELECT
-                            vl."voteId",
-                            vl."userId",
-                            vl."optionId",
-                            vl."optionGroupId"
-                        FROM "VoteLists" vl
-                        JOIN vote_groups vg ON (vl."voteId" = vg."voteId" AND vl."optionGroupId" = vg."optionGroupId")
-                        JOIN "Votes" v ON v.id = vl."voteId"
-                        WHERE v."authType"='${Vote.AUTH_TYPES.soft}' AND vl."voteId" = :voteId
-                        UNION ALL
-                        SELECT
-                            vl."voteId",
-                            vl."userId",
-                            vl."optionId",
-                            vl."optionGroupId"
-                        FROM "VoteLists" vl
-                        JOIN vote_groups vg ON (vl."voteId" = vg."voteId" AND vl."optionGroupId" = vg."optionGroupId")
-                        JOIN "Votes" v ON v.id = vl."voteId"
-                        WHERE v."authType"='${Vote.AUTH_TYPES.hard}' AND vl."voteId" = :voteId
-                        AND vl."userId" IN (
-                            SELECT "userId" FROM (
-                                SELECT DISTINCT ON (vl."userHash")
-                                vl."userId",
-                                vl."userHash",
-                                MAX(vl."updatedAt")
-                                FROM "VoteLists" vl
-                                WHERE vl."voteId" = :voteId
-                                GROUP BY vl."userId", vl."userHash", vl."updatedAt" ORDER BY vl."userHash", vl."updatedAt" DESC
-                            ) vu
-                        )
-                    ),
-                    votes_with_delegations("voteId", "userId", "optionId", "optionGroupId", "byUserId", depth) AS (
-                        SELECT
-                            v."voteId",
-                            v."userId",
-                            v."optionId",
-                            v."optionGroupId",
-                            id."byUserId",
-                            id."depth"
-                        FROM votes v
-                        LEFT JOIN indirect_delegations id ON (v."userId" = id."toUserId")
-                        WHERE v."userId" NOT IN (SELECT "byUserId" FROM indirect_delegations WHERE "voteId"=v."voteId")
-                    )
-
-                SELECT
-                    SUM(v."voteCount") as "voteCount",
-                    v."optionId",
-                    v."voteId",
-                    (SELECT vc.count + vd.count + dt.count
-                        FROM (
-                            SELECT COUNT (*) FROM (
-                                SELECT DISTINCT ON ("userId")
-                                     "userId"
-                                FROM votes_with_delegations
-                                WHERE "byUserId" IS NULL
-                            ) nd
-                        ) vc
-                        JOIN (
-                            SELECT COUNT(*) FROM (
-                                SELECT "byUserId" FROM votes_with_delegations WHERE "byUserId" IS NOT NULL GROUP BY "byUserId"
-                                ) d
-                        ) vd ON vd."count" = vd."count"
-                        JOIN (
-                        SELECT COUNT(*) FROM (
-                            SELECT vl."userId" FROM "VoteLists" vl JOIN votes_with_delegations vd ON vd."userId" = vl."userId" WHERE vd."byUserId" IS NOT NULL GROUP BY vl."userId"
-                            ) dt
-                        ) dt ON dt."count" = dt."count"
-                    ) AS "votersCount",
-                    vo."value"
-                    ${includeVoted}
-                FROM (
-                    SELECT
-                        COUNT(v."optionId") + 1 as "voteCount",
-                        v."optionId",
-                        v."optionGroupId",
-                        v."voteId"
-                    FROM votes_with_delegations v
-                    WHERE v.depth IS NOT NULL
-                    GROUP BY v."optionId", v."optionGroupId", v."voteId"
-
-                    UNION ALL
-
-                    SELECT
-                        COUNT(v."optionId") as "voteCount",
-                        v."optionId",
-                        v."optionGroupId",
-                        v."voteId"
-                    FROM votes_with_delegations v
-                    WHERE v.depth IS NULL
-                    GROUP BY v."optionId", v."optionGroupId", v."voteId"
-                ) v
-                LEFT JOIN "VoteOptions" vo ON (v."optionId" = vo."id")
-                GROUP BY v."optionId", v."voteId", vo."value"
-        ;`;
-
-        return db
-            .query(sql,
-                {
-                    replacements: {
-                        voteId: voteId,
-                        userId: userId
-                    },
-                    type: db.QueryTypes.SELECT,
-                    raw: true
-                }
-            );
-    };
-
-    const getBdocURL = function (params) {
-        const userId = params.userId;
-        const topicId = params.topicId;
-        const voteId = params.voteId;
-        const type = params.type;
-
-        let path;
-        const tokenPayload = {};
-        const tokenOptions = {
-            expiresIn: '1d'
-        };
-
-        if (type === 'user') {
-            path = '/api/users/self/topics/:topicId/votes/:voteId/downloads/bdocs/user';
-        }
-
-        if (type === 'final') {
-            path = '/api/users/self/topics/:topicId/votes/:voteId/downloads/bdocs/final';
-        }
-
-        if (type === 'goverment') {
-            tokenOptions.expiresIn = '30d';
-            path = '/api/topics/:topicId/votes/:voteId/downloads/bdocs/final';
-        }
-
-        if (userId) {
-            tokenPayload.userId = userId;
-        }
-
-        path = path
-            .replace(':topicId', topicId)
-            .replace(':voteId', voteId);
-
-        const urlOptions = {
-            token: cosJwt.getTokenRestrictedUse(tokenPayload, 'GET ' + path, tokenOptions)
-        };
-
-        if (type === 'goverment') {
-            urlOptions.accept = 'application/x-7z-compressed';
-        }
-
-        return urlLib.getApi(path, null, urlOptions);
-    };
-
-    const getZipURL = function (params) {
-        const userId = params.userId;
-        const topicId = params.topicId;
-        const voteId = params.voteId;
-        const type = params.type;
-
-        let path;
-        const tokenPayload = {};
-        const tokenOptions = {
-            expiresIn: '1d'
-        };
-
-        if (type === 'final') {
-            path = '/api/users/self/topics/:topicId/votes/:voteId/downloads/zip/final';
-        }
-        if (userId) {
-            tokenPayload.userId = userId;
-        }
-
-        path = path
-            .replace(':topicId', topicId)
-            .replace(':voteId', voteId);
-
-        const urlOptions = {
-            token: cosJwt.getTokenRestrictedUse(tokenPayload, 'GET ' + path, tokenOptions)
-        };
-
-        urlOptions.accept = 'application/x-7z-compressed';
-
-        return urlLib.getApi(path, null, urlOptions);
-    };
+    const topicService = require('../../services/topic')(app);
+    const voteService = require('../../services/vote')(app);
+    const cryptoLib = app.get('cryptoLib');
 
     const _topicReadUnauth = async function (topicId, include) {
-        await _syncTopicAuthors(topicId); // TODO: On every public topic read we sync authors with EP, can we do better?
+        await topicService.syncTopicAuthors(topicId); // TODO: On every public topic read we sync authors with EP, can we do better?
 
         let join = '';
         let returncolumns = '';
@@ -823,7 +268,7 @@ module.exports = function (app) {
             topic.revision = [];
         }
         if (include && include.indexOf('vote') > -1 && topic.vote?.id) {
-            const voteResults = await getVoteResults(topic.vote.id);
+            const voteResults = await voteService.getVoteResults(topic.vote.id);
             const options = [];
 
             topic.vote.options.forEach((option) => {
@@ -866,7 +311,7 @@ module.exports = function (app) {
     };
 
     const _topicReadAuth = async function (topicId, include, user, partner) {
-        await _syncTopicAuthors(topicId);
+        await topicService.syncTopicAuthors(topicId);
 
         let join = '';
         let returncolumns = '';
@@ -934,7 +379,7 @@ module.exports = function (app) {
         if (user.moderator) {
             returncolumns += `
             , c.email as "creator.email"
-            , uc."connectionData"::jsonb->'phoneNumber' AS "creator.phoneNumber"
+            , uc."connectionData" AS "creator.connectionData"
             `;
 
             returncolumns += `
@@ -1126,7 +571,7 @@ module.exports = function (app) {
             }
         );
         let topic;
-        if (result && result.length && result[0] && (result[0].visibility === 'public' || result[0]?.permission?.level !== TopicMemberUser.LEVELS.none)) {
+        if (result?.length && result[0] && (result[0].visibility === 'public' || result[0]?.permission?.level !== TopicMemberUser.LEVELS.none)) {
             topic = result[0];
         } else {
             logger.warn('Topic not found', topicId);
@@ -1144,7 +589,7 @@ module.exports = function (app) {
 
         if (include && include.indexOf('vote') > -1 && topic.vote && topic.vote.id) {
 
-            const voteResult = await getVoteResults(topic.vote.id, user.id);
+            const voteResult = await voteService.getVoteResults(topic.vote.id, user.id);
             const options = [];
             let hasVoted = false;
 
@@ -1177,7 +622,7 @@ module.exports = function (app) {
 
             if (topic.vote.authType === Vote.AUTH_TYPES.hard && hasVoted) {
                 topic.vote.downloads = {
-                    bdocVote: getBdocURL({
+                    bdocVote: voteService.getBdocURL({
                         userId: user.id,
                         topicId: topicId,
                         voteId: topic.vote.id,
@@ -1198,253 +643,18 @@ module.exports = function (app) {
             delete topic.report;
         }
 
+        if (topic.creator.email) {
+            topic.creator.email = cryptoLib.privateDecrypt(topic.creator.email);
+        }
+        if (topic.creator.connectionData) {
+            const data = cryptoLib.privateDecrypt(topic.creator.connectionData);
+            if (data.phoneNumber) {
+                topic.creator.phoneNumber = data.phoneNumber;
+            }
+            delete topic.creator.connectionData;
+        }
+
         return topic;
-    };
-
-    const getAllVotesResults = async (userId) => {
-        let where = '';
-        let join = '';
-        let select = '';
-        if (!userId) {
-            where = ` AND t.visibility = '${Topic.VISIBILITY.public}'`;
-        } else {
-            select = injectReplacements(', (SELECT true FROM pg_temp.votes(v."voteId") WHERE "userId" = :userId AND "optionId" = v."optionId") as "selected" ', db.dialect, { userId });
-            where = `AND COALESCE(tmup.level, tmgp.level, 'none')::"enum_TopicMemberUsers_level" > 'none'`;
-            join += injectReplacements(`LEFT JOIN (
-                        SELECT
-                            tmu."topicId",
-                            tmu."userId",
-                            tmu.level::text AS level
-                        FROM "TopicMemberUsers" tmu
-                        WHERE tmu."deletedAt" IS NULL
-                    ) AS tmup ON (tmup."topicId" = t.id AND tmup."userId" = :userId)
-                    LEFT JOIN (
-                        SELECT
-                            tmg."topicId",
-                            gm."userId",
-                            MAX(tmg.level)::text AS level
-                        FROM "TopicMemberGroups" tmg
-                            LEFT JOIN "GroupMemberUsers" gm ON (tmg."groupId" = gm."groupId")
-                        WHERE tmg."deletedAt" IS NULL
-                        AND gm."deletedAt" IS NULL
-                        GROUP BY "topicId", "userId"
-                    ) AS tmgp ON (tmgp."topicId" = t.id AND tmgp."userId" = :userId)
-            `, db.dialect, { userId });
-        }
-        const query = `
-                        CREATE OR REPLACE FUNCTION pg_temp.delegations(uuid)
-                            RETURNS TABLE("voteId" uuid, "toUserId" uuid, "byUserId" uuid, depth INT)
-                                AS $$
-                                    WITH  RECURSIVE q ("voteId", "toUserId", "byUserId", depth)
-                                        AS
-                                            (
-                                            SELECT
-                                                vd."voteId",
-                                                vd."toUserId",
-                                                vd."byUserId",
-                                                1
-                                            FROM "VoteDelegations" vd
-                                            WHERE vd."voteId" = $1
-                                              AND vd."deletedAt" IS NULL
-                                            UNION ALL
-                                            SELECT
-                                                vd."voteId",
-                                                vd."toUserId",
-                                                dc."byUserId",
-                                                dc.depth+1
-                                            FROM q dc, "VoteDelegations" vd
-                                            WHERE vd."byUserId" = dc."toUserId"
-                                              AND vd."voteId" = dc."voteId"
-                                              AND vd."deletedAt" IS NULL
-                                            )
-                            SELECT * FROM q; $$
-                        LANGUAGE SQL;
-                        CREATE OR REPLACE FUNCTION pg_temp.indirect_delegations(uuid)
-                            RETURNS TABLE("voteId" uuid, "toUserId" uuid, "byUserId" uuid, depth int)
-                                AS $$
-                                    SELECT DISTINCT ON("byUserId")
-                                        "voteId",
-                                        "toUserId",
-                                        "byUserId",
-                                        depth
-                                    FROM pg_temp.delegations($1)
-                                    ORDER BY "byUserId", depth DESC; $$
-                            LANGUAGE SQL;
-                        CREATE OR REPLACE FUNCTION pg_temp.vote_groups(uuid)
-                            RETURNS TABLE ("voteId" uuid, "userId" uuid, "optionGroupId" character varying , "updatedAt" timestamp with time zone)
-                            AS $$
-                            SELECT DISTINCT ON (vl."userId") vl."voteId", vl."userId", vli."optionGroupId", vl."updatedAt"
-                            FROM (
-                                SELECT DISTINCT ON (vl."userHash", MAX(vl."updatedAt"))
-                                    vl."userId",
-                                    vl."voteId",
-                                    MAX(vl."updatedAt") as "updatedAt"
-                                FROM "VoteLists" vl
-                                WHERE vl."voteId" = $1
-                                    AND vl."deletedAt" IS NULL
-                                GROUP BY vl."userHash", vl."userId", vl."voteId"
-                                ORDER BY MAX(vl."updatedAt") DESC
-                            ) vl
-                            JOIN "VoteLists" vli
-                            ON
-                                vli."userId" = vl."userId"
-                                AND vl."voteId" = vli."voteId"
-                                AND vli."updatedAt" = vl."updatedAt"
-                              ; $$
-                            LANGUAGE SQL;
-                        CREATE OR REPLACE FUNCTION pg_temp.votes(uuid)
-                            RETURNS TABLE ("voteId" uuid, "userId" uuid, "optionId" uuid, "optionGroupId" character varying)
-                            AS $$
-                                SELECT
-                                    vl."voteId",
-                                    vl."userId",
-                                    vl."optionId",
-                                    vl."optionGroupId"
-                                FROM "VoteLists" vl
-                                JOIN pg_temp.vote_groups($1) vg ON (vl."voteId" = vg."voteId" AND vl."optionGroupId" = vg."optionGroupId")
-                                JOIN "Votes" vo ON vo.id = vl."voteId"
-                                WHERE vo."authType"='${Vote.AUTH_TYPES.soft}' AND vl."voteId" = $1
-                                UNION ALL
-                                SELECT
-                                    vl."voteId",
-                                    vl."userId",
-                                    vl."optionId",
-                                    vl."optionGroupId"
-                                FROM "VoteLists" vl
-                                JOIN pg_temp.vote_groups($1) vg ON (vl."voteId" = vg."voteId" AND vl."optionGroupId" = vg."optionGroupId")
-                                JOIN "Votes" vo ON vo.id = vl."voteId"
-                                WHERE vo."authType"='${Vote.AUTH_TYPES.hard}' AND vl."voteId" = $1
-                                AND vl."userId" IN (
-                                    SELECT "userId" FROM (
-                                        SELECT DISTINCT ON (vl."userHash")
-                                        vl."userId",
-                                        vl."userHash",
-                                        MAX(vl."updatedAt")
-                                        FROM "VoteLists" vl
-                                        WHERE vl."voteId" = $1
-                                        GROUP BY vl."userId", vl."userHash", vl."updatedAt" ORDER BY vl."userHash", vl."updatedAt" DESC
-                                    ) vu
-                                )
-                                $$
-                            LANGUAGE SQL;
-                        CREATE OR REPLACE FUNCTION pg_temp.votes_with_delegations(uuid)
-                            RETURNS TABLE ("voteId" uuid, "userId" uuid, "optionId" uuid, "optionGroupId" varchar(8), depth int)
-                            AS $$
-                                SELECT
-                                    v."voteId",
-                                    v."userId",
-                                    v."optionId",
-                                    v."optionGroupId",
-                                    id."depth"
-                                FROM pg_temp.votes($1) v
-                                LEFT JOIN pg_temp.indirect_delegations($1) id ON (v."userId" = id."toUserId")
-                                WHERE v."userId" NOT IN (SELECT "byUserId" FROM pg_temp.indirect_delegations($1) WHERE "voteId"=v."voteId");
-                                $$
-                            LANGUAGE SQL;
-                        CREATE OR REPLACE FUNCTION pg_temp.get_vote_results (uuid)
-                            RETURNS TABLE ("voteCount" bigint, "optionId" uuid, "optionGroupId" varchar(8), "voteId" uuid)
-                            AS $$
-                                SELECT
-                                    COUNT(v."optionId") + 1 as "voteCount",
-                                    v."optionId",
-                                    v."optionGroupId",
-                                    v."voteId"
-                                FROM pg_temp.votes_with_delegations($1) v
-                                WHERE v.depth IS NOT NULL
-                                GROUP BY v."optionId", v."optionGroupId", v."voteId"
-
-                                UNION ALL
-
-                                SELECT
-                                    COUNT(v."optionId") as "voteCount",
-                                    v."optionId",
-                                    v."optionGroupId",
-                                    v."voteId"
-                                FROM pg_temp.votes_with_delegations($1) v
-                                WHERE v.depth IS NULL
-                                GROUP BY v."optionId", v."optionGroupId", v."voteId"; $$
-                            LANGUAGE SQL;
-                        CREATE OR REPLACE FUNCTION pg_temp.get_voters_count (uuid)
-                            RETURNS TABLE ("votersCount" bigint)
-                            AS $$
-                                SELECT COUNT(*) as "votersCount" FROM
-                                (
-                                    SELECT "userId" FROM (
-                                        SELECT DISTINCT ON (vl."userHash")
-                                        vl."userId",
-                                        vl."userHash",
-                                        MAX(vl."updatedAt")
-                                        FROM "VoteLists" vl
-                                        WHERE vl."voteId" = $1
-                                        GROUP BY vl."userId", vl."userHash", vl."updatedAt" ORDER BY vl."userHash", vl."updatedAt" DESC
-                                    ) vu
-                                ) c
-                             $$
-                            LANGUAGE SQL;
-
-                        SELECT
-                            SUM(v."voteCount") as "voteCount",
-                            vc."votersCount",
-                            v."optionId",
-                            v."voteId",
-                            vo."value",
-                            vo."ideaId"
-                            ${select}
-                        FROM "Topics" t
-                        LEFT JOIN "TopicVotes" tv
-                            ON tv."topicId" = t.id AND tv."deletedAt" IS NULL
-                        LEFT JOIN pg_temp.get_vote_results(tv."voteId") v ON v."voteId" = tv."voteId"
-                        LEFT JOIN "VoteOptions" vo ON v."optionId" = vo.id
-                        LEFT JOIN pg_temp.get_voters_count(tv."voteId") vc ON vc."votersCount" = vc."votersCount"
-                        ${join}
-                        WHERE  t."deletedAt" IS NULL
-                        AND v."optionId" IS NOT NULL
-                        AND v."voteId" IS NOT NULL
-                        AND vo."value" IS NOT NULL
-                        ${where}
-                        GROUP BY v."optionId", v."voteId", vo."value", vo."ideaId", vc."votersCount"
-                    ;`;
-
-        return db
-            .query(
-                query,
-                {
-                    type: db.QueryTypes.SELECT,
-                    raw: true
-                }
-            );
-    };
-
-    const _syncTopicAuthors = async (topicId) => {
-        let authorIds = [];
-        try {
-            authorIds = await cosEtherpad.getTopicPadAuthors(topicId);
-            if (!authorIds) authorIds = [];
-        } catch (err) {
-            authorIds = [];
-            logger.error('Failed to sync authors from etherpad', err);
-        }
-
-        const topicData = await Topic.findOne({
-            where: {
-                id: topicId
-            },
-            attributes: ['authorIds'],
-            include: [{ model: User, as: 'creator' }]
-        })
-        if (!authorIds.length) {
-            authorIds.push(topicData.creator.id);
-        }
-        const compareArrays = (a, b) => a.length === b.length && a.every((element, index) => element === b[index]);
-        if (!compareArrays(authorIds.sort(), topicData.authorIds.sort())) {
-            await Topic.update({
-                authorIds
-            }, {
-                where: {
-                    id: topicId
-                }
-            });
-        }
     };
 
     /**
@@ -1568,7 +778,7 @@ module.exports = function (app) {
     });
 
     //Copy topic
-    app.get('/api/users/:userId/topics/:topicId/duplicate', loginCheck(['partner']), partnerParser, hasPermission(TopicMemberUser.LEVELS.admin), async function (req, res, next) {
+    app.get('/api/users/:userId/topics/:topicId/duplicate', loginCheck(['partner']), partnerParser, topicService.hasPermission(TopicMemberUser.LEVELS.admin), async function (req, res, next) {
         try {
             // I wish Sequelize Model.build supported "fields". This solution requires you to add a field here once new are defined in model.
             const sourceTopic = await Topic.findOne({
@@ -1772,7 +982,7 @@ module.exports = function (app) {
     /**
      * Read a Topic
      */
-    app.get('/api/users/:userId/topics/:topicId', loginCheck(['partner']), partnerParser, hasPermission(TopicMemberUser.LEVELS.read, true), isModerator(), async function (req, res, next) {
+    app.get('/api/users/:userId/topics/:topicId', loginCheck(['partner']), partnerParser, topicService.hasPermission(TopicMemberUser.LEVELS.read, true), topicService.isModerator(), async function (req, res, next) {
         try {
             const include = req.query.include;
             const topicId = req.params.topicId;
@@ -1802,7 +1012,7 @@ module.exports = function (app) {
         }
     });
 
-    app.get('/api/users/self/topics/:topicId/description', loginCheck(['partner']), partnerParser, hasPermission(TopicMemberUser.LEVELS.edit, true), async (req, res, next) => {
+    app.get('/api/users/self/topics/:topicId/description', loginCheck(['partner']), partnerParser, topicService.hasPermission(TopicMemberUser.LEVELS.edit, true), async (req, res, next) => {
         try {
             const topicId = req.params.topicId;
             const rev = req.query.rev;
@@ -1819,7 +1029,7 @@ module.exports = function (app) {
         }
     });
 
-    app.post('/api/users/self/topics/:topicId/revert', partnerParser, hasPermission(TopicMemberUser.LEVELS.edit, true), async (req, res, next) => {
+    app.post('/api/users/self/topics/:topicId/revert', partnerParser, topicService.hasPermission(TopicMemberUser.LEVELS.edit, true), async (req, res, next) => {
         try {
             const topicId = req.params.topicId;
             const rev = req.body.rev;
@@ -2041,7 +1251,7 @@ module.exports = function (app) {
         }
     };
 
-    app.post('/api/users/:userId/topics/:topicId/upload', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.edit, null, [Topic.STATUSES.draft, Topic.STATUSES.ideation, Topic.STATUSES.inProgress, Topic.STATUSES.voting, Topic.STATUSES.followUp]), asyncMiddleware(async function (req, res) {
+    app.post('/api/users/:userId/topics/:topicId/upload', loginCheck(['partner']), topicService.hasPermission(TopicMemberUser.LEVELS.edit, null, [Topic.STATUSES.draft, Topic.STATUSES.ideation, Topic.STATUSES.inProgress, Topic.STATUSES.voting, Topic.STATUSES.followUp]), asyncMiddleware(async function (req, res) {
         const topicId = req.params.topicId;
         let topic = await Topic.findOne({
             where: {
@@ -2084,7 +1294,7 @@ module.exports = function (app) {
     /**
      * Update Topic info
      */
-    app.put('/api/users/:userId/topics/:topicId', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.edit, null, [Topic.STATUSES.draft, Topic.STATUSES.ideation, Topic.STATUSES.inProgress, Topic.STATUSES.voting, Topic.STATUSES.followUp]), async function (req, res, next) {
+    app.put('/api/users/:userId/topics/:topicId', loginCheck(['partner']), topicService.hasPermission(TopicMemberUser.LEVELS.edit, null, [Topic.STATUSES.draft, Topic.STATUSES.ideation, Topic.STATUSES.inProgress, Topic.STATUSES.voting, Topic.STATUSES.followUp]), async function (req, res, next) {
         try {
             await _topicUpdate(req, res, next);
 
@@ -2094,7 +1304,7 @@ module.exports = function (app) {
         }
     });
 
-    app.patch('/api/users/:userId/topics/:topicId', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.edit, null, [Topic.STATUSES.draft, Topic.STATUSES.ideation, Topic.STATUSES.inProgress, Topic.STATUSES.voting, Topic.STATUSES.followUp]), async function (req, res, next) {
+    app.patch('/api/users/:userId/topics/:topicId', loginCheck(['partner']), topicService.hasPermission(TopicMemberUser.LEVELS.edit, null, [Topic.STATUSES.draft, Topic.STATUSES.ideation, Topic.STATUSES.inProgress, Topic.STATUSES.voting, Topic.STATUSES.followUp]), async function (req, res, next) {
         try {
             await _topicUpdate(req, res, next);
 
@@ -2111,7 +1321,7 @@ module.exports = function (app) {
      *
      * @see https://github.com/citizenos/citizenos-fe/issues/311
      */
-    app.put('/api/users/:userId/topics/:topicId/join', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.admin, null, [Topic.STATUSES.draft, Topic.STATUSES.ideation, Topic.STATUSES.inProgress, Topic.STATUSES.voting, Topic.STATUSES.followUp]), asyncMiddleware(async function (req, res) {
+    app.put('/api/users/:userId/topics/:topicId/join', loginCheck(['partner']), topicService.hasPermission(TopicMemberUser.LEVELS.admin, null, [Topic.STATUSES.draft, Topic.STATUSES.ideation, Topic.STATUSES.inProgress, Topic.STATUSES.voting, Topic.STATUSES.followUp]), asyncMiddleware(async function (req, res) {
         const topicId = req.params.topicId;
         const level = req.body.level;
         if (!Object.values(TopicJoin.LEVELS).includes(level)) {
@@ -2153,7 +1363,7 @@ module.exports = function (app) {
      *
      * @see https://github.com/citizenos/citizenos-fe/issues/311
      */
-    app.put('/api/users/:userId/topics/:topicId/join/:token', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.admin, null, [Topic.STATUSES.draft, Topic.STATUSES.ideation, Topic.STATUSES.inProgress, Topic.STATUSES.voting, Topic.STATUSES.followUp]), asyncMiddleware(async function (req, res) {
+    app.put('/api/users/:userId/topics/:topicId/join/:token', loginCheck(['partner']), topicService.hasPermission(TopicMemberUser.LEVELS.admin, null, [Topic.STATUSES.draft, Topic.STATUSES.ideation, Topic.STATUSES.inProgress, Topic.STATUSES.voting, Topic.STATUSES.followUp]), asyncMiddleware(async function (req, res) {
         const topicId = req.params.topicId;
         const token = req.params.token;
         const level = req.body.level;
@@ -2201,7 +1411,7 @@ module.exports = function (app) {
     /**
      * Delete Topic
      */
-    app.delete('/api/users/:userId/topics/:topicId', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.admin), async function (req, res, next) {
+    app.delete('/api/users/:userId/topics/:topicId', loginCheck(['partner']), topicService.hasPermission(TopicMemberUser.LEVELS.admin), async function (req, res, next) {
         try {
             const topic = await Topic.findByPk(req.params.topicId);
             if (!topic) {
@@ -2316,7 +1526,7 @@ module.exports = function (app) {
             , tv."minChoices" as "vote.minChoices"
             , tv."type" as "vote.type"
             `;
-            voteResults = getAllVotesResults(userId);
+            voteResults = voteService.getAllVotesResults(userId);
             groupBy += `, tv."authType", tv."createdAt", tv."delegationIsAllowed", tv."description", tv."endsAt", tv."reminderSent", tv."reminderTime", tv."maxChoices", tv."minChoices", tv."type", tv."autoClose"`;
         }
 
@@ -2762,7 +1972,7 @@ module.exports = function (app) {
                     , tv."type" as "vote.type"
                     `;
                     groupBy += `,tv."authType", tv."createdAt", tv."delegationIsAllowed", tv."description", tv."endsAt", tv."maxChoices", tv."minChoices", tv."type", tv."autoClose" `;
-                    voteResults = getAllVotesResults();
+                    voteResults = voteService.getAllVotesResults();
                 }
                 if (include.indexOf('event') > -1) {
                     join += `LEFT JOIN (
@@ -3061,142 +2271,13 @@ module.exports = function (app) {
         }
     });
 
-    const _getAllTopicMembers = async (topicId, userId, showExtraUserInfo) => {
-        const response = {
-            groups: {
-                count: 0,
-                rows: []
-            },
-            users: {
-                count: 0,
-                rows: []
-            }
-        };
-
-        const groups = await db
-            .query(
-                `
-                SELECT
-                    g.id,
-                    CASE
-                        WHEN gmu.level IS NOT NULL THEN g.name
-                        ELSE NULL
-                    END as "name",
-                    tmg.level,
-                    gmu.level as "permission.level",
-                    g.visibility,
-                    g."createdAt",
-                    g."updatedAt",
-                    gmuc.count as "members.users.count"
-                FROM "TopicMemberGroups" tmg
-                    JOIN "Groups" g ON (tmg."groupId" = g.id)
-                    JOIN (
-                        SELECT
-                            "groupId",
-                            COUNT(*) as count
-                        FROM "GroupMemberUsers"
-                        WHERE "deletedAt" IS NULL
-                        GROUP BY 1
-                    ) as gmuc ON (gmuc."groupId" = g.id)
-                    LEFT JOIN "GroupMemberUsers" gmu ON (gmu."groupId" = g.id AND gmu."userId" = :userId AND gmu."deletedAt" IS NULL)
-                WHERE tmg."topicId" = :topicId
-                    AND tmg."deletedAt" IS NULL
-                    AND g."deletedAt" IS NULL
-                ORDER BY level DESC;`,
-                {
-                    replacements: {
-                        topicId: topicId,
-                        userId: userId
-                    },
-                    type: db.QueryTypes.SELECT,
-                    raw: true,
-                    nest: true
-                }
-            );
-
-        let extraUserInfo = '';
-        if (showExtraUserInfo) {
-            extraUserInfo = `
-            u.email,
-            uc."connectionData"::jsonb->>'phoneNumber' AS "phoneNumber",
-            `;
-        }
-
-        const users = await db
-            .query(
-                `
-                SELECT
-                    tm.*
-                FROM (
-                    SELECT DISTINCT ON(id)
-                        tm."memberId" as id,
-                        tm."level",
-                        tmu."level" as "levelUser",
-                        u.name,
-                        u.company,
-                        ${extraUserInfo}
-                        u."imageUrl"
-                    FROM "Topics" t
-                    JOIN (
-                        SELECT
-                            tmu."topicId",
-                            tmu."userId" AS "memberId",
-                            tmu."level"::text,
-                            1 as "priority"
-                        FROM "TopicMemberUsers" tmu
-                        WHERE tmu."deletedAt" IS NULL
-                        UNION
-                        (
-                            SELECT
-                                tmg."topicId",
-                                gm."userId" AS "memberId",
-                                tmg."level"::text,
-                                2 as "priority"
-                            FROM "TopicMemberGroups" tmg
-                            LEFT JOIN "GroupMemberUsers" gm ON (tmg."groupId" = gm."groupId")
-                            WHERE tmg."deletedAt" IS NULL
-                            AND gm."deletedAt" IS NULL
-                            ORDER BY tmg."level"::"enum_TopicMemberGroups_level" DESC
-                        )
-                    ) AS tm ON (tm."topicId" = t.id)
-                    JOIN "Users" u ON (u.id = tm."memberId")
-                    LEFT JOIN "TopicMemberUsers" tmu ON (tmu."userId" = tm."memberId" AND tmu."topicId" = t.id)
-                    LEFT JOIN "UserConnections" uc ON (uc."userId" = tm."memberId" AND uc."connectionId" = 'esteid')
-                    WHERE t.id = :topicId
-                    ORDER BY id, tm.priority
-                ) tm
-                ORDER BY name ASC
-                ;`,
-                {
-                    replacements: {
-                        topicId: topicId
-                    },
-                    type: db.QueryTypes.SELECT,
-                    raw: true
-                }
-            );
-
-        if (groups?.length) {
-            response.groups.count = groups.length;
-            response.groups.rows = groups;
-        }
-
-        if (users?.length) {
-            response.users.count = users.length;
-            response.users.rows = users;
-        }
-
-        return response;
-    };
-
-
     /**
      * Get all members of the Topic
      */
-    app.get('/api/users/:userId/topics/:topicId/members', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.read), async function (req, res, next) {
+    app.get('/api/users/:userId/topics/:topicId/members', loginCheck(['partner']), topicService.hasPermission(TopicMemberUser.LEVELS.read), async function (req, res, next) {
         try {
             const showExtraUserInfo = req.user?.moderator;
-            const response = await _getAllTopicMembers(req.params.topicId, req.user.userId, showExtraUserInfo);
+            const response = await topicService.getAllTopicMembers(req.params.topicId, req.user.userId, showExtraUserInfo);
 
             return res.ok(response);
         } catch (err) {
@@ -3246,15 +2327,10 @@ module.exports = function (app) {
         }
 
         let dataForModeratorAndAdmin = '';
-        let joinForAdmin = '';
-        let groupForAdmin = '';
         if (req.user?.moderator) {
             dataForModeratorAndAdmin = `
             tm.email,
-            uc."connectionData"::jsonb->>'phoneNumber' AS "phoneNumber",
             `;
-            joinForAdmin = ` LEFT JOIN "UserConnections" uc ON (uc."userId" = tm.id AND uc."connectionId" = 'esteid') `;
-            groupForAdmin = `, uc."connectionData"::jsonb `;
         }
 
         try {
@@ -3316,9 +2392,8 @@ module.exports = function (app) {
                     WHERE gm."deletedAt" IS NULL
                     AND tmg."deletedAt" IS NULL
                 ) tmg ON tmg."topicId" = :topicId AND (tmg."userId" = tm.id)
-                ${joinForAdmin}
                 ${where}
-                GROUP BY tm.id, tm.level, tmu.level, tm.name, tm.company, tm."imageUrl", tm.email ${groupForAdmin}
+                GROUP BY tm.id, tm.level, tmu.level, tm.name, tm.company, tm."imageUrl", tm.email
                 ${sortSql}
                 LIMIT :limit
                 OFFSET :offset
@@ -3375,7 +2450,7 @@ module.exports = function (app) {
         return res.notFound();
     });
 
-    app.get('/api/users/:userId/topics/:topicId/members/users', loginCheck(['partner']), isModerator(), hasPermission(TopicMemberUser.LEVELS.read, true), async function (req, res, next) {
+    app.get('/api/users/:userId/topics/:topicId/members/users', loginCheck(['partner']), topicService.isModerator(), topicService.hasPermission(TopicMemberUser.LEVELS.read, true), async function (req, res, next) {
         return _topicMemberUsers(req, res, next);
     });
 
@@ -3493,7 +2568,7 @@ module.exports = function (app) {
     /**
      * Get all member Groups of the Topic
      */
-    app.get('/api/users/:userId/topics/:topicId/members/groups', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.read, true), async function (req, res, next) {
+    app.get('/api/users/:userId/topics/:topicId/members/groups', loginCheck(['partner']), topicService.hasPermission(TopicMemberUser.LEVELS.read, true), async function (req, res, next) {
         const limitDefault = 10;
         const offset = parseInt(req.query.offset, 10) ? parseInt(req.query.offset, 10) : 0;
         let limit = parseInt(req.query.limit, 10) ? parseInt(req.query.limit, 10) : limitDefault;
@@ -3672,7 +2747,7 @@ module.exports = function (app) {
     /**
      * Create new member Groups to a Topic
      */
-    app.post('/api/users/:userId/topics/:topicId/members/groups', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.admin, null, [Topic.STATUSES.draft, Topic.STATUSES.ideation, Topic.STATUSES.inProgress, Topic.STATUSES.voting, Topic.STATUSES.followUp]), async function (req, res, next) {
+    app.post('/api/users/:userId/topics/:topicId/members/groups', loginCheck(['partner']), topicService.hasPermission(TopicMemberUser.LEVELS.admin, null, [Topic.STATUSES.draft, Topic.STATUSES.ideation, Topic.STATUSES.inProgress, Topic.STATUSES.voting, Topic.STATUSES.followUp]), async function (req, res, next) {
         let members = req.body;
         const topicId = req.params.topicId;
 
@@ -3781,7 +2856,7 @@ module.exports = function (app) {
     /**
      * Update User membership information
      */
-    app.put('/api/users/:userId/topics/:topicId/members/users/:memberId', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.admin, null, [Topic.STATUSES.draft, Topic.STATUSES.ideation, Topic.STATUSES.inProgress, Topic.STATUSES.voting, Topic.STATUSES.followUp]), async function (req, res, next) {
+    app.put('/api/users/:userId/topics/:topicId/members/users/:memberId', loginCheck(['partner']), topicService.hasPermission(TopicMemberUser.LEVELS.admin, null, [Topic.STATUSES.draft, Topic.STATUSES.ideation, Topic.STATUSES.inProgress, Topic.STATUSES.voting, Topic.STATUSES.followUp]), async function (req, res, next) {
         const newLevel = req.body.level;
         const memberId = req.params.memberId;
         const topicId = req.params.topicId;
@@ -3849,7 +2924,7 @@ module.exports = function (app) {
     /**
      * Update Group membership information
      */
-    app.put('/api/users/:userId/topics/:topicId/members/groups/:memberId', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.admin, null, [Topic.STATUSES.draft, Topic.STATUSES.ideation, Topic.STATUSES.inProgress, Topic.STATUSES.voting, Topic.STATUSES.followUp]), async function (req, res, next) {
+    app.put('/api/users/:userId/topics/:topicId/members/groups/:memberId', loginCheck(['partner']), topicService.hasPermission(TopicMemberUser.LEVELS.admin, null, [Topic.STATUSES.draft, Topic.STATUSES.ideation, Topic.STATUSES.inProgress, Topic.STATUSES.voting, Topic.STATUSES.followUp]), async function (req, res, next) {
         const newLevel = req.body.level;
         const memberId = req.params.memberId;
         const topicId = req.params.topicId;
@@ -3903,7 +2978,7 @@ module.exports = function (app) {
     /**
      * Delete User membership information
      */
-    app.delete('/api/users/:userId/topics/:topicId/members/users/:memberId', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.admin, null, null, true), async function (req, res, next) {
+    app.delete('/api/users/:userId/topics/:topicId/members/users/:memberId', loginCheck(['partner']), topicService.hasPermission(TopicMemberUser.LEVELS.admin, null, null, true), async function (req, res, next) {
         const topicId = req.params.topicId;
         const memberId = req.params.memberId;
         try {
@@ -4037,7 +3112,7 @@ module.exports = function (app) {
     /**
      * Delete Group membership information
      */
-    app.delete('/api/users/:userId/topics/:topicId/members/groups/:memberId', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.admin), async function (req, res, next) {
+    app.delete('/api/users/:userId/topics/:topicId/members/groups/:memberId', loginCheck(['partner']), topicService.hasPermission(TopicMemberUser.LEVELS.admin), async function (req, res, next) {
         const topicId = req.params.topicId;
         const memberId = req.params.memberId;
 
@@ -4168,240 +3243,250 @@ module.exports = function (app) {
      *
      * @see /api/users/:userId/topics/:topicId/members/users "Auto accept" - Adds a Member to the Topic instantly and sends a notification to the User.
      */
-    app.post('/api/users/:userId/topics/:topicId/invites/users', loginCheck(), hasPermission(TopicMemberUser.LEVELS.admin, false, [Topic.STATUSES.draft, Topic.STATUSES.ideation, Topic.STATUSES.inProgress, Topic.STATUSES.voting, Topic.STATUSES.followUp]), rateLimiter(5, false), speedLimiter(1, false), asyncMiddleware(async function (req, res) {
+    app.post('/api/users/:userId/topics/:topicId/invites/users', loginCheck(), topicService.hasPermission(TopicMemberUser.LEVELS.admin, false, [Topic.STATUSES.draft, Topic.STATUSES.ideation, Topic.STATUSES.inProgress, Topic.STATUSES.voting, Topic.STATUSES.followUp]), rateLimiter(5, false), speedLimiter(1, false), async (req, res) => {
         //NOTE: userId can be actual UUID or e-mail - it is comfort for the API user, but confusing in the BE code.
-        const topicId = req.params.topicId;
-        const userId = req.user.userId;
-        let members = req.body;
-        const MAX_LENGTH = 50;
+        try {
+            const topicId = req.params.topicId;
+            const userId = req.user.userId;
+            let members = req.body;
+            const MAX_LENGTH = 50;
 
-        if (!Array.isArray(members)) {
-            members = [members];
-        }
-
-        if (members.length > MAX_LENGTH) {
-            return res.badRequest("Maximum user limit reached");
-        }
-
-        const inviteMessage = members[0].inviteMessage;
-        const validEmailMembers = [];
-        let validUserIdMembers = [];
-
-        // userId can be actual UUID or e-mail, sort to relevant buckets
-        members.forEach((m) => {
-            if (m.userId) {
-                m.userId = m.userId.trim();
-                // Is it an e-mail?
-                if (validator.isEmail(m.userId)) {
-                    m.userId = m.userId.toLowerCase(); // https://github.com/citizenos/citizenos-api/issues/234
-                    validEmailMembers.push(m); // The whole member object with level
-                } else if (validator.isUUID(m.userId)) {
-                    validUserIdMembers.push(m);
-                } else {
-                    logger.warn('Invalid member ID, is not UUID or email thus ignoring', req.method, req.path, m, req.body);
-                }
-            } else {
-                logger.warn('Missing member id, ignoring', req.method, req.path, m, req.body);
-            }
-        });
-
-        const validEmails = validEmailMembers.map(m => m.userId);
-        if (validEmails.length) {
-            // Find out which e-mails already exist
-            const usersExistingEmail = await User
-                .findAll({
-                    where: {
-                        email: {
-                            [Op.iLike]: {
-                                [Op.any]: validEmails
-                            }
-                        }
-                    },
-                    attributes: ['id', 'email']
-                });
-
-            usersExistingEmail.forEach((u) => {
-                const member = validEmailMembers.find(m => {
-                    return m.userId === u.email
-                });
-                if (member) {
-                    const index = validEmailMembers.findIndex(m => m.userId === u.email);
-                    member.userId = u.id;
-                    validUserIdMembers.push(member);
-                    validEmailMembers.splice(index, 1) // Remove the e-mail, so that by the end of the day only e-mails that did not exist remain.
-                }
-            });
-        }
-
-        await db.transaction(async function (t) {
-            let createdUsers;
-
-            // The leftovers are e-mails for which User did not exist
-            if (validEmailMembers.length) {
-                const usersToCreate = [];
-                validEmailMembers.forEach((m) => {
-                    usersToCreate.push({
-                        email: m.userId,
-                        language: m.language,
-                        password: null,
-                        name: util.emailToDisplayName(m.userId),
-                        source: User.SOURCES.citizenos
-                    });
-                });
-
-                createdUsers = await User.bulkCreate(usersToCreate, { transaction: t });
-
-                const createdUsersActivitiesCreatePromises = createdUsers.map(async function (user) {
-                    return cosActivities.createActivity(
-                        user,
-                        null,
-                        {
-                            type: 'System',
-                            ip: req.ip
-                        },
-                        req.method + ' ' + req.path,
-                        t
-                    );
-                });
-
-                await Promise.all(createdUsersActivitiesCreatePromises);
+            if (!Array.isArray(members)) {
+                members = [members];
             }
 
-            // Go through the newly created users and add them to the validUserIdMembers list so that they get invited
-            if (createdUsers && createdUsers.length) {
-                createdUsers.forEach((u) => {
-                    const member = {
-                        userId: u.id
-                    };
-
-                    // Sequelize defaultValue has no effect if "undefined" or "null" is set for attribute...
-                    const level = validEmailMembers.find(m => m.userId === u.email).level;
-                    if (level) {
-                        member.level = level;
-                    }
-
-                    validUserIdMembers.push(member);
-                });
+            if (members.length > MAX_LENGTH) {
+                return res.badRequest("Maximum user limit reached");
             }
 
-            // Need the Topic just for the activity
-            const topic = await Topic.findOne({
-                where: {
-                    id: topicId
-                }
-            });
+            const inviteMessage = members[0].inviteMessage;
+            const validEmailMembers = [];
+            let validUserIdMembers = [];
 
-            validUserIdMembers = validUserIdMembers.filter(function (member) {
-                return member.userId !== req.user.userId; // Make sure user does not invite self
-            });
-            const currentMembers = await TopicMemberUser.findAll({
-                where: {
-                    topicId: topicId
-                }
-            });
-
-            const createInvitePromises = validUserIdMembers.map(async function (member) {
-                const addedMember = currentMembers.find(function (cmember) {
-                    return cmember.userId === member.userId;
-                });
-                if (addedMember) {
-                    const LEVELS = {
-                        none: 0, // Enables to override inherited permissions.
-                        read: 1,
-                        edit: 2,
-                        admin: 3
-                    };
-                    if (addedMember.level !== member.level) {
-                        if (LEVELS[member.level] > LEVELS[addedMember.level]) {
-                            await addedMember.update({
-                                level: member.level
-                            });
-
-                            cosActivities.updateActivity(
-                                addedMember,
-                                null,
-                                {
-                                    type: 'User',
-                                    id: req.user.userId,
-                                    ip: req.ip
-                                },
-                                req.method + ' ' + req.path,
-                                t
-                            );
-
-                            return;
-                        }
-
-                        return;
+            // userId can be actual UUID or e-mail, sort to relevant buckets
+            members.forEach((m) => {
+                if (m.userId) {
+                    m.userId = m.userId.trim();
+                    // Is it an e-mail?
+                    if (validator.isEmail(m.userId)) {
+                        m.userId = m.userId.toLowerCase(); // https://github.com/citizenos/citizenos-api/issues/234
+                        validEmailMembers.push(m); // The whole member object with level
+                    } else if (validator.isUUID(m.userId)) {
+                        validUserIdMembers.push(m);
                     } else {
-                        return;
+                        logger.warn('Invalid member ID, is not UUID or email thus ignoring', req.method, req.path, m, req.body);
                     }
                 } else {
-                    const deletedCount = await TopicInviteUser
-                        .destroy(
-                            {
-                                where: {
-                                    userId: member.userId,
-                                    topicId: topicId
+                    logger.warn('Missing member id, ignoring', req.method, req.path, m, req.body);
+                }
+            });
+
+            const validEmails = validEmailMembers.map(m => cryptoLib.privateEncrypt(m.userId));
+            if (validEmails.length) {
+                // Find out which e-mails already exist
+                const usersExistingEmail = await User
+                    .findAll({
+                        where: {
+                            email: {
+                                [Op.iLike]: {
+                                    [Op.any]: validEmails
                                 }
                             }
-                        );
-                    logger.info(`Removed ${deletedCount} invites`);
-                    const topicInvite = await TopicInviteUser.create(
-                        {
-                            topicId: topicId,
-                            creatorId: userId,
-                            userId: member.userId,
-                            level: member.level
                         },
-                        {
-                            transaction: t
-                        }
-                    );
-
-                    const userInvited = User.build({ id: topicInvite.userId });
-                    userInvited.dataValues.level = topicInvite.level; // FIXME: HACK? Invite event, putting level here, not sure it belongs here, but.... https://github.com/citizenos/citizenos-fe/issues/112 https://github.com/w3c/activitystreams/issues/506
-                    userInvited.dataValues.inviteId = topicInvite.id; // FIXME: HACK? Invite event, pu
-
-                    await cosActivities.inviteActivity(
-                        topic,
-                        userInvited,
-                        {
-                            type: 'User',
-                            id: req.user.userId,
-                            ip: req.ip
-                        },
-                        req.method + ' ' + req.path,
-                        t
-                    );
-
-                    return topicInvite;
-                }
-            });
-
-            let createdInvites = await Promise.all(createInvitePromises);
-
-            createdInvites = createdInvites.filter(function (invite) {
-                return !!invite;
-            });
-
-            for (let invite of createdInvites) {
-                invite.inviteMessage = inviteMessage;
-            }
-
-            t.afterCommit(async () => {
-                if (createdInvites.length) {
-                    await emailLib.sendTopicMemberUserInviteCreate(createdInvites);
-                    return res.created({
-                        count: createdInvites.length,
-                        rows: createdInvites
+                        attributes: ['id', 'email']
                     });
-                } else {
-                    return res.badRequest('No invites were created. Possibly because no valid userId-s (uuidv4s or emails) were provided.', 1);
+
+                usersExistingEmail.forEach((u) => {
+                    const member = validEmailMembers.find(m => {
+                        return m.userId === u.email
+                    });
+                    if (member) {
+                        const index = validEmailMembers.findIndex(m => m.userId === u.email);
+                        member.userId = u.id;
+                        validUserIdMembers.push(member);
+                        validEmailMembers.splice(index, 1) // Remove the e-mail, so that by the end of the day only e-mails that did not exist remain.
+                    }
+                });
+            }
+            await db.transaction(async function (t) {
+                let createdUsers;
+
+                // The leftovers are e-mails for which User did not exist
+                if (validEmailMembers.length) {
+                    const usersToCreate = [];
+                    validEmailMembers.forEach((m) => {
+                        usersToCreate.push({
+                            email: m.userId,
+                            language: m.language,
+                            password: null,
+                            name: util.emailToDisplayName(m.userId),
+                            source: User.SOURCES.citizenos
+                        });
+                    });
+
+                    createdUsers = await User.bulkCreate(usersToCreate);
+
+                    const createdUsersActivitiesCreatePromises = createdUsers.map(async function (user) {
+                        return cosActivities.createActivity(
+                            user,
+                            null,
+                            {
+                                type: 'System',
+                                ip: req.ip
+                            },
+                            req.method + ' ' + req.path,
+                            t
+                        );
+                    });
+
+                    await Promise.all(createdUsersActivitiesCreatePromises);
                 }
+
+                // Go through the newly created users and add them to the validUserIdMembers list so that they get invited
+                if (createdUsers && createdUsers.length) {
+                    createdUsers.forEach((u) => {
+                        const member = {
+                            userId: u.id
+                        };
+
+                        // Sequelize defaultValue has no effect if "undefined" or "null" is set for attribute...
+                        const level = validEmailMembers.find(m => m.userId === u.email).level;
+                        if (level) {
+                            member.level = level;
+                        }
+                        validUserIdMembers.push(member);
+                    });
+                }
+
+                // Need the Topic just for the activity
+                const topic = await Topic.findOne({
+                    where: {
+                        id: topicId
+                    }
+                });
+
+                validUserIdMembers = validUserIdMembers.filter(function (member) {
+                    return member.userId !== req.user.userId; // Make sure user does not invite self
+                });
+                const currentMembers = await TopicMemberUser.findAll({
+                    where: {
+                        topicId: topicId
+                    }
+                });
+
+                const createInvitePromises = validUserIdMembers.map(async function (member) {
+                    const addedMember = currentMembers.find(cmember => cmember.userId === member.userId);
+
+                    if (addedMember) {
+                        const LEVELS = {
+                            none: 0, // Enables to override inherited permissions.
+                            read: 1,
+                            edit: 2,
+                            admin: 3
+                        };
+                        if (addedMember.level !== member.level) {
+                            if (LEVELS[member.level] > LEVELS[addedMember.level]) {
+                                await addedMember.update({
+                                    level: member.level
+                                });
+
+                                cosActivities.updateActivity(
+                                    addedMember,
+                                    null,
+                                    {
+                                        type: 'User',
+                                        id: req.user.userId,
+                                        ip: req.ip
+                                    },
+                                    req.method + ' ' + req.path,
+                                    t
+                                );
+
+                                return;
+                            }
+
+                            return;
+                        } else {
+                            return;
+                        }
+                    } else {
+                        const deletedCount = await TopicInviteUser
+                            .destroy(
+                                {
+                                    where: {
+                                        userId: member.userId,
+                                        topicId: topicId
+                                    }
+                                }
+                            );
+                        logger.info(`Removed ${deletedCount} invites`);
+                        const topicInvite = await TopicInviteUser.create(
+                            {
+                                topicId: topicId,
+                                creatorId: userId,
+                                userId: member.userId,
+                                level: member.level
+                            },
+                            {
+                                transaction: t
+                            }
+                        );
+
+                        const userInvited = User.build({ id: topicInvite.userId });
+                        userInvited.dataValues.level = topicInvite.level; // FIXME: HACK? Invite event, putting level here, not sure it belongs here, but.... https://github.com/citizenos/citizenos-fe/issues/112 https://github.com/w3c/activitystreams/issues/506
+                        userInvited.dataValues.inviteId = topicInvite.id; // FIXME: HACK? Invite event, pu
+
+                        await cosActivities.inviteActivity(
+                            topic,
+                            userInvited,
+                            {
+                                type: 'User',
+                                id: req.user.userId,
+                                ip: req.ip
+                            },
+                            req.method + ' ' + req.path,
+                            t
+                        );
+
+                        return topicInvite;
+                    }
+                });
+
+                let createdInvites = await Promise.all(createInvitePromises);
+
+                createdInvites = createdInvites.filter(function (invite) {
+                    return !!invite;
+                });
+
+                for (let invite of createdInvites) {
+                    invite.inviteMessage = inviteMessage;
+                }
+
+                t.afterCommit(async () => {
+                    if (createdInvites.length) {
+                        await emailLib.sendTopicMemberUserInviteCreate(createdInvites);
+                        return res.created({
+                            count: createdInvites.length,
+                            rows: createdInvites
+                        });
+                    } else {
+                        return res.badRequest('No invites were created. Possibly because no valid userId-s (uuidv4s or emails) were provided.', 1);
+                    }
+                });
             });
-        });
-    }));
+        } catch (err) {
+            if (err.errors) {
+                let resErrors = {};
+                Object.keys(err.errors).forEach(key => {
+                    resErrors[err.errors[key].path] = err.errors[key].message;
+                });
+                return res.badRequest(resErrors);
+            } else {
+                logger.error('Error creating user:', err);
+                return res.internalServerError(err);
+            }
+        }
+    });
 
     app.get('/api/users/:userId/topics/:topicId/invites/users', loginCheck(), asyncMiddleware(async function (req, res) {
         const limitDefault = 10;
@@ -4411,7 +3496,7 @@ module.exports = function (app) {
 
         const topicId = req.params.topicId;
         const userId = req.user.userId;
-        const permissions = await _hasPermission(topicId, userId, TopicMemberUser.LEVELS.read, true);
+        const permissions = await topicService._hasPermission(topicId, userId, TopicMemberUser.LEVELS.read, true);
 
         let where = '';
         if (search) {
@@ -4564,7 +3649,7 @@ module.exports = function (app) {
         if (!invite) {
             return res.notFound();
         }
-        const hasAccess = await _hasPermission(topicId, invite.userId, TopicMemberUser.LEVELS.read, true);
+        const hasAccess = await topicService._hasPermission(topicId, invite.userId, TopicMemberUser.LEVELS.read, true);
 
         if (hasAccess) {
             return res.ok(invite, 1); // Invite has already been accepted OR deleted and the person has access
@@ -4652,7 +3737,7 @@ module.exports = function (app) {
         return res.ok(finalInvites[0], 0);
     }));
 
-    app.put(['/api/topics/:topicId/invites/users/:inviteId', '/api/users/:userId/topics/:topicId/invites/users/:inviteId'], loginCheck(), hasPermission(TopicMemberUser.LEVELS.admin), asyncMiddleware(async function (req, res) {
+    app.put(['/api/topics/:topicId/invites/users/:inviteId', '/api/users/:userId/topics/:topicId/invites/users/:inviteId'], loginCheck(), topicService.hasPermission(TopicMemberUser.LEVELS.admin), asyncMiddleware(async function (req, res) {
         const newLevel = req.body.level;
         const topicId = req.params.topicId;
         const inviteId = req.params.inviteId;
@@ -4700,7 +3785,7 @@ module.exports = function (app) {
         }
     }));
 
-    app.delete(['/api/topics/:topicId/invites/users/:inviteId', '/api/users/:userId/topics/:topicId/invites/users/:inviteId'], loginCheck(), hasPermission(TopicMemberUser.LEVELS.admin), asyncMiddleware(async function (req, res) {
+    app.delete(['/api/topics/:topicId/invites/users/:inviteId', '/api/users/:userId/topics/:topicId/invites/users/:inviteId'], loginCheck(), topicService.hasPermission(TopicMemberUser.LEVELS.admin), asyncMiddleware(async function (req, res) {
         const topicId = req.params.topicId;
         const inviteId = req.params.inviteId;
         const invite = await TopicInviteUser.findOne({
@@ -5121,7 +4206,7 @@ module.exports = function (app) {
     /**
      * Add Topic Attachment
      */
-    app.post('/api/users/:userId/topics/:topicId/attachments/upload', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.edit, false, [Topic.STATUSES.draft, Topic.STATUSES.ideation, Topic.STATUSES.inProgress, Topic.STATUSES.voting, Topic.STATUSES.followUp]), async function (req, res, next) {
+    app.post('/api/users/:userId/topics/:topicId/attachments/upload', loginCheck(['partner']), topicService.hasPermission(TopicMemberUser.LEVELS.edit, false, [Topic.STATUSES.draft, Topic.STATUSES.ideation, Topic.STATUSES.inProgress, Topic.STATUSES.voting, Topic.STATUSES.followUp]), async function (req, res, next) {
         const attachmentLimit = config.attachments.limit || 5;
         const topicId = req.params.topicId;
         try {
@@ -5179,7 +4264,7 @@ module.exports = function (app) {
         }
     });
 
-    app.post('/api/users/:userId/topics/:topicId/attachments', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.edit, false, [Topic.STATUSES.draft, Topic.STATUSES.ideation, Topic.STATUSES.inProgress, Topic.STATUSES.voting, Topic.STATUSES.followUp]), async function (req, res, next) {
+    app.post('/api/users/:userId/topics/:topicId/attachments', loginCheck(['partner']), topicService.hasPermission(TopicMemberUser.LEVELS.edit, false, [Topic.STATUSES.draft, Topic.STATUSES.ideation, Topic.STATUSES.inProgress, Topic.STATUSES.voting, Topic.STATUSES.followUp]), async function (req, res, next) {
         const topicId = req.params.topicId;
         const name = req.body.name;
         const type = req.body.type;
@@ -5279,7 +4364,7 @@ module.exports = function (app) {
         }
     });
 
-    app.put('/api/users/:userId/topics/:topicId/attachments/:attachmentId', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.edit, false, [Topic.STATUSES.draft, Topic.STATUSES.ideation, Topic.STATUSES.inProgress, Topic.STATUSES.voting, Topic.STATUSES.followUp]), async function (req, res, next) {
+    app.put('/api/users/:userId/topics/:topicId/attachments/:attachmentId', loginCheck(['partner']), topicService.hasPermission(TopicMemberUser.LEVELS.edit, false, [Topic.STATUSES.draft, Topic.STATUSES.ideation, Topic.STATUSES.inProgress, Topic.STATUSES.voting, Topic.STATUSES.followUp]), async function (req, res, next) {
         const newName = req.body.name;
 
         if (!newName) {
@@ -5330,7 +4415,7 @@ module.exports = function (app) {
     /**
      * Delete Topic Attachment
      */
-    app.delete('/api/users/:userId/topics/:topicId/attachments/:attachmentId', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.edit, false, [Topic.STATUSES.draft, Topic.STATUSES.ideation, Topic.STATUSES.inProgress, Topic.STATUSES.voting, Topic.STATUSES.followUp], true), async function (req, res, next) {
+    app.delete('/api/users/:userId/topics/:topicId/attachments/:attachmentId', loginCheck(['partner']), topicService.hasPermission(TopicMemberUser.LEVELS.edit, false, [Topic.STATUSES.draft, Topic.STATUSES.ideation, Topic.STATUSES.inProgress, Topic.STATUSES.voting, Topic.STATUSES.followUp], true), async function (req, res, next) {
         try {
             const attachment = await Attachment.findOne({
                 where: {
@@ -5406,8 +4491,8 @@ module.exports = function (app) {
         }
     };
 
-    app.get('/api/users/:userId/topics/:topicId/attachments', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.read, true), topicAttachmentsList);
-    app.get('/api/topics/:topicId/attachments', hasVisibility(Topic.VISIBILITY.public), topicAttachmentsList);
+    app.get('/api/users/:userId/topics/:topicId/attachments', loginCheck(['partner']), topicService.hasPermission(TopicMemberUser.LEVELS.read, true), topicAttachmentsList);
+    app.get('/api/topics/:topicId/attachments', topicService.hasVisibility(Topic.VISIBILITY.public), topicAttachmentsList);
 
     const readAttachment = async function (req, res, next) {
         try {
@@ -5453,8 +4538,8 @@ module.exports = function (app) {
         }
     };
 
-    app.get('/api/users/:userId/topics/:topicId/attachments/:attachmentId', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.read, true), readAttachment);
-    app.get('/api/topics/:topicId/attachments/:attachmentId', hasVisibility(Topic.VISIBILITY.public), readAttachment);
+    app.get('/api/users/:userId/topics/:topicId/attachments/:attachmentId', loginCheck(['partner']), topicService.hasPermission(TopicMemberUser.LEVELS.read, true), readAttachment);
+    app.get('/api/topics/:topicId/attachments/:attachmentId', topicService.hasVisibility(Topic.VISIBILITY.public), readAttachment);
 
     const topicReportsCreate = async function (req, res, next) {
         try {
@@ -5503,14 +4588,14 @@ module.exports = function (app) {
      *
      * @see https://github.com/citizenos/citizenos-api/issues/5
      */
-    app.post(['/api/users/:userId/topics/:topicId/reports', '/api/topics/:topicId/reports'], loginCheck(['partner']), hasVisibility(Topic.VISIBILITY.public), topicReportsCreate);
+    app.post(['/api/users/:userId/topics/:topicId/reports', '/api/topics/:topicId/reports'], loginCheck(['partner']), topicService.hasVisibility(Topic.VISIBILITY.public), topicReportsCreate);
 
     /**
      * Read Topic Report
      *
      * @see https://github.com/citizenos/citizenos-api/issues/5
      */
-    app.get(['/api/topics/:topicId/reports/:reportId', '/api/users/:userId/topics/:topicId/reports/:reportId'], hasVisibility(Topic.VISIBILITY.public), hasPermissionModerator(), async function (req, res, next) {
+    app.get(['/api/topics/:topicId/reports/:reportId', '/api/users/:userId/topics/:topicId/reports/:reportId'], topicService.hasVisibility(Topic.VISIBILITY.public), topicService.hasPermissionModerator(), async function (req, res, next) {
         try {
             const topicReports = await db
                 .query(
@@ -5561,7 +4646,7 @@ module.exports = function (app) {
     /**
      * Moderate a Topic - moderator approves a report, thus applying restrictions to the Topic
      */
-    app.post(['/api/topics/:topicId/reports/:reportId/moderate', '/api/users/:userId/topics/:topicId/reports/:reportId/moderate'], hasVisibility(Topic.VISIBILITY.public), hasPermissionModerator(), async function (req, res, next) {
+    app.post(['/api/topics/:topicId/reports/:reportId/moderate', '/api/users/:userId/topics/:topicId/reports/:reportId/moderate'], topicService.hasVisibility(Topic.VISIBILITY.public), topicService.hasPermissionModerator(), async function (req, res, next) {
         const moderatedReasonType = req.body.type; // Delete reason type which is provided in case deleted/hidden by moderator due to a user report
         const moderatedReasonText = req.body.text; // Free text with reason why the comment was deleted/hidden
         try {
@@ -5621,7 +4706,7 @@ module.exports = function (app) {
     });
 
     /** Send a Topic report for review - User let's Moderators know that the violations have been corrected **/
-    app.post(['/api/users/:userId/topics/:topicId/reports/:reportId/review', '/api/topics/:topicId/reports/:reportId/review'], loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.read), async function (req, res, next) {
+    app.post(['/api/users/:userId/topics/:topicId/reports/:reportId/review', '/api/topics/:topicId/reports/:reportId/review'], loginCheck(['partner']), topicService.hasPermission(TopicMemberUser.LEVELS.read), async function (req, res, next) {
         const topicId = req.params.topicId;
         const reportId = req.params.reportId;
         const text = req.body.text;
@@ -5655,7 +4740,7 @@ module.exports = function (app) {
      *
      * @see https://app.citizenos.com/en/topics/ac8b66a4-ca56-4d02-8406-5e19da73d7ce?argumentsPage=1
      */
-    app.post(['/api/topics/:topicId/reports/:reportId/resolve', '/api/users/:userId/topics/:topicId/reports/:reportId/resolve'], hasVisibility(Topic.VISIBILITY.public), hasPermissionModerator(), async function (req, res, next) {
+    app.post(['/api/topics/:topicId/reports/:reportId/resolve', '/api/users/:userId/topics/:topicId/reports/:reportId/resolve'], topicService.hasVisibility(Topic.VISIBILITY.public), topicService.hasPermissionModerator(), async function (req, res, next) {
         const topicId = req.params.topicId;
         const reportId = req.params.reportId;
         try {
@@ -5784,1622 +4869,13 @@ module.exports = function (app) {
     /**
      * Read (List) Topic Mentions
      */
-    app.get('/api/users/:userId/topics/:topicId/mentions', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.read, true), topicMentionsList);
+    app.get('/api/users/:userId/topics/:topicId/mentions', loginCheck(['partner']), topicService.hasPermission(TopicMemberUser.LEVELS.read, true), topicMentionsList);
 
 
     /**
      * Read (List) public Topic Mentions
      */
-    app.get('/api/topics/:topicId/mentions', hasVisibility(Topic.VISIBILITY.public), topicMentionsList);
-
-    /**
-     * Create a Vote
-     */
-    app.post('/api/users/:userId/topics/:topicId/votes', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.admin, null, [Topic.STATUSES.draft, Topic.STATUSES.ideation, Topic.STATUSES.inProgress]), asyncMiddleware(async function (req, res) {
-        const voteOptions = req.body.options;
-
-        if (!voteOptions || !Array.isArray(voteOptions) || voteOptions.length < 2) {
-            return res.badRequest('At least 2 vote options are required', 1);
-        }
-
-        const authType = req.body.authType || Vote.AUTH_TYPES.soft;
-        const delegationIsAllowed = req.body.delegationIsAllowed || false;
-
-        // We cannot allow too similar options, otherwise the options are not distinguishable in the signed file
-        if (authType === Vote.AUTH_TYPES.hard) {
-            const voteOptionValues = voteOptions.map(o => sanitizeFilename(o.value).toLowerCase());
-
-            const uniqueValues = voteOptionValues.filter((value, index, array) => {
-                return array.indexOf(value) === index;
-            });
-            if (uniqueValues.length !== voteOptions.length) {
-                return res.badRequest('Vote options are too similar', 2);
-            }
-
-            const reservedPrefix = VoteOption.RESERVED_PREFIX;
-            uniqueValues.forEach(function (value) {
-                if (value.substr(0, 2) === reservedPrefix) {
-                    return res.badRequest('Vote option not allowed due to usage of reserved prefix "' + reservedPrefix + '"', 4);
-                }
-            });
-        }
-
-
-        if (authType === Vote.AUTH_TYPES.hard && delegationIsAllowed) {
-            return res.badRequest('Delegation is not allowed for authType "' + authType + '"', 3);
-        }
-
-        const vote = Vote.build({
-            minChoices: req.body.minChoices || 1,
-            maxChoices: req.body.maxChoices || 1,
-            delegationIsAllowed: req.body.delegationIsAllowed || false,
-            endsAt: req.body.endsAt,
-            description: req.body.description,
-            type: req.body.type || Vote.TYPES.regular,
-            authType: authType,
-            autoClose: req.body.autoClose,
-            reminderTime: req.body.reminderTime
-        });
-
-
-        // TODO: Some of these queries can be done in parallel
-        const topic = await Topic.findOne({
-            where: {
-                id: req.params.topicId
-            }
-        });
-
-        await db
-            .transaction(async function (t) {
-                let voteOptionsCreated;
-
-                await cosActivities
-                    .createActivity(
-                        vote,
-                        null,
-                        {
-                            type: 'User',
-                            id: req.user.userId,
-                            ip: req.ip
-                        },
-                        req.method + ' ' + req.path,
-                        t
-                    );
-                await vote.save({ transaction: t });
-                const voteOptionPromises = [];
-                voteOptions.forEach((o) => {
-                    o.voteId = vote.id;
-                    const vopt = VoteOption.build(o);
-                    voteOptionPromises.push(vopt.validate());
-                });
-
-                await Promise.all(voteOptionPromises);
-                voteOptionsCreated = await VoteOption
-                    .bulkCreate(
-                        voteOptions,
-                        {
-                            fields: ['id', 'voteId', 'value', 'ideaId'], // Deny updating other fields like "updatedAt", "createdAt"...
-                            returning: true,
-                            transaction: t
-                        }
-                    );
-
-                await cosActivities
-                    .createActivity(
-                        voteOptionsCreated,
-                        null,
-                        {
-                            type: 'User',
-                            id: req.user.userId,
-                            ip: req.ip
-                        },
-                        req.method + ' ' + req.path,
-                        t
-                    );
-                await TopicVote
-                    .create(
-                        {
-                            topicId: req.params.topicId,
-                            voteId: vote.id
-                        },
-                        { transaction: t }
-                    );
-                await cosActivities
-                    .createActivity(
-                        vote,
-                        topic,
-                        {
-                            type: 'User',
-                            id: req.user.userId,
-                            ip: req.ip
-                        },
-                        req.method + ' ' + req.path,
-                        t
-                    );
-                if (topic.status !== Topic.STATUSES.draft)
-                    topic.status = Topic.STATUSES.voting;
-
-                await cosActivities
-                    .updateActivity(
-                        topic,
-                        null,
-                        {
-                            type: 'User',
-                            id: req.user.userId,
-                            ip: req.ip
-                        },
-                        req.method + ' ' + req.path,
-                        t
-                    );
-
-                const resTopic = await topic
-                    .save({
-                        returning: true,
-                        transaction: t
-                    });
-
-                vote.dataValues.VoteOptions = [];
-                voteOptionsCreated.forEach(function (option) {
-                    vote.dataValues.VoteOptions.push(option.dataValues);
-                });
-
-                await cosSignature.createVoteFiles(resTopic, vote, voteOptionsCreated, t);
-                t.afterCommit(() => {
-                    return res.created(vote.toJSON());
-                });
-            });
-    }));
-
-
-    /**
-     * Read a Vote
-     */
-    app.get('/api/users/:userId/topics/:topicId/votes/:voteId', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.read, true), asyncMiddleware(async function (req, res) {
-        const topicId = req.params.topicId;
-        const voteId = req.params.voteId;
-        const userId = req.user.userId;
-
-        const voteInfo = await Vote.findOne({
-            where: { id: voteId },
-            include: [
-                {
-                    model: Topic,
-                    where: { id: topicId }
-                },
-                VoteOption,
-                {
-                    model: VoteDelegation,
-                    where: {
-                        voteId: voteId,
-                        byUserId: userId
-                    },
-                    attributes: ['id'],
-                    required: false,
-                    include: [
-                        {
-                            model: User
-                        }
-                    ]
-                }
-            ]
-        });
-
-        if (!voteInfo) {
-            return res.notFound();
-        }
-
-        const voteResults = await getVoteResults(voteId, userId);
-        let hasVoted = false;
-        if (voteResults && voteResults.length) {
-            voteInfo.dataValues.VoteOptions.forEach(function (option) {
-                const result = voteResults.find((o) => o.optionId === option.id);
-
-                if (result) {
-                    const voteCount = parseInt(result.voteCount, 10);
-                    if (voteCount)
-                        option.dataValues.voteCount = voteCount;//TODO: this could be replaced with virtual getters/setters - https://gist.github.com/pranildasika/2964211
-                    if (result.selected) {
-                        option.dataValues.selected = result.selected; //TODO: this could be replaced with virtual getters/setters - https://gist.github.com/pranildasika/2964211
-                        hasVoted = true;
-                    }
-                }
-            });
-
-            voteInfo.dataValues.votersCount = voteResults[0].votersCount;
-        }
-
-        // TODO: Contains duplicate code with GET /status AND /sign
-        if (hasVoted && voteInfo.authType === Vote.AUTH_TYPES.hard) {
-            voteInfo.dataValues.downloads = {
-                bdocVote: getBdocURL({
-                    userId: userId,
-                    topicId: topicId,
-                    voteId: voteId,
-                    type: 'user'
-                })
-            };
-        }
-
-        if (req.locals.topic.permissions.level === TopicMemberUser.LEVELS.admin && [Topic.STATUSES.followUp, Topic.STATUSES.closed].indexOf(req.locals.topic.status) > -1) {
-            if (!voteInfo.dataValues.downloads) {
-                voteInfo.dataValues.downloads = {};
-            }
-            const voteFinalURLParams = {
-                userId: userId,
-                topicId: topicId,
-                voteId: voteId,
-                type: 'final'
-            };
-            if (voteInfo.authType === Vote.AUTH_TYPES.hard) {
-                voteInfo.dataValues.downloads.bdocFinal = getBdocURL(voteFinalURLParams);
-            } else {
-                voteInfo.dataValues.downloads.zipFinal = getZipURL(voteFinalURLParams);
-            }
-        }
-
-        return res.ok(voteInfo);
-    }));
-
-    /**
-     * Update a Vote
-     */
-    app.put('/api/users/:userId/topics/:topicId/votes/:voteId', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.admin), asyncMiddleware(async function (req, res) {
-        const topicId = req.params.topicId;
-        const voteId = req.params.voteId;
-        // Make sure the Vote is actually related to the Topic through which the permission was granted.
-        let fields = ['endsAt', 'reminderTime'];
-
-        const topic = await Topic.findOne({
-            where: {
-                id: topicId
-            },
-            include: [
-                {
-                    model: Vote,
-                    where: {
-                        id: voteId
-                    }
-                }
-            ]
-        });
-
-        if (!topic || !topic.Votes || !topic.Votes.length) {
-            return res.notFound();
-        }
-        if (topic.status === Topic.STATUSES.draft) {
-            fields = fields.concat(['minChoices', 'maxChoices', 'description', 'type', 'authType', 'autoClose', 'delegationIsAllowed']);
-        }
-        const voteOptions = req.body.options;
-
-        if (Array.isArray(voteOptions) && voteOptions.length < 2) {
-            return res.badRequest('At least 2 vote options are required', 1);
-        }
-        const vote = topic.Votes[0];
-
-
-        await db.transaction(async function (t) {
-            fields.forEach(function (field) {
-                if (Object.keys(req.body).indexOf(field) > -1)
-                    vote[field] = req.body[field];
-            });
-            await cosActivities
-                .updateActivity(
-                    vote,
-                    topic,
-                    {
-                        type: 'User',
-                        id: req.user.userId,
-                        ip: req.ip
-                    },
-                    req.method + ' ' + req.path,
-                    t
-                );
-
-
-            const createPromises = [];
-            if (voteOptions && voteOptions.length && topic.status === Topic.STATUSES.draft) {
-                try {
-
-                    await VoteOption.destroy({
-                        where: {
-                            voteId: vote.id
-                        },
-                        force: true
-                    });
-                } catch (e) {
-                    console.error('Vote Option delete fail', e);
-                }
-                if (vote.authType === Vote.AUTH_TYPES.hard) {
-                    const voteOptionValues = voteOptions.map(o => sanitizeFilename(o.value).toLowerCase());
-
-                    const uniqueValues = voteOptionValues.filter((value, index, array) => {
-                        return array.indexOf(value) === index;
-                    })
-                    if (uniqueValues.length !== voteOptions.length) {
-                        return res.badRequest('Vote options are too similar', 2);
-                    }
-
-                    const reservedPrefix = VoteOption.RESERVED_PREFIX;
-                    uniqueValues.forEach(function (value) {
-                        if (value.substr(0, 2) === reservedPrefix) {
-                            return res.badRequest('Vote option not allowed due to usage of reserved prefix "' + reservedPrefix + '"', 4);
-                        }
-                    });
-                }
-
-                voteOptions.forEach((o) => {
-                    o.voteId = vote.id;
-                    const vopt = VoteOption.build(o);
-                    createPromises.push(vopt.validate());
-                });
-            }
-            let voteOptionsCreated;
-            if (createPromises.length) {
-                await Promise.all(createPromises);
-                voteOptionsCreated = await VoteOption
-                    .bulkCreate(
-                        voteOptions,
-                        {
-                            fields: ['id', 'voteId', 'value'], // Deny updating other fields like "updatedAt", "createdAt"...
-                            returning: true,
-                            transaction: t
-                        }
-                    );
-                await cosActivities
-                    .createActivity(
-                        voteOptionsCreated,
-                        null,
-                        {
-                            type: 'User',
-                            id: req.user.userId,
-                            ip: req.ip
-                        },
-                        req.method + ' ' + req.path,
-                        t
-                    );
-            }
-
-            await vote.save({
-                transaction: t
-            });
-            t.afterCommit(async () => {
-                const voteInfo = await Vote
-                    .findOne({
-                        where: { id: voteId },
-                        include: [
-                            {
-                                model: Topic,
-                                where: { id: topicId }
-                            },
-                            VoteOption
-                        ]
-                    });
-
-                return res.ok(voteInfo);
-            })
-        });
-    }));
-
-    /**
-     * Read a public Topics Vote
-     */
-    app.get('/api/topics/:topicId/votes/:voteId', hasVisibility(Topic.VISIBILITY.public), asyncMiddleware(async function (req, res) {
-        const topicId = req.params.topicId;
-        const voteId = req.params.voteId;
-
-        // TODO: Can be done in 1 query.
-        const voteInfo = await Vote
-            .findOne({
-                where: { id: voteId },
-                include: [
-                    {
-                        model: Topic,
-                        where: { id: topicId }
-                    },
-                    VoteOption
-                ]
-            });
-
-        if (!voteInfo) {
-            return res.notFound();
-        }
-
-        const voteResults = await getVoteResults(voteId);
-        if (voteResults && voteResults.length) {
-            voteInfo.dataValues.VoteOptions.forEach((option) => {
-                const result = voteResults.find((o) => o.optionId === option.id);
-                if (result) {
-                    option.dataValues.voteCount = parseInt(result.voteCount, 10); //TODO: this could be replaced with virtual getters/setters - https://gist.github.com/pranildasika/2964211
-                    if (result.selected) {
-                        option.dataValues.selected = result.selected; //TODO: this could be replaced with virtual getters/setters - https://gist.github.com/pranildasika/2964211
-                    }
-                }
-            });
-            voteInfo.dataValues.votersCount = voteResults[0].votersCount;
-        }
-
-        return res.ok(voteInfo);
-    }));
-
-    const handleTopicVotePreconditions = async function (req, res) {
-        const topicId = req.params.topicId;
-        const voteId = req.params.voteId;
-
-        let voteOptions = [...new Map(req.body.options.map(item =>
-            [item['optionId'], item])).values()];
-        let isSingelOption = false;
-
-        const vote = await Vote
-            .findOne({
-                where: { id: voteId },
-                include: [
-                    {
-                        model: Topic,
-                        where: { id: topicId }
-                    },
-                    {
-                        model: VoteOption,
-                        where: { id: voteOptions.map(o => o.optionId) },
-                        required: false
-                    }
-                ]
-            });
-
-        if (!vote) {
-            return res.notFound();
-        }
-
-        if (vote.endsAt && new Date() > vote.endsAt) {
-            return res.badRequest('The Vote has ended.');
-        }
-
-        if (!vote.VoteOptions.length) {
-            return res.badRequest('Invalid option');
-        }
-        const singleOptions = vote.VoteOptions.filter((option) => {
-            const optVal = option.value.toLowerCase();
-
-            return optVal === 'neutral' || optVal === 'veto';
-        });
-        if (singleOptions.length) {
-            for (let i = 0; i < voteOptions.length; i++) {
-                const isOption = singleOptions.find(opt => opt.id === voteOptions[i].optionId);
-
-                if (isOption) {
-                    isSingelOption = true;
-                    req.body.options = [{ optionId: isOption.id }];
-                }
-            }
-        }
-
-        if (!isSingelOption && (!voteOptions || !Array.isArray(voteOptions) || voteOptions.length > vote.maxChoices || voteOptions.length < vote.minChoices)) {
-            return res.badRequest('The options must be an array of minimum :minChoices and maximum :maxChoices options.'
-                .replace(':minChoices', vote.minChoices)
-                .replace(':maxChoices', vote.maxChoices));
-        }
-
-        return vote;
-    };
-
-    const _handleVoteAutoCloseConditions = async (voteId, topicId, userId) => {
-        const vote = await Vote
-            .findOne({
-                where: { id: voteId },
-                include: [
-                    {
-                        model: Topic,
-                        where: { id: topicId }
-                    }
-                ]
-            });
-
-        if (vote.autoClose) {
-            const promises = vote.autoClose.map(async (condition) => {
-                if (condition.enabled && condition.value === Vote.AUTO_CLOSE.allMembersVoted) {
-                    const topicMembers = await _getAllTopicMembers(topicId, userId, false);
-                    const voteResults = await getVoteResults(voteId, userId);
-                    if (voteResults.length && topicMembers.users.count === voteResults[0].votersCount) {
-                        vote.endsAt = (new Date()).toISOString();
-                        await vote.save();
-
-                        return true;
-                    }
-                }
-            });
-            const isClosed = await Promise.all(promises);
-
-            return isClosed.includes(true);
-        } else {
-            return false;
-        }
-    };
-
-    const handleVoteLists = async (req, userId, topicId, voteId, voteOptions, context, transaction) => {
-        await VoteList.destroy({
-            where: {
-                voteId,
-                userId
-            },
-            force: true,
-            transaction: transaction
-        });
-        const voteListPromise = VoteList.bulkCreate(
-            voteOptions,
-            {
-                fields: ['optionId', 'voteId', 'userId', 'optionGroupId', 'userHash'],
-                transaction: transaction
-            });
-        const topicPromise = Topic.findOne({
-            where: {
-                id: topicId
-            },
-            transaction: transaction
-        });
-        const [voteList, topic] = await Promise.all([voteListPromise, topicPromise]);
-        const vl = [];
-        let tc = JSON.parse(JSON.stringify(topic.dataValues));
-        tc.description = null;
-        tc = Topic.build(tc);
-
-        voteList.forEach(function (el, key) {
-            delete el.dataValues.optionId;
-            delete el.dataValues.optionGroupId;
-            el = VoteList.build(el.dataValues);
-            vl[key] = el;
-        });
-        const actor = {
-            type: 'User',
-            ip: req.ip
-        };
-        if (userId) {
-            actor.id = userId;
-        }
-        const activityPromise = cosActivities.createActivity(vl, tc, actor, context, transaction);
-
-        // Delete delegation if you are voting - TODO: why is this here? You cannot delegate when authType === 'hard'
-        const destroyDelegation = VoteDelegation
-            .destroy({
-                where: {
-                    voteId: voteId,
-                    byUserId: userId
-                },
-                force: true,
-                transaction: transaction
-            });
-        await Promise.all([activityPromise, destroyDelegation]);
-    };
-
-    const handleTopicVoteSoft = async function (vote, req, res, next) {
-        try {
-            const voteId = vote.id;
-            const userId = req.user.userId;
-            const topicId = req.params.topicId;
-            const voteOptions = [...new Map(req.body.options.map(item =>
-                [item['optionId'], item])).values()];
-
-            await db
-                .transaction(async function (t) {
-                    // Store vote options
-                    await addUserAsMember(userId, topicId, t);
-
-                    const optionGroupId = Math.random().toString(36).substring(2, 10);
-
-                    voteOptions.forEach((o) => {
-                        o.voteId = voteId;
-                        o.userId = userId;
-                        o.optionGroupId = optionGroupId;
-                    });
-
-                    await handleVoteLists(req, userId, topicId, voteId, voteOptions, req.method + ' ' + req.path, t);
-                    t.afterCommit(async () => {
-                        const isClosed = await _handleVoteAutoCloseConditions(voteId, topicId, userId);
-                        if (isClosed) {
-                            return res.reload();
-                        }
-
-                        return res.ok();
-                    });
-                });
-        } catch (err) {
-            return next(err);
-        }
-    };
-
-    const _checkAuthenticatedUser = async function (userId, personalInfo, transaction) {
-        const userConnection = await UserConnection.findOne({
-            where: {
-                connectionId: {
-                    [Op.in]: [
-                        UserConnection.CONNECTION_IDS.esteid,
-                        UserConnection.CONNECTION_IDS.smartid
-                    ]
-                },
-                userId: userId
-            },
-            transaction
-        });
-
-        if (userConnection) {
-            let personId = personalInfo.pid;
-            let connectionUserId = userConnection.connectionUserId;
-            if (personalInfo.pid.indexOf('PNO') > -1) {
-                personId = personId.split('-')[1];
-            }
-            const country = (personalInfo.country || personalInfo.countryCode);
-            const idPattern = `PNO${country}-${personId}`;
-            if (connectionUserId.indexOf('PNO') > -1) {
-                connectionUserId = connectionUserId.split('-')[1];
-            }
-            if (!userConnection.connectionData || (userConnection.connectionData.country || userConnection.connectionData.countryCode)) {
-                if (userConnection.connectionUserId !== idPattern) {
-                    throw new Error('User account already connected to another PID.');
-                }
-            }
-            const conCountry = (userConnection.connectionData.country || userConnection.connectionData.countryCode)
-            const connectionUserPattern = `PNO${conCountry}-${connectionUserId}`;
-            if (connectionUserPattern !== idPattern) {
-                throw new Error('User account already connected to another PID.');
-            }
-        }
-    };
-
-    const handleTopicVoteHard = async function (vote, req, res) {
-        try {
-            const voteId = vote.id;
-            let userId = req.user ? req.user.userId : null;
-
-            //idCard
-            const certificate = req.body.certificate;
-            //mID
-            const pid = req.body.pid;
-            const phoneNumber = req.body.phoneNumber;
-            //smart-ID
-            const countryCode = req.body.countryCode;
-            let personalInfo;
-            let signingMethod;
-
-            if (!certificate && !(pid && (phoneNumber || countryCode))) {
-                return res.badRequest('Vote with hard authentication requires users certificate when signing with ID card OR phoneNumber+pid when signing with mID', 9);
-            }
-            let certificateInfo;
-            let smartIdcertificate;
-            let mobileIdCertificate;
-            let signingTime = new Date();
-            let certFormat = 'base64';
-            if (pid && countryCode) {
-                signingMethod = Vote.SIGNING_METHODS.smartId;
-                smartIdcertificate = await smartId.getUserCertificate(pid, countryCode);
-                certificateInfo = {
-                    certificate: smartIdcertificate,
-                    format: 'pem'
-                };
-            } else if (certificate) {
-                signingMethod = Vote.SIGNING_METHODS.idCard;
-                await mobileId.validateCert(certificate, 'hex');
-                certificateInfo = {
-                    certificate: certificate,
-                    format: 'der'
-                }
-                certFormat = 'hex';
-            } else {
-                signingMethod = Vote.SIGNING_METHODS.mid;
-                mobileIdCertificate = await mobileId.getUserCertificate(pid, phoneNumber);
-                if (mobileIdCertificate.data && mobileIdCertificate.data.result === 'NOT_FOUND') {
-                    return res.notFound();
-                }
-                certificateInfo = {
-                    certificate: mobileIdCertificate,
-                    format: 'pem'
-                };
-            }
-            if (signingMethod === Vote.SIGNING_METHODS.smartId) {
-                personalInfo = await smartId.getCertUserData(certificateInfo.certificate);
-                if (personalInfo.pid.indexOf(pid) - 1) {
-                    personalInfo.pid = pid;
-                }
-            } else {
-                personalInfo = await mobileId.getCertUserData(certificateInfo.certificate, certFormat);
-                if (signingMethod === Vote.SIGNING_METHODS.mid) {
-                    personalInfo.phoneNumber = phoneNumber;
-                }
-            }
-            let signInitResponse, token, sessionDataEncrypted;
-            await db.transaction(async function (t) { // One big transaction, we don't want created User data to lay around in DB if the process failed.
-                // Authenticated User
-                if (userId) {
-                    await _checkAuthenticatedUser(userId, personalInfo, t);
-                } else { // Un-authenticated User, find or create one.
-                    const user = (await authUser.getUserByPersonalId(personalInfo, UserConnection.CONNECTION_IDS.esteid, req, t))[0];
-                    userId = user.id;
-                }
-
-                switch (signingMethod) {
-                    case Vote.SIGNING_METHODS.idCard:
-                        signInitResponse = await cosSignature.signInitIdCard(voteId, userId, vote.VoteOptions, signingTime, certificate, t);
-                        break;
-                    case Vote.SIGNING_METHODS.smartId:
-                        signInitResponse = await cosSignature.signInitSmartId(voteId, userId, vote.VoteOptions, signingTime, personalInfo.pid, countryCode, smartIdcertificate, t);
-                        break;
-                    case Vote.SIGNING_METHODS.mid:
-                        signInitResponse = await cosSignature.signInitMobile(voteId, userId, vote.VoteOptions, signingTime, personalInfo.pid, personalInfo.phoneNumber, mobileIdCertificate, t);
-                        break;
-                    default:
-                        throw new Error('Invalid signing method ' + signingMethod);
-                }
-                // Check that the personal ID is not related to another User account. We don't want Users signing Votes from different accounts.
-                t.afterCommit(() => {
-
-                    let sessionData = {
-                        voteOptions: vote.VoteOptions,
-                        signingTime: signingTime,
-                        signingMethod,
-                        userId: userId, // Required for un-authenticated signing.
-                        voteId: voteId // saves one run of "handleTopicVotePreconditions" in the /sign
-                    }
-
-                    if (signInitResponse.sessionId) {
-                        sessionData.sessionId = signInitResponse.sessionId;
-                        sessionData.hash = signInitResponse.hash;
-                        sessionData.sessionHash = signInitResponse.sessionHash;
-                        sessionData.personalInfo = signInitResponse.personalInfo;
-                        sessionData.signatureId = signInitResponse.signatureId;
-                    } else {
-                        switch (signInitResponse.statusCode) {
-                            case 0:
-                                // Common to MID and ID-card signing
-                                sessionData.personalInfo = personalInfo;
-                                sessionData.hash = signInitResponse.hash;
-                                sessionData.signableHash = signInitResponse.signableHash;
-                                sessionData.signatureId = signInitResponse.signatureId;
-                                break;
-                            case 101:
-                                return res.badRequest('Invalid input parameters.', 20);
-                            case 301:
-                                return res.badRequest('User is not a Mobile-ID client. Please double check phone number and/or id code.', 21);
-                            case 302:
-                                return res.badRequest('User certificates are revoked or suspended.', 22);
-                            case 303:
-                                return res.badRequest('User certificate is not activated.', 23);
-                            case 304:
-                                return res.badRequest('User certificate is suspended.', 24);
-                            case 305:
-                                return res.badRequest('User certificate is expired.', 25);
-                            default:
-                                logger.error('Unhandled DDS status code', signInitResponse.statusCode);
-                                return res.internalServerError();
-                        }
-                    }
-
-                    // Send JWT with state and expect it back in /sign /status - https://trello.com/c/ZDN2WomW/287-bug-id-card-signing-does-not-work-for-some-users
-                    // Wrapping sessionDataEncrypted in object, otherwise jwt.sign "expiresIn" will not work - https://github.com/auth0/node-jsonwebtoken/issues/166
-                    sessionDataEncrypted = { sessionDataEncrypted: cryptoLib.encrypt(config.session.secret, sessionData) };
-                    token = jwt.sign(sessionDataEncrypted, config.session.privateKey, {
-                        expiresIn: '5m',
-                        algorithm: config.session.algorithm
-                    });
-
-                    if (signingMethod === Vote.SIGNING_METHODS.idCard) {
-                        return res.ok({
-                            signedInfoDigest: signInitResponse.signableHash,
-                            signedInfoHashType: cryptoLib.getHashType(signInitResponse.signableHash),
-                            token: token
-                        }, 1);
-                    } else {
-                        return res.ok({
-                            challengeID: signInitResponse.challengeID,
-                            token: token
-                        }, 1);
-                    }
-                });
-            });
-        } catch (error) {
-            switch (error.message) {
-                case 'Personal ID already connected to another user account.':
-                    return res.badRequest(error.message, 30)
-                case 'User account already connected to another PID.':
-                    return res.badRequest(error.message, 31);
-                case 'Invalid signature':
-                    return res.badRequest(error.message, 32);
-                case 'Invalid certificate issuer':
-                    return res.badRequest(error.message, 33);
-                case 'Certificate not active':
-                    return res.badRequest(error.message, 34);
-                case 'phoneNumber must contain of + and numbers(8-30)':
-                    return res.badRequest(error.message, 21);
-                case 'nationalIdentityNumber must contain of 11 digits':
-                    return res.badRequest(error.message, 22);
-                case 'Bad Request':
-                    return res.badRequest();
-                case 'Not Found':
-                    return res.notFound();
-                default:
-                    logger.error(error)
-                    return res.badRequest(error.message);
-            }
-        }
-    };
-
-    /**
-     * Vote
-     *
-     * IF Vote authType===hard then starts Vote signing process. Vote won't be counted before signing is finalized by calling POST /api/users/:userId/topics/:topicId/votes/:voteId/sign or Mobiil-ID signing is completed (GET /api/users/:userId/topics/:topicId/votes/:voteId/status)
-     *
-     * TODO: Should simplify all of this routes code. It's a mess cause I decided to keep one endpoint for all of the voting. Maybe it's a better idea to move authType===hard to separate endpont
-     * TODO: create an alias /api/topics/:topicId/votes/:voteId for un-authenticated signing? I's weird to call /users/self when user has not logged in...
-     */
-    app.post('/api/users/:userId/topics/:topicId/votes/:voteId', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.read, true, [Topic.STATUSES.voting]), async function (req, res, next) {
-        try {
-            const vote = await handleTopicVotePreconditions(req, res);
-            if (vote.authType === Vote.AUTH_TYPES.soft) {
-                return handleTopicVoteSoft(vote, req, res, next);
-            }
-            await handleTopicVoteHard(vote, req, res);
-
-        } catch (err) {
-            return next(err);
-        }
-    });
-
-    const handleHardVotingFinalization = async (req, userId, topicId, voteId, idSignFlowData, context, transaction) => {
-        // Store vote options
-        const voteOptions = idSignFlowData.voteOptions;
-        const optionGroupId = Math.random().toString(36).substring(2, 10);
-
-        let connectionUserId = idSignFlowData.personalInfo.pid;
-        if (connectionUserId.indexOf('PNO') === -1) {
-            const country = (idSignFlowData.personalInfo.country || idSignFlowData.personalInfo.countryCode);
-            connectionUserId = `PNO${country}-${connectionUserId}`;
-        }
-
-        const userHash = createDataHash(voteId + connectionUserId);
-
-        voteOptions.forEach((o) => {
-            o.voteId = voteId;
-            o.userId = userId;
-            o.optionGroupId = optionGroupId;
-            o.optionId = o.optionId || o.id;
-            o.userHash = userHash;
-        });
-
-        // Authenticated User signing, check the user connection
-        if (req.user) {
-            await _checkAuthenticatedUser(userId, idSignFlowData.personalInfo, transaction);
-        }
-
-        await handleVoteLists(req, userId, topicId, voteId, voteOptions, context, transaction);
-
-        await UserConnection.upsert(
-            {
-                userId: userId,
-                connectionId: UserConnection.CONNECTION_IDS.esteid,
-                connectionUserId,
-                connectionData: idSignFlowData.personalInfo
-            },
-            {
-                transaction: transaction
-            }
-        );
-    };
-
-    const handleTopicVoteSign = async function (req, res, next) {
-        const topicId = req.params.topicId;
-        const voteId = req.params.voteId;
-
-        const token = req.body.token;
-        const signatureValue = req.body.signatureValue;
-
-        if (!token) {
-            logger.warn('Missing requried parameter "token"', req.ip, req.path, req.headers);
-
-            return res.badRequest('Missing required parameter "token"');
-        }
-
-        if (!signatureValue) {
-            return res.badRequest('Missing signature', 1);
-        }
-
-        let tokenData;
-        let idSignFlowData;
-
-        try {
-            tokenData = jwt.verify(token, config.session.publicKey, { algorithms: [config.session.algorithm] });
-            idSignFlowData = cryptoLib.decrypt(config.session.secret, tokenData.sessionDataEncrypted);
-        } catch (err) {
-            if (err.name === 'TokenExpiredError') {
-                logger.info('loginCheck - JWT token has expired', req.method, req.path, err);
-
-                return res.unauthorised('JWT token has expired');
-            } else {
-                logger.warn('loginCheck - JWT error', req.method, req.path, req.headers, err);
-
-                return res.unauthorised('Invalid JWT token');
-            }
-        }
-
-        const userId = req.user ? req.user.userId : idSignFlowData.userId; // Auth has User in session, but un-authenticated in idSignFlowData
-
-        // POST /votes/:voteId checks that Vote belongs to Topic using "handleTopicVotePreconditions". It sets it in the sign flow data so we would not have to call "handleTopicVotePreconditions" again.
-        if (voteId !== idSignFlowData.voteId) {
-            logger.warn('Invalid token provider for vote.', voteId, idSignFlowData.voteId);
-
-            return res.badRequest('Invalid token for the vote');
-        }
-
-        try {
-            await db.transaction(async function (t) {
-                await handleHardVotingFinalization(req, userId, topicId, voteId, idSignFlowData, req.method + ' ' + req.path, t);
-                const voteOptions = idSignFlowData.voteOptions;
-                const optionIds = voteOptions.map(function (elem) {
-                    return elem.optionId
-                });
-
-                const voteOptionsResult = await VoteOption.findAll({
-                    where: {
-                        id: optionIds,
-                        voteId: voteId
-                    }
-                });
-                const signedDocument = await cosSignature.signUserBdoc(
-                    idSignFlowData.voteId,
-                    idSignFlowData.userId,
-                    voteOptionsResult,
-                    idSignFlowData.signableHash,
-                    idSignFlowData.signatureId,
-                    Buffer.from(signatureValue, 'hex').toString('base64'),
-                    idSignFlowData.hash
-                );
-
-                let connectionUserId = idSignFlowData.personalInfo.pid;
-
-                if (connectionUserId.indexOf('PNO') === -1) {
-                    const country = (idSignFlowData.personalInfo.country || idSignFlowData.personalInfo.countryCode);
-                    connectionUserId = `PNO${country}-${connectionUserId}`;
-                }
-
-                await VoteUserContainer.destroy({
-                    where: {
-                        voteId,
-                        PID: connectionUserId
-                    },
-                    force: true,
-                    transaction: t
-                });
-
-                await addUserAsMember(idSignFlowData.userId, topicId, t);
-
-                await VoteUserContainer.upsert(
-                    {
-                        userId: userId,
-                        voteId: voteId,
-                        container: signedDocument.signedDocData,
-                        PID: connectionUserId
-                    },
-                    {
-                        transaction: t
-                    }
-                );
-
-                t.afterCommit(() => {
-                    return res.ok({
-                        bdocUri: getBdocURL({
-                            userId: userId,
-                            topicId: topicId,
-                            voteId: voteId,
-                            type: 'user'
-                        })
-                    });
-                });
-            });
-        } catch (e) {
-            switch (e.message) {
-                case 'Personal ID already connected to another user account.':
-                    return res.badRequest(e.message, 30)
-                case 'User account already connected to another PID.':
-                    return res.badRequest(e.message, 31);
-            }
-            return next(e);
-        }
-    };
-
-    /**
-     * Sign a Vote
-     *
-     * Complete the ID-card signing flow started by calling POST /api/users/:userId/topics/:topicId/votes/:voteId
-     */
-    app.post('/api/users/:userId/topics/:topicId/votes/:voteId/sign', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.read, true, [Topic.STATUSES.voting]), handleTopicVoteSign);
-
-
-    const handleTopicVoteStatus = async function (req, res, next) {
-        const topicId = req.params.topicId;
-        const voteId = req.params.voteId;
-
-        const token = req.query.token;
-        const timeoutMs = req.query.timeoutMs || 5000;
-
-        if (!token) {
-            logger.warn('Missing requried parameter "token"', req.ip, req.path, req.headers);
-
-            return res.badRequest('Missing required parameter "token"');
-        }
-
-        let tokenData;
-        let idSignFlowData;
-        try {
-            tokenData = jwt.verify(token, config.session.publicKey, { algorithms: [config.session.algorithm] });
-            idSignFlowData = cryptoLib.decrypt(config.session.secret, tokenData.sessionDataEncrypted);
-        } catch (err) {
-            if (err.name === 'TokenExpiredError') {
-                logger.info('loginCheck - JWT token has expired', req.method, req.path, err);
-
-                return res.unauthorised('JWT token has expired');
-            } else {
-                logger.warn('loginCheck - JWT error', req.method, req.path, req.headers, err);
-
-                return res.unauthorised('Invalid JWT token');
-            }
-        }
-
-        const userId = req.user ? req.user.userId : idSignFlowData.userId;
-        try {
-            const getStatus = async () => {
-                let signedDocInfo;
-                try {
-                    if (idSignFlowData.signingMethod === Vote.SIGNING_METHODS.smartId) {
-                        signedDocInfo = await cosSignature.getSmartIdSignedDoc(idSignFlowData.sessionId, idSignFlowData.sessionHash, idSignFlowData.signatureId, idSignFlowData.voteId, idSignFlowData.userId, idSignFlowData.voteOptions, idSignFlowData.hash, timeoutMs);
-                    } else {
-                        signedDocInfo = await cosSignature.getMobileIdSignedDoc(idSignFlowData.sessionId, idSignFlowData.sessionHash, idSignFlowData.signatureId, idSignFlowData.voteId, idSignFlowData.userId, idSignFlowData.voteOptions, idSignFlowData.hash, timeoutMs);
-                    }
-
-                    return signedDocInfo;
-                } catch (err) {
-                    let statusCode;
-                    if (err.result && err.result.endResult) {
-                        statusCode = err.result.endResult;
-                    } else if (err.result && !err.result.endResult) {
-                        statusCode = err.result;
-                    } else {
-                        statusCode = err.state;
-                    }
-                    if (statusCode === 'RUNNING') {
-                        return getStatus();
-                    }
-
-                    throw err;
-                }
-            }
-
-            const signedDocInfo = await getStatus();
-
-            await db.transaction(async function (t) {
-                await handleHardVotingFinalization(req, userId, topicId, voteId, idSignFlowData, req.method + ' ' + req.path, t);
-                let connectionUserId = idSignFlowData.personalInfo.pid;
-
-                if (connectionUserId.indexOf('PNO') === -1) {
-                    const country = (idSignFlowData.personalInfo.country || idSignFlowData.personalInfo.countryCode);
-                    connectionUserId = `PNO${country}-${connectionUserId}`;
-                }
-
-                await VoteContainerFile.destroy({
-                    where: {
-                        voteId: voteId,
-                        hash: idSignFlowData.hash
-                    },
-                    force: true,
-                    transaction: t
-                });
-
-                await VoteUserContainer.destroy({
-                    where: {
-                        voteId,
-                        PID: connectionUserId
-                    },
-                    force: true,
-                    transaction: t
-                });
-
-                await VoteUserContainer.upsert(
-                    {
-                        userId: userId,
-                        voteId: voteId,
-                        container: signedDocInfo.signedDocData,
-                        PID: connectionUserId
-                    },
-                    {
-                        transaction: t,
-                        logging: false
-                    }
-                );
-
-                if (!req.user) {
-                    // When starting signing with Mobile-ID we have no full name, thus we need to fetch and update
-                    await User
-                        .update(
-                            {
-                                name: db.fn('initcap', idSignFlowData.personalInfo.firstName + ' ' + idSignFlowData.personalInfo.lastName)
-                            },
-                            {
-                                where: {
-                                    id: userId,
-                                    name: null
-                                },
-                                limit: 1, // SAFETY
-                                transaction: t
-                            }
-                        );
-                }
-                t.afterCommit(async () => {
-                    const isClosed = await _handleVoteAutoCloseConditions(voteId, topicId, userId);
-                    const resBody = {
-                        bdocUri: getBdocURL({
-                            userId: userId,
-                            topicId: topicId,
-                            voteId: voteId,
-                            type: 'user'
-                        })
-                    };
-                    if (isClosed) {
-                        return res.reload('Signing has been completed and vote is now closed', 2, resBody);
-                    }
-
-                    return res.ok('Signing has been completed', 2, resBody);
-                });
-            });
-        } catch (err) {
-            let statusCode;
-            if (err.result && err.result.endResult) {
-                statusCode = err.result.endResult;
-            } else if (err.result && !err.result.endResult) {
-                statusCode = err.result;
-            } else {
-                statusCode = err.state;
-            }
-            switch (err.message) {
-                case 'Personal ID already connected to another user account.':
-                    return res.badRequest(err.message, 30);
-                case 'User account already connected to another PID.':
-                    return res.badRequest(err.message, 31);
-            }
-            switch (statusCode) {
-                case 'RUNNING':
-                    return res.ok('Signing in progress', 1);
-                case 'USER_CANCELLED':
-                    return res.badRequest('User has cancelled the signing process', 10);
-                case 'USER_REFUSED':
-                    return res.badRequest('User has cancelled the signing process', 10);
-                case 'SIGNATURE_HASH_MISMATCH':
-                    return res.badRequest('Signature is not valid', 12);
-                case 'NOT_MID_CLIENT':
-                    return res.badRequest('Mobile-ID functionality of the phone is not yet ready', 13);
-                case 'PHONE_ABSENT':
-                    return res.badRequest('Delivery of the message was not successful, mobile phone is probably switched off or out of coverage;', 14);
-                case 'DELIVERY_ERROR':
-                    return res.badRequest('Other error when sending message (phone is incapable of receiving the message, error in messaging server etc.)', 15);
-                case 'SIM_ERROR':
-                    return res.badRequest('SIM application error.', 16);
-                case 'TIMEOUT':
-                    logger.error('There was a timeout, i.e. end user did not confirm or refuse the operation within maximum time frame allowed (can change, around two minutes).', statusCode);
-                    return res.badRequest('There was a timeout, i.e. end user did not confirm or refuse the operation within maximum time frame allowed (can change, around two minutes).', 10);
-                default:
-                    logger.error('Unknown status code when trying to sign with mobile', statusCode, err);
-                    return next(err);
-            }
-        }
-    };
-
-    /**
-     * Get Vote signing status
-     *
-     * Initially designed only for Mobile-ID signing. The signing is to be started by calling POST /api/users/:userId/topics/:topicId/votes/:voteId.
-     */
-    app.get('/api/users/:userId/topics/:topicId/votes/:voteId/status', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.read, true, [Topic.STATUSES.voting]), handleTopicVoteStatus);
-
-
-    /**
-     * Vote (Un-authenticated)
-     *
-     * Un-authenticated, which means only authType===hard is supported.
-     * Vote authType===hard then starts Vote signing process. Vote won't be counted before signing is finalized by calling POST /api/topics/:topicId/votes/:voteId/sign or Mobiil-ID signing is completed (GET /api/topics/:topicId/votes/:voteId/status)
-     */
-    app.post('/api/topics/:topicId/votes/:voteId', async function (req, res, next) {
-        try {
-            const vote = await handleTopicVotePreconditions(req, res);
-            // Deny calling for non-public Topics
-            if (vote.Topics[0].visibility !== Topic.VISIBILITY.public) {
-                return res.unauthorised();
-            }
-
-            if (vote.authType === Vote.AUTH_TYPES.soft) {
-                logger.warn('Un-authenticated Voting is not supported for Votes with authType === soft.');
-
-                return res.badRequest('Un-authenticated Voting is not supported for Votes with authType === soft.');
-            } else {
-                await handleTopicVoteHard(vote, req, res);
-            }
-        } catch (e) {
-            next(e);
-        }
-    });
-
-
-    /**
-     * Sign a Vote (Un-authenticated).
-     *
-     * Complete the ID-card signing flow started by calling POST /api/topics/:topicId/votes/:voteId
-     *
-     * NOTE: NO authorization checks as there are checks on the init (POST /api/topics/:topicId/votes/:voteId) and you cannot have required data for this endpoint without calling the init.
-     */
-    app.post('/api/topics/:topicId/votes/:voteId/sign', handleTopicVoteSign);
-
-
-    /**
-     * Get Vote signing status (Un-authenticated)
-     *
-     * Initially designed only for Mobile-ID signing. The signing is to be started by calling POST /api/topics/:topicId/votes/:voteId.
-     *
-     * NOTE: NO authorization checks as there are checks on the init (POST /api/topics/:topicId/votes/:voteId) and you cannot have required data for this endpoint without calling the init.
-     */
-    app.get('/api/topics/:topicId/votes/:voteId/status', handleTopicVoteStatus);
-
-
-    /**
-     * Download Users vote BDOC container
-     *
-     * TODO: Deprecate /api/users/:userId/topics/:topicId/votes/:voteId/downloads/bdocs/user
-     */
-    app.get(['/api/users/:userId/topics/:topicId/votes/:voteId/downloads/bdocs/user', '/api/topics/:topicId/votes/:voteId/downloads/bdocs/user'], authTokenRestrictedUse, async function (req, res, next) {
-        const voteId = req.params.voteId;
-        const downloadTokenData = req.locals.tokenDecoded;
-        const userId = downloadTokenData.userId;
-
-        //TODO: Make use of streaming once Sequelize supports it - https://github.com/sequelize/sequelize/issues/2454
-        try {
-            const voteUserContainer = await VoteUserContainer
-                .findOne({
-                    where: {
-                        userId: userId,
-                        voteId: voteId
-                    }
-                });
-
-            if (!voteUserContainer) {
-                return res.notFound();
-            }
-
-            const container = voteUserContainer.container;
-
-            res.set('Content-disposition', 'attachment; filename=vote.bdoc');
-            res.set('Content-type', 'application/vnd.etsi.asic-e+zip');
-
-            return res.send(container);
-
-        } catch (err) {
-            return next(err);
-        }
-    });
-
-    const topicDownloadBdocFinal = async function (req, res, next) {
-        const topicId = req.params.topicId;
-        const voteId = req.params.voteId;
-        const include = req.query.include;
-        let finalDocStream;
-        try {
-            const topic = await Topic
-                .findOne({
-                    where: {
-                        id: topicId
-                    },
-                    include: [
-                        {
-                            model: Vote,
-                            where: {
-                                id: voteId,
-                                authType: Vote.AUTH_TYPES.hard
-                            }
-                        }
-                    ]
-                });
-            const vote = topic.Votes[0];
-
-            // TODO: Once we implement the the "endDate>now -> followUp" we can remove Topic.STATUSES.voting check
-            if ((vote.endsAt && vote.endsAt.getTime() > new Date().getTime() && topic.status === Topic.STATUSES.voting) || topic.status === Topic.STATUSES.voting) {
-                return res.badRequest('The Vote has not ended.');
-            }
-
-            let userId = '';
-            if (req.user) {
-                userId = req.user.userId
-            }
-
-            await cosActivities
-                .downloadFinalContainerActivity({
-                    voteId,
-                    topicId
-                }, {
-                    type: 'User',
-                    id: userId,
-                    ip: req.ip
-                },
-                    req.method + ' ' + req.path
-                );
-
-            if (req.query.accept === 'application/x-7z-compressed') {
-                res.set('Content-disposition', 'attachment; filename=final.7z');
-                res.set('Content-type', 'application/x-7z-compressed');
-                finalDocStream = await cosSignature.getFinalBdoc(topicId, voteId, include, true);
-            } else {
-                res.set('Content-disposition', 'attachment; filename=final.bdoc');
-                res.set('Content-type', 'application/vnd.etsi.asic-e+zip');
-                finalDocStream = await cosSignature.getFinalBdoc(topicId, voteId, include);
-            }
-
-            return finalDocStream.pipe(res);
-        } catch (e) {
-            return next(e);
-        }
-    };
-
-    /**
-     * Download final vote Zip container
-     */
-
-    const topicDownloadZipFinal = async function (req, res, next) {
-        const topicId = req.params.topicId;
-        const voteId = req.params.voteId;
-        try {
-            const topic = await Topic.findOne({
-                where: {
-                    id: topicId
-                },
-                include: [
-                    {
-                        model: Vote,
-                        where: {
-                            id: voteId,
-                            authType: Vote.AUTH_TYPES.soft
-                        }
-                    }
-                ]
-            });
-
-            const vote = topic.Votes[0];
-
-            // TODO: Once we implement the the "endDate>now -> followUp" we can remove Topic.STATUSES.voting check
-            if ((vote.endsAt && vote.endsAt.getTime() > new Date().getTime() && topic.status === Topic.STATUSES.voting) || topic.status === Topic.STATUSES.voting) {
-                return res.badRequest('The Vote has not ended.');
-            }
-
-            res.set('Content-disposition', 'attachment; filename=final.zip');
-            res.set('Content-type', 'application/zip');
-
-            const finalDocStream = await cosSignature.getFinalZip(topicId, voteId, true);
-
-            return finalDocStream.pipe(res);
-        } catch (err) {
-            return next(err);
-        }
-    };
-
-    /**
-     * Download final vote BDOC container
-     *
-     * TODO: Get rid of this endpoint usage in favor of the one below
-     *
-     * @deprecated Use GET /api/topics/:topicId/votes/:voteId/downloads/bdocs/final instead
-     */
-    app.get('/api/users/:userId/topics/:topicId/votes/:voteId/downloads/bdocs/final', authTokenRestrictedUse, topicDownloadBdocFinal);
-    app.get('/api/users/:userId/topics/:topicId/votes/:voteId/downloads/zip/final', authTokenRestrictedUse, topicDownloadZipFinal);
-
-
-    /**
-     * Download final vote BDOC container
-     */
-    app.get('/api/topics/:topicId/votes/:voteId/downloads/bdocs/final', authTokenRestrictedUse, topicDownloadBdocFinal);
-    app.get('/api/topics/:topicId/votes/:voteId/downloads/zip/final', authTokenRestrictedUse, topicDownloadZipFinal);
-
-
-    /**
-     * Delegate a Vote
-     */
-    app.post('/api/users/:userId/topics/:topicId/votes/:voteId/delegations', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.read, null, [Topic.STATUSES.voting]), async function (req, res, next) {
-        const topicId = req.params.topicId;
-        const voteId = req.params.voteId;
-
-        const toUserId = req.body.userId;
-
-        if (req.user.userId === toUserId) {
-            return res.badRequest('Cannot delegate to self.', 1);
-        }
-
-        const hasAccess = await _hasPermission(topicId, toUserId, TopicMemberUser.LEVELS.read, false, null, null, req.user.partnerId);
-
-        if (!hasAccess) {
-            return res.badRequest('Cannot delegate Vote to User who does not have access to this Topic.', 2);
-        }
-
-        const vote = await Vote.findOne({
-            where: {
-                id: voteId
-            },
-            include: [
-                {
-                    model: Topic,
-                    where: { id: topicId }
-                }
-            ]
-        });
-        if (!vote) {
-            return res.notFound();
-        }
-        if (!vote.delegationIsAllowed) {
-            return res.badRequest();
-        }
-        if (vote.endsAt && new Date() > vote.endsAt) {
-            return res.badRequest('The Vote has ended.');
-        }
-
-        try {
-            await db.transaction(async function (t) {
-                try {
-                    let result = await db.query(`
-                        WITH
-                            RECURSIVE delegation_chains("voteId", "toUserId", "byUserId", depth) AS (
-                                SELECT
-                                    "voteId",
-                                    "toUserId",
-                                    "byUserId",
-                                    1
-                                FROM "VoteDelegations" vd
-                                WHERE vd."voteId" = :voteId
-                                    AND vd."byUserId" = :toUserId
-                                    AND vd."deletedAt" IS NULL
-                                UNION ALL
-                                SELECT
-                                    vd."voteId",
-                                    vd."toUserId",
-                                    dc."byUserId",
-                                    dc.depth + 1
-                                FROM delegation_chains dc, "VoteDelegations" vd
-                                WHERE vd."voteId" = dc."voteId"
-                                    AND vd."byUserId" = dc."toUserId"
-                                    AND vd."deletedAt" IS NULL
-                            ),
-                            cyclicDelegation AS (
-                                SELECT
-                                    0
-                                FROM delegation_chains
-                                WHERE "byUserId" = :toUserId
-                                    AND "toUserId" = :byUserId
-                                LIMIT 1
-                            ),
-                            upsert AS (
-                                UPDATE "VoteDelegations"
-                                SET "toUserId" = :toUserId,
-                                    "updatedAt" = CURRENT_TIMESTAMP
-                                WHERE "voteId" = :voteId
-                                AND "byUserId" = :byUserId
-                                AND 1 = 1 / COALESCE((SELECT * FROM cyclicDelegation), 1)
-                                AND "deletedAt" IS NULL
-                                RETURNING *
-                            )
-                        INSERT INTO "VoteDelegations" ("voteId", "toUserId", "byUserId", "createdAt", "updatedAt")
-                            SELECT :voteId, :toUserId, :byUserId, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
-                            WHERE NOT EXISTS (SELECT * FROM upsert)
-                                AND 1 = 1 / COALESCE((SELECT * FROM cyclicDelegation), 1)
-                        RETURNING *
-                        ;`,
-                        {
-                            replacements: {
-                                voteId: voteId,
-                                toUserId: toUserId,
-                                byUserId: req.user.userId
-                            },
-                            raw: true,
-                            transaction: t
-                        }
-                    );
-                    const delegation = VoteDelegation.build(result[0][0]);
-                    await cosActivities
-                        .createActivity(
-                            delegation,
-                            vote,
-                            {
-                                type: 'User',
-                                id: req.user.userId,
-                                ip: req.ip
-                            },
-                            req.method + ' ' + req.path,
-                            t
-                        );
-
-                    t.afterCommit(() => {
-                        return res.ok();
-                    });
-                } catch (err) {
-                    // HACK: Forcing division by zero when cyclic delegation is detected. Cannot use result check as both update and cyclic return [].
-                    if (err.parent.code === '22012') {
-                        // Cyclic delegation detected.
-                        return res.badRequest('Sorry, you cannot delegate your vote to this person.');
-                    }
-
-                    // Don't hide other errors
-                    throw err
-                }
-            });
-        } catch (err) {
-            return next(err);
-        }
-    });
-
-
-    /**
-     * Delete Vote delegation
-     */
-    app.delete('/api/users/:userId/topics/:topicId/votes/:voteId/delegations', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.read, null, [Topic.STATUSES.voting]), async function (req, res, next) {
-        try {
-            const topicId = req.params.topicId;
-            const voteId = req.params.voteId;
-            const userId = req.user.userId;
-
-            const vote = await Vote
-                .findOne({
-                    where: { id: voteId },
-                    include: [
-                        {
-                            model: Topic,
-                            where: { id: topicId }
-                        }
-                    ]
-                });
-
-            if (!vote) {
-                return res.notFound('Vote was not found for given topic', 1);
-            }
-
-            if (vote.endsAt && new Date() > vote.endsAt) {
-                return res.badRequest('The Vote has ended.', 1);
-            }
-
-            const voteDelegation = await VoteDelegation
-                .findOne({
-                    where: {
-                        voteId: voteId,
-                        byUserId: userId
-                    }
-                });
-
-            if (!voteDelegation) {
-                return res.notFound('Delegation was not found', 2);
-            }
-
-            await db
-                .transaction(async function (t) {
-                    await cosActivities
-                        .deleteActivity(
-                            voteDelegation,
-                            vote,
-                            {
-                                type: 'User',
-                                id: req.user.userId,
-                                ip: req.ip
-                            },
-                            req.method + ' ' + req.path,
-                            t
-                        );
-
-                    await voteDelegation
-                        .destroy({
-                            force: true,
-                            transaction: t
-                        });
-
-                    t.afterCommit(() => {
-                        return res.ok();
-                    });
-                });
-        } catch (err) {
-            return next(err);
-        }
-    });
+    app.get('/api/topics/:topicId/mentions', topicService.hasVisibility(Topic.VISIBILITY.public), topicMentionsList);
 
     const topicEventsCreate = async function (req, res, next) {
         const topicId = req.params.topicId;
@@ -7455,12 +4931,12 @@ module.exports = function (app) {
     };
 
     /** Create an Event **/
-    app.post('/api/users/:userId/topics/:topicId/events', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.admin, null, [Topic.STATUSES.followUp]), topicEventsCreate);
+    app.post('/api/users/:userId/topics/:topicId/events', loginCheck(['partner']), topicService.hasPermission(TopicMemberUser.LEVELS.admin, null, [Topic.STATUSES.followUp]), topicEventsCreate);
 
 
     /** Update an Event*/
 
-    app.put('/api/users/:userId/topics/:topicId/events/:eventId', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.admin, null, [Topic.STATUSES.followUp]), async (req, res, next) => {
+    app.put('/api/users/:userId/topics/:topicId/events/:eventId', loginCheck(['partner']), topicService.hasPermission(TopicMemberUser.LEVELS.admin, null, [Topic.STATUSES.followUp]), async (req, res, next) => {
         const topicId = req.params.topicId;
         const eventId = req.params.eventId;
         try {
@@ -7535,19 +5011,19 @@ module.exports = function (app) {
 
 
     /** List Events **/
-    app.get('/api/users/:userId/topics/:topicId/events', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.read, true, [Topic.STATUSES.followUp, Topic.STATUSES.closed]), topicEventsList);
+    app.get('/api/users/:userId/topics/:topicId/events', loginCheck(['partner']), topicService.hasPermission(TopicMemberUser.LEVELS.read, true, [Topic.STATUSES.followUp, Topic.STATUSES.closed]), topicEventsList);
 
 
     /**
      * Read (List) public Topic Events
      */
-    app.get('/api/topics/:topicId/events', hasVisibility(Topic.VISIBILITY.public), topicEventsList);
+    app.get('/api/topics/:topicId/events', topicService.hasVisibility(Topic.VISIBILITY.public), topicEventsList);
 
 
     /**
      * Delete event
      */
-    app.delete('/api/users/:userId/topics/:topicId/events/:eventId', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.admin, null, [Topic.STATUSES.followUp]), async function (req, res, next) {
+    app.delete('/api/users/:userId/topics/:topicId/events/:eventId', loginCheck(['partner']), topicService.hasPermission(TopicMemberUser.LEVELS.admin, null, [Topic.STATUSES.followUp]), async function (req, res, next) {
         const topicId = req.params.topicId;
         const eventId = req.params.eventId;
         try {
@@ -7791,7 +5267,7 @@ module.exports = function (app) {
                         }
                     });
 
-                    await addUserAsMember(userId, topicId, t);
+                    await topicService.addUserAsMember(userId, topicId, t);
 
                     const userSettingsPromise = UserNotificationSettings.findOne({
                         where: {
@@ -7873,14 +5349,4 @@ module.exports = function (app) {
             return next(err);
         }
     }));
-
-    return {
-        _hasPermission: _hasPermission,
-        hasPermission: hasPermission,
-        getVoteResults: getVoteResults,
-        getAllVotesResults: getAllVotesResults,
-        isModerator: isModerator,
-        hasVisibility: hasVisibility,
-        addUserAsMember: addUserAsMember
-    };
 };

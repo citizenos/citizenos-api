@@ -9,7 +9,7 @@ module.exports = function (app) {
     const models = app.get('models');
     const db = models.sequelize;
     const { injectReplacements } = require('sequelize/lib/utils/sql');
-    //const _ = app.get('lodash');
+    const cryptoLib = app.get('cryptoLib');
     const emailLib = app.get('email');
     const cosActivities = app.get('cosActivities');
 
@@ -36,7 +36,7 @@ module.exports = function (app) {
     const DiscussionComment = models.DiscussionComment;
     const Discussion = models.Discussion;
 
-    const topicLib = require('./topic')(app);
+    const topicService = require('../../services/topic')(app);
 
     const isCommentCreator = function () {
         return async function (req, res, next) {
@@ -66,7 +66,7 @@ module.exports = function (app) {
     /**
      * Create a Discussion
      */
-    app.post('/api/users/:userId/topics/:topicId/discussions', loginCheck(['partner']), topicLib.hasPermission(TopicMemberUser.LEVELS.admin, null, [Topic.STATUSES.draft, Topic.STATUSES.ideation, Topic.STATUSES.inProgress]), async (req, res, next) => {
+    app.post('/api/users/:userId/topics/:topicId/discussions', loginCheck(['partner']), topicService.hasPermission(TopicMemberUser.LEVELS.admin, null, [Topic.STATUSES.draft, Topic.STATUSES.ideation, Topic.STATUSES.inProgress]), async (req, res, next) => {
         const question = req.body.question;
         const deadline = req.body.deadline;
         const topicId = req.params.topicId;
@@ -240,7 +240,7 @@ module.exports = function (app) {
         }
     };
 
-    app.get('/api/users/:userId/topics/:topicId/discussions/:discussionId/participants', loginCheck(['partner']), topicLib.hasPermission(TopicMemberUser.LEVELS.read, true), async (req, res, next) => {
+    app.get('/api/users/:userId/topics/:topicId/discussions/:discussionId/participants', loginCheck(['partner']), topicService.hasPermission(TopicMemberUser.LEVELS.read, true), async (req, res, next) => {
         try {
             const discussion = await Discussion.findOne({
                 where: {
@@ -318,14 +318,14 @@ module.exports = function (app) {
         }
     });
 
-    app.get('/api/users/:userId/topics/:topicId/discussions/:discussionId', loginCheck(['partner']), topicLib.hasPermission(TopicMemberUser.LEVELS.read, true), async (req, res, next) => {
+    app.get('/api/users/:userId/topics/:topicId/discussions/:discussionId', loginCheck(['partner']), topicService.hasPermission(TopicMemberUser.LEVELS.read, true), async (req, res, next) => {
         _readDiscussion(req, res, next);
     });
 
     /**
      * Update a discussion
      */
-    app.put('/api/users/:userId/topics/:topicId/discussions/:discussionId', loginCheck(['partner']), topicLib.hasPermission(TopicMemberUser.LEVELS.admin, null, [Topic.STATUSES.draft, Topic.STATUSES.inProgress]), async (req, res, next) => {
+    app.put('/api/users/:userId/topics/:topicId/discussions/:discussionId', loginCheck(['partner']), topicService.hasPermission(TopicMemberUser.LEVELS.admin, null, [Topic.STATUSES.draft, Topic.STATUSES.inProgress]), async (req, res, next) => {
         try {
             const topicId = req.params.topicId;
             const discussionId = req.params.discussionId;
@@ -409,7 +409,7 @@ module.exports = function (app) {
         }
     });
 
-    app.delete('/api/users/:userId/topics/:topicId/discussions/:discussionId', loginCheck(['partner']), topicLib.hasPermission(TopicMemberUser.LEVELS.admin), async (req, res, next) => {
+    app.delete('/api/users/:userId/topics/:topicId/discussions/:discussionId', loginCheck(['partner']), topicService.hasPermission(TopicMemberUser.LEVELS.admin), async (req, res, next) => {
         try {
             const discussionId = req.params.discussionId;
             const discussion = await Discussion.findOne({
@@ -451,7 +451,7 @@ module.exports = function (app) {
     /**
      * Create Topic Comment
      */
-    app.post('/api/users/:userId/topics/:topicId/discussions/:discussionId/comments', loginCheck(['partner']), topicLib.hasPermission(TopicMemberUser.LEVELS.read, true, [Topic.STATUSES.inProgress, Topic.STATUSES.voting, Topic.STATUSES.followUp]), asyncMiddleware(async function (req, res) {
+    app.post('/api/users/:userId/topics/:topicId/discussions/:discussionId/comments', loginCheck(['partner']), topicService.hasPermission(TopicMemberUser.LEVELS.read, true, [Topic.STATUSES.inProgress, Topic.STATUSES.voting, Topic.STATUSES.followUp]), asyncMiddleware(async function (req, res) {
         let type = req.body.type;
         const parentId = req.body.parentId;
         const topicId = req.params.topicId;
@@ -472,7 +472,7 @@ module.exports = function (app) {
             ]
         });
 
-        if (!discussion || !discussion.Topics.length) {
+        if (!discussion?.Topics?.length) {
             return res.notFound();
         }
         if (discussion.deadline && new Date(discussion.deadline) < new Date()) return res.forbidden();
@@ -556,7 +556,7 @@ module.exports = function (app) {
                         );
                 }
 
-                await topicLib.addUserAsMember(req.user.id, topic.id, t);
+                await topicService.addUserAsMember(req.user.id, topic.id, t);
 
                 await DiscussionComment
                     .create(
@@ -609,6 +609,9 @@ module.exports = function (app) {
             });
     }));
 
+    /**
+     * Get topic comments
+     */
     const topicCommentsList = async function (req, res, next) {
         const orderByValues = {
             rating: 'rating',
@@ -626,7 +629,7 @@ module.exports = function (app) {
             types = types.filter((type) => Comment.TYPES[type]);
         }
 
-        if (types && types.length) {
+        if (types?.length) {
             where += ` AND ct.type IN (:types) `
         }
 
@@ -636,7 +639,6 @@ module.exports = function (app) {
             if (req.user.moderator) {
                 dataForModerator = `
                 , 'email', u.email
-                , 'phoneNumber', uc."connectionData"::jsonb->>'phoneNumber'
                 `;
             }
         }
@@ -662,7 +664,7 @@ module.exports = function (app) {
                     c.subject,
                     c.text,
                     pg_temp.editCreatedAtToJson(c.edits) as edits,
-                    jsonb_build_object('id', u.id,'name',u.name, 'imageUrl', u."imageUrl", 'company', u.company ${dataForModerator}) as creator,
+                    jsonb_build_object('id', u.id,'name',u.name, 'imageUrl', u."imageUrl" ${dataForModerator}) as creator,
                     CASE
                         WHEN c."deletedById" IS NOT NULL THEN jsonb_build_object('id', c."deletedById", 'name', dbu.name )
                         ELSE jsonb_build_object('id', c."deletedById")
@@ -700,7 +702,7 @@ module.exports = function (app) {
                     c.subject,
                     c.text,
                     pg_temp.editCreatedAtToJson(c.edits) as edits,
-                    jsonb_build_object('id', u.id,'name',u.name, 'imageUrl', u."imageUrl", 'company', u.company ${dataForModerator}) as creator,
+                    jsonb_build_object('id', u.id,'name',u.name, 'imageUrl', u."imageUrl" ${dataForModerator}) as creator,
                     CASE
                         WHEN c."deletedById" IS NOT NULL THEN jsonb_build_object('id', c."deletedById", 'name', dbu.name )
                         ELSE jsonb_build_object('id', c."deletedById")
@@ -959,11 +961,18 @@ module.exports = function (app) {
 
             const setDiscussionId = (discussionId, reply) => {
                 reply.discussionId = discussionId;
+                if (reply.creator?.email) {
+                    reply.creator.email = cryptoLib.privateDecrypt(reply.creator.email);
+                }
                 if (reply.replies.rows.length) {
                     reply.replies.rows.forEach((r) => setDiscussionId(discussionId, r));
                 }
             }
             comments.forEach((comment) => {
+                if (comment.creator?.email) {
+                    comment.creator.email = cryptoLib.privateDecrypt(comment.creator.email);
+                }
+
                 const discussionId = comment.discussionId;
                 comment.replies.rows.forEach((reply) => {
                     setDiscussionId(discussionId, reply);
@@ -997,17 +1006,17 @@ module.exports = function (app) {
     /**
      * Read (List) Topic Comments
      */
-    app.get('/api/users/:userId/topics/:topicId/discussions/:discussionId/comments', loginCheck(['partner']), topicLib.hasPermission(TopicMemberUser.LEVELS.read, true), topicLib.isModerator(), topicCommentsList);
+    app.get('/api/users/:userId/topics/:topicId/discussions/:discussionId/comments', loginCheck(['partner']), topicService.hasPermission(TopicMemberUser.LEVELS.read, true), topicService.isModerator(), topicCommentsList);
 
     /**
      * Read (List) public Topic Comments
      */
-    app.get('/api/topics/:topicId/discussions/:discussionId/comments', topicLib.hasVisibility(Topic.VISIBILITY.public), topicLib.isModerator(), topicCommentsList);
+    app.get('/api/topics/:topicId/discussions/:discussionId/comments', topicService.hasVisibility(Topic.VISIBILITY.public), topicService.isModerator(), topicCommentsList);
 
     /**
      * Delete Topic Comment
      */
-    app.delete('/api/users/:userId/topics/:topicId/discussions/:discussionId/comments/:commentId', loginCheck(['partner']), isCommentCreator(), topicLib.hasPermission(TopicMemberUser.LEVELS.read, false, null, true));
+    app.delete('/api/users/:userId/topics/:topicId/discussions/:discussionId/comments/:commentId', loginCheck(['partner']), isCommentCreator(), topicService.hasPermission(TopicMemberUser.LEVELS.read, false, null, true));
 
     //WARNING: Don't mess up with order here! In order to use "next('route')" in the isCommentCreator, we have to have separate route definition
     //NOTE: If you have good ideas how to keep one route definition with several middlewares, feel free to share!
@@ -1353,7 +1362,7 @@ module.exports = function (app) {
     /**
      * Create a Comment Vote
      */
-    app.post('/api/topics/:topicId/discussions/:discussionId/comments/:commentId/votes', loginCheck(['partner']), topicLib.hasPermission(TopicMemberUser.LEVELS.read, true), async function (req, res, next) {
+    app.post('/api/topics/:topicId/discussions/:discussionId/comments/:commentId/votes', loginCheck(['partner']), topicService.hasPermission(TopicMemberUser.LEVELS.read, true), async function (req, res, next) {
         const value = parseInt(req.body.value, 10);
         try {
             const comment = await Comment
@@ -1378,7 +1387,7 @@ module.exports = function (app) {
                             transaction: t
                         });
 
-                    await topicLib.addUserAsMember(req.user.id, req.params.topicId, t);
+                    await topicService.addUserAsMember(req.user.id, req.params.topicId, t);
 
                     if (vote) {
                         //User already voted
@@ -1479,7 +1488,7 @@ module.exports = function (app) {
      * Read (List) Topic Comment votes
      */
 
-    app.get('/api/users/:userId/topics/:topicId/discussions/:discussionId/comments/:commentId/votes', loginCheck(['partner']), topicLib.hasPermission(TopicMemberUser.LEVELS.read, true), async function (req, res, next) {
+    app.get('/api/users/:userId/topics/:topicId/discussions/:discussionId/comments/:commentId/votes', loginCheck(['partner']), topicService.hasPermission(TopicMemberUser.LEVELS.read, true), async function (req, res, next) {
         try {
             const results = await db.query(
                 `
@@ -1583,7 +1592,7 @@ module.exports = function (app) {
             next(err);
         }
     }
-    app.post('/api/users/:userId/topics/:topicId/discussions/:discussionId/comments/:commentId/attachments/upload', loginCheck(['partner']), isCommentCreator(), topicLib.hasPermission(TopicMemberUser.LEVELS.admin, false, null, true), async function (req, res, next) {
+    app.post('/api/users/:userId/topics/:topicId/discussions/:discussionId/comments/:commentId/attachments/upload', loginCheck(['partner']), isCommentCreator(), topicService.hasPermission(TopicMemberUser.LEVELS.admin, false, null, true), async function (req, res, next) {
         return addCommentAttachment(req, res, next);
     });
 
@@ -1591,11 +1600,11 @@ module.exports = function (app) {
    * Add image to comment
    */
 
-    app.post('/api/users/:userId/topics/:topicId/discussions/:discussionId/comments/:commentId/image/upload', loginCheck(['partner']), topicLib.hasPermission(TopicMemberUser.LEVELS.read, true, [Topic.STATUSES.inProgress, Topic.STATUSES.voting, Topic.STATUSES.followUp]), async function (req, res, next) {
+    app.post('/api/users/:userId/topics/:topicId/discussions/:discussionId/comments/:commentId/image/upload', loginCheck(['partner']), topicService.hasPermission(TopicMemberUser.LEVELS.read, true, [Topic.STATUSES.inProgress, Topic.STATUSES.voting, Topic.STATUSES.followUp]), async function (req, res, next) {
         return addCommentAttachment(req, res, next, CommentAttachment.ATTACHMENT_TYPES.image);
     });
 
-    app.post('/api/users/:userId/topics/:topicId/discussions/:discussionId/comments/:commentId/attachments', loginCheck(['partner']), topicLib.hasPermission(TopicMemberUser.LEVELS.read, true, [Topic.STATUSES.inProgress, Topic.STATUSES.voting, Topic.STATUSES.followUp]), async function (req, res, next) {
+    app.post('/api/users/:userId/topics/:topicId/discussions/:discussionId/comments/:commentId/attachments', loginCheck(['partner']), topicService.hasPermission(TopicMemberUser.LEVELS.read, true, [Topic.STATUSES.inProgress, Topic.STATUSES.voting, Topic.STATUSES.followUp]), async function (req, res, next) {
         const commentId = req.params.commentId;
         const name = req.body.name;
         const type = req.body.type;
@@ -1697,7 +1706,7 @@ module.exports = function (app) {
         }
     });
 
-    app.put('/api/users/:userId/topics/:topicId/discussions/:discussionId/comments/:commentId/attachments/:attachmentId', loginCheck(['partner']), isCommentCreator(), topicLib.hasPermission(TopicMemberUser.LEVELS.read, true, [Topic.STATUSES.inProgress, Topic.STATUSES.voting, Topic.STATUSES.followUp]), async function (req, res, next) {
+    app.put('/api/users/:userId/topics/:topicId/discussions/:discussionId/comments/:commentId/attachments/:attachmentId', loginCheck(['partner']), isCommentCreator(), topicService.hasPermission(TopicMemberUser.LEVELS.read, true, [Topic.STATUSES.inProgress, Topic.STATUSES.voting, Topic.STATUSES.followUp]), async function (req, res, next) {
         const newName = req.body.name;
 
         if (!newName) {
@@ -1748,7 +1757,7 @@ module.exports = function (app) {
     /**
      * Delete Comment Attachment
      */
-    app.delete('/api/users/:userId/topics/:topicId/discussions/:discussionId/comments/:commentId/attachments/:attachmentId', loginCheck(['partner']), isCommentCreator(), topicLib.hasPermission(TopicMemberUser.LEVELS.read, true, [Topic.STATUSES.inProgress, Topic.STATUSES.voting, Topic.STATUSES.followUp]), async function (req, res, next) {
+    app.delete('/api/users/:userId/topics/:topicId/discussions/:discussionId/comments/:commentId/attachments/:attachmentId', loginCheck(['partner']), isCommentCreator(), topicService.hasPermission(TopicMemberUser.LEVELS.read, true, [Topic.STATUSES.inProgress, Topic.STATUSES.voting, Topic.STATUSES.followUp]), async function (req, res, next) {
         try {
             const attachment = await Attachment.findOne({
                 where: {
@@ -1825,8 +1834,8 @@ module.exports = function (app) {
         }
     };
 
-    app.get('/api/users/:userId/topics/:topicId/discussions/:discussionId/comments/:commentId/attachments', loginCheck(['partner']), topicLib.hasPermission(TopicMemberUser.LEVELS.read, true), topicLib.isModerator(), commentAttachmentsList);
-    app.get('/api/topics/:topicId/discussions/:discussionId/comments/:commentId/attachments', loginCheck(['partner']), topicLib.hasPermission(TopicMemberUser.LEVELS.read, true), topicLib.isModerator(), commentAttachmentsList);
+    app.get('/api/users/:userId/topics/:topicId/discussions/:discussionId/comments/:commentId/attachments', loginCheck(['partner']), topicService.hasPermission(TopicMemberUser.LEVELS.read, true), topicService.isModerator(), commentAttachmentsList);
+    app.get('/api/topics/:topicId/discussions/:discussionId/comments/:commentId/attachments', loginCheck(['partner']), topicService.hasPermission(TopicMemberUser.LEVELS.read, true), topicService.isModerator(), commentAttachmentsList);
 
     const readAttachment = async function (req, res, next) {
         try {
@@ -1872,8 +1881,8 @@ module.exports = function (app) {
         }
     };
 
-    app.get('/api/users/:userId/topics/:topicId/discussions/:discussionId/comments/:commentId/attachments/:attachmentId', loginCheck(['partner']), topicLib.hasPermission(TopicMemberUser.LEVELS.read, true), topicLib.isModerator(), readAttachment);
-    app.get('/api/topics/:topicId/discussions/:discussionId/comments/:commentId/attachments/:attachmentId', loginCheck(['partner']), topicLib.hasPermission(TopicMemberUser.LEVELS.read, true), topicLib.isModerator(), readAttachment);
+    app.get('/api/users/:userId/topics/:topicId/discussions/:discussionId/comments/:commentId/attachments/:attachmentId', loginCheck(['partner']), topicService.hasPermission(TopicMemberUser.LEVELS.read, true), topicService.isModerator(), readAttachment);
+    app.get('/api/topics/:topicId/discussions/:discussionId/comments/:commentId/attachments/:attachmentId', loginCheck(['partner']), topicService.hasPermission(TopicMemberUser.LEVELS.read, true), topicService.isModerator(), readAttachment);
 
 
     return {

@@ -333,13 +333,31 @@ module.exports = function (app) {
             container.add(fileName, content, mimeType);
         });
 
+        // Try to find the vote file with specific hash
         const voteFile = await VoteContainerFile.findOne({
             where: {
                 voteId: voteId,
                 hash
             }
         });
-        container.add(voteFile.fileName, voteFile.content, voteFile.mimeType);
+
+        // Only add the file if it exists
+        if (voteFile) {
+            container.add(voteFile.fileName, voteFile.content, voteFile.mimeType);
+        } else {
+            logger.warn(`Vote file with hash ${hash} not found for vote ${voteId} - this is expected during initial request`);
+            // We'll look for the signature file by name instead
+            const signatureFile = await VoteContainerFile.findOne({
+                where: {
+                    voteId: voteId,
+                    fileName: SIGNATURE_FILE.name
+                }
+            });
+
+            if (signatureFile) {
+                container.add(signatureFile.fileName, signatureFile.content, signatureFile.mimeType);
+            }
+        }
 
         return new Promise(function (resolve) {
             let finalData = '';
@@ -459,20 +477,21 @@ module.exports = function (app) {
                             type: SIGNATURE_FILE.mimeType,
                             hash: hash
                         });
-
+                        const hashString = hash.toString();
                         await VoteContainerFile.create(
                             {
                                 voteId: vote.id,
                                 fileName: SIGNATURE_FILE.name,
                                 mimeType: SIGNATURE_FILE.mimeType,
                                 content: docxBuffer,
-                                hash: hash.toString()
+                                hash: hashString
                             },
                             {
                                 transaction: transaction
                             }
                         );
-                        return resolve(hash.toString());
+
+                        return resolve(hashString);
                     });
             });
 
@@ -598,38 +617,49 @@ module.exports = function (app) {
     };
 
     const _handleSigningResult = async function (voteId, userId, voteOptions, signableHash, signatureId, signature, hash) {
-        const signatureData = await Signature
-            .findOne({
-                where: {
-                    id: signatureId
-                }
+        try {
+            const signatureData = await Signature
+                .findOne({
+                    where: {
+                        id: signatureId
+                    }
+                });
+
+            if (!signatureData) {
+                throw new Error(`Signature data not found for ID: ${signatureId}`);
+            }
+
+            const xades = Xades.parse(signatureData.data);
+            xades.setSignature(Buffer.from(signature, 'base64'));
+            xades.setTimestamp(await hades.timestamp(xades));
+            xades.setOcspResponse(await hades.timemark(xades));
+
+            // Attempt to get the user container - our updated function will handle missing files gracefully
+            const container = await _getUserContainer(voteId, userId, voteOptions, hash);
+
+            const signedDocData = await new Promise(function (resolve) {
+                const chunks = [];
+                container.addSignature(xades);
+                const streamData = container.toStream();
+
+                streamData.on('data', function (data) {
+                    chunks.push(data);
+                });
+
+                streamData.on('end', function () {
+                    const buff = Buffer.concat(chunks);
+                    return resolve(buff);
+                });
+
+                container.end();
             });
-        const xades = Xades.parse(signatureData.data);
-        xades.setSignature(Buffer.from(signature, 'base64'));
-        xades.setTimestamp(await hades.timestamp(xades));
-        xades.setOcspResponse(await hades.timemark(xades));
 
-        const container = await _getUserContainer(voteId, userId, voteOptions, hash)
-
-        const signedDocData = await new Promise(function (resolve) {
-            const chunks = [];
-            container.addSignature(xades);
-            const streamData = container.toStream();
-
-            streamData.on('data', function (data) {
-                chunks.push(data);
-            })
-
-            streamData.on('end', function () {
-                const buff = Buffer.concat(chunks);
-
-                return resolve(buff);
-            })
-            container.end();
-        });
-
-        return {
-            signedDocData
+            return {
+                signedDocData
+            };
+        } catch (error) {
+            logger.error('Error in _handleSigningResult:', error);
+            throw error;
         }
     };
 
@@ -1078,7 +1108,7 @@ module.exports = function (app) {
                 const voteContainerFiles = await VoteContainerFile.findAll({
                     where: {
                         voteId: voteId,
-                        fileName: {[Op.ne]: SIGNATURE_FILE.name}
+                        fileName: { [Op.ne]: SIGNATURE_FILE.name }
                     }
                 });
 
