@@ -1,3 +1,6 @@
+## 2025-04-22 - v5.1.5
+  * Fix: Issue FE #1861: Fix missing hääl.docx file in user vote container
+
 ## 2025-04-21 - v5.1.4
   * Fix: Issue FE #1861: ID VOTING: User got a 500 error when digitally signing
   * Fix: Issue FE #2087: IDEA GATHERING: Images not added to anonymous ideas and HTTP error
