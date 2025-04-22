@@ -340,7 +340,6 @@ module.exports = function (app) {
                 hash
             }
         });
-
         // Only add the file if it exists
         if (voteFile) {
             container.add(voteFile.fileName, voteFile.content, voteFile.mimeType);
@@ -477,7 +476,7 @@ module.exports = function (app) {
                             type: SIGNATURE_FILE.mimeType,
                             hash: hash
                         });
-                        const hashString = hash.toString();
+                        const hashString = hash.toString('base64');
                         await VoteContainerFile.create(
                             {
                                 voteId: vote.id,
@@ -490,7 +489,6 @@ module.exports = function (app) {
                                 transaction: transaction
                             }
                         );
-
                         return resolve(hashString);
                     });
             });
@@ -611,12 +609,12 @@ module.exports = function (app) {
         const signatureData = await Signature.create({ data: xades.toString() });
         response.signatureId = signatureData.id
         response.personalInfo = personalInfo;
-        response.hash = hash
+        response.hash = hash;
 
         return response;
     };
 
-    const _handleSigningResult = async function (voteId, userId, voteOptions, signableHash, signatureId, signature, hash) {
+    const _handleSigningResult = async function (voteId, userId, voteOptions, signatureId, signature, hash) {
         try {
             const signatureData = await Signature
                 .findOne({
@@ -663,11 +661,11 @@ module.exports = function (app) {
         }
     };
 
-    const _getSmartIdSignedDoc = async function (sessionId, signableHash, signatureId, voteId, userId, voteOptions, hash, timeoutMs) {
+    const _getSmartIdSignedDoc = async function (sessionId, signatureId, voteId, userId, voteOptions, hash, timeoutMs) {
         try {
             const signResult = await smartId.statusSign(sessionId, timeoutMs);
             if (signResult.signature) {
-                return _handleSigningResult(voteId, userId, voteOptions, signableHash, signatureId, signResult.signature.value, hash);
+                return _handleSigningResult(voteId, userId, voteOptions, signatureId, signResult.signature.value, hash);
             }
 
             logger.error(signResult);
@@ -678,11 +676,11 @@ module.exports = function (app) {
         }
     };
 
-    const _getMobileIdSignedDoc = async function (sessionId, signableHash, signatureId, voteId, userId, voteOptions, hash, timeoutMs) {
+    const _getMobileIdSignedDoc = async function (sessionId, signatureId, voteId, userId, voteOptions, hash, timeoutMs) {
         try {
             const signResult = await mobileId.statusSign(sessionId, timeoutMs)
             if (signResult.signature) {
-                return _handleSigningResult(voteId, userId, voteOptions, signableHash, signatureId, signResult.signature.value, hash);
+                return _handleSigningResult(voteId, userId, voteOptions, signatureId, signResult.signature.value, hash);
             }
 
             logger.error(signResult);
@@ -693,8 +691,8 @@ module.exports = function (app) {
         }
     };
 
-    const _signUserBdoc = function (voteId, userId, voteOptions, signableHash, signatureId, signatureValue, hash) {
-        return _handleSigningResult(voteId, userId, voteOptions, signableHash, signatureId, signatureValue, hash);
+    const _signUserBdoc = function (voteId, userId, voteOptions, signatureId, signatureValue, hash) {
+        return _handleSigningResult(voteId, userId, voteOptions, signatureId, signatureValue, hash);
     };
 
     const _generateFinalCSV = async function (voteId, type, finalContainer) {
@@ -1090,6 +1088,14 @@ module.exports = function (app) {
 
         const finalContainerDownloadPath = wrap ? finalZipPath : finalContainerPath;
         try {
+            /*Delete all vote files related to the voteId*/
+            await VoteContainerFile.destroy({
+                where: {
+                    voteId: voteId,
+                    hash: { [Op.ne]: null }
+                },
+                force: true
+            });
             await fs.accessAsync(finalContainerDownloadPath, fs.R_OK);
             logger.info('_generateFinalContainer', 'Cache hit for final BDOC file', finalContainerDownloadPath);
 
