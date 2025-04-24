@@ -34,6 +34,7 @@ const StreamUpload = require('stream_upload');
 const notifications = require('./libs/notifications');
 const SlowDown = require('express-slow-down');
 const rateLimit = require('express-rate-limit')
+const which = require('which');
 
 const app = express();
 app.set('redis', require('./libs/redis')(app));

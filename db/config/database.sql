@@ -62,7 +62,8 @@ CREATE TYPE public."enum_Comments_deletedReasonType" AS ENUM (
     'spam',
     'hate',
     'netiquette',
-    'duplicate'
+    'duplicate',
+    'other'
 );
 
 
@@ -138,7 +139,8 @@ CREATE TYPE public."enum_IdeaReports_moderatedReasonType" AS ENUM (
     'spam',
     'hate',
     'netiquette',
-    'duplicate'
+    'duplicate',
+    'other'
 );
 
 
@@ -152,7 +154,8 @@ CREATE TYPE public."enum_IdeaReports_type" AS ENUM (
     'spam',
     'hate',
     'netiquette',
-    'duplicate'
+    'duplicate',
+    'other'
 );
 
 
@@ -166,7 +169,8 @@ CREATE TYPE public."enum_Ideas_deletedReasonType" AS ENUM (
     'spam',
     'hate',
     'netiquette',
-    'duplicate'
+    'duplicate',
+    'other'
 );
 
 
@@ -4213,4 +4217,6 @@ COPY public."SequelizeMeta" (name) FROM stdin;
 20250131193905-draft-ideas.js
 20250319122353-alter-reports-update-type.js
 20250416191841-alter-topic-reports-update-type.js
+20250415183735-alter-attachments-update-creator-id-relation.js
+20250424201337-alter-idea-reports-update-type.js
 \.
