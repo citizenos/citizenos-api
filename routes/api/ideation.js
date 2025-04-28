@@ -907,7 +907,6 @@ module.exports = function (app) {
             const ideaId = req.params.ideaId;
             const ideationId = req.params.ideationId;
             const topicId = req.params.topicId;
-            const sessToken = createHash('sha256').update(req.cookies[config.session.name]).digest('base64');
             const idea = await Idea.findOne({
                 where: {
                     id: ideaId
@@ -934,7 +933,7 @@ module.exports = function (app) {
                 res.forbidden();
             }
 
-            if ((!ideation.allowAnonymous && idea.authorId !== req.user.id) || (ideation.allowAnonymous && idea.sessionId !== sessToken)) {
+            if (idea.authorId !== req.user.id) {
                 return res.forbidden();
             }
 
