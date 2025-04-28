@@ -1,3 +1,8 @@
+## 2025-04-28 - v5.1.6
+  * Fix: Issue #68: API: Set the password reset time to 1 hour
+  * Fix: Issue FE #2214: IDEAS: 'Forbidden' error when deleting draft idea
+  * Fix: Issue FE #2222: MODERATION: Page crashes for topic admin and platform moderator
+
 ## 2025-04-22 - v5.1.5
   * Fix: Issue FE #1861: Fix missing hääl.docx file in user vote container
 

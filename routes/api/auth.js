@@ -389,13 +389,13 @@ module.exports = function (app) {
 
             if (getStateCookie(req, COOKIE_NAME_OPENID_AUTH_STATE)) { // We are in the middle of OpenID authorization flow
                 return res.redirect(urlLib.getApi('/api/auth/openid/authorize'));
-            } else {  
+            } else {
                 // Check if this is the first time user uses this link.
                 // If it's first time, then we authorize user.
                 if (!emailIsVerified) {
                     setAuthCookie(req, res, id);
-                }         
-        
+                }
+
                 return res.redirect(302, redirectSuccess);
             }
         } catch (err) {
@@ -446,15 +446,15 @@ module.exports = function (app) {
 
         const key = cachedResetCodeKey(user.id)
         const cachedResetCode = await getResetPasswordToken(key);
-    
+
         if (!cachedResetCode) {
             user.passwordResetCode = true; // Model will generate new code
             await user.save({ fields: ["passwordResetCode"] });
             await setResetPasswordToken(key, CACHED_RESET_TOKEN_TTL, user.passwordResetCode);
         }
-    
+
         const passwordResetCode = cachedResetCode || user.passwordResetCode;
-    
+
         const emailResult = await emailLib.sendPasswordReset(
             user.email,
             passwordResetCode
@@ -481,8 +481,8 @@ module.exports = function (app) {
             }
         });
 
-        const cachedResetCode = await getResetPasswordToken(cachedResetCodeKey(user.id));
-    
+        const cachedResetCode = await getResetPasswordToken(cachedResetCodeKey(user?.id));
+
         // !user.passwordResetCode avoids the situation where passwordResetCode has not been sent (null), but user posts null to API
         if (
               !user ||

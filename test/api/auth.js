@@ -1447,7 +1447,7 @@ suite('Auth', function () {
             suite('Complete', function () {
                 let passwordResetCode;
 
-                suiteSetup(async function () {
+                setup(async function () {
                     await passwordResetSend(agent, email);
                     const user = await User.findOne({
                         where: db.where(db.fn('lower', db.col('email')), db.fn('lower', email))
@@ -1500,10 +1500,13 @@ suite('Auth', function () {
                     await passwordResetComplete(agent, email, password, passwordResetCode);
                     const loginRes = await login(agent, email, password);
                     assert.equal(email, loginRes.body.data.email);
-                    const user = await User.findOne({
-                        where: db.where(db.fn('lower', db.col('email')), db.fn('lower', email))
-                    });
-                    assert.notEqual(user.passwordResetCode, passwordResetCode);
+                });
+
+                test('Fail - reset code expired after reset', async function () {
+                    await passwordResetComplete(agent, email, password, passwordResetCode);
+                    const loginRes = await login(agent, email, password);
+                    assert.equal(email, loginRes.body.data.email);
+                    await _passwordResetComplete(agent, email, password, passwordResetCode, 400);
                 });
 
             });
