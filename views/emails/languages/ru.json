@@ -53,7 +53,7 @@
       "HATE": "Ксенофобные высказывания",
       "NETIQUETTE": "Нарушает этикет",
       "DUPLICATE": "Дублирует содержание другой темы",
-      "OTHER": "Other"
+      "OTHER": "Другое"
     }
   },
   "REPORT_COMMENT": {
@@ -64,7 +64,7 @@
       "HATE": "Содержит враждебные высказывания",
       "NETIQUETTE": "Нарушает (н)этикет",
       "DUPLICATE": "Является дубликатом",
-      "OTHER": "Other"
+      "OTHER": "Другое"
     }
   },
   "REPORT_COMMENT_CREATOR": {
