@@ -984,6 +984,7 @@ module.exports = function (app) {
         const favourite = req.query.favourite;
         const folderId = req.query.folderId;
         const showModerated = req.query.showModerated || false;
+        const demographicsFilter = req.query.demographics ? JSON.parse(req.query.demographics) : null;
         let status = req.query.status || null;
         if (!req.user?.id || !req.user?.userId) {
             status = 'published';
@@ -1022,6 +1023,24 @@ module.exports = function (app) {
             }
         } else {
             where += ` AND ("Idea"."status" = 'published' OR "Idea"."status" = 'draft' AND "Idea"."authorId"=:userId) `;
+        }
+        if (demographicsFilter) {
+            const conditions = [];
+            const demoReplacements = {};
+            Object.keys(demographicsFilter).forEach(key => {
+                if (demographicsFilter[key].toLowerCase() === 'other') {
+                    // Use ILIKE substring matching for value "other"
+                    conditions.push(`("Idea".demographics ->> '${key}') ILIKE '%' || :demographics_${key} || '%'`);
+                } else {
+                    // Use strict equality check
+                    conditions.push(`"Idea".demographics ->> '${key}' = :demographics_${key}`);
+                }
+                demoReplacements[`demographics_${key}`] = demographicsFilter[key];
+            });
+
+            if (conditions.length) {
+                where += ' AND ' + conditions.join(' AND ');
+            }
         }
         let orderSql = ' iv."up.count" DESC, "replies.count" DESC, "Idea"."createdAt" DESC ';
         if (!showModerated || showModerated == "false") {
@@ -1134,6 +1153,9 @@ module.exports = function (app) {
                     userId: req.user?.id || req.user?.userId,
                     ideationId,
                     authorId,
+                    demographics_age: demographicsFilter?.age,
+                    demographics_gender: demographicsFilter?.gender,
+                    demographics_residence: demographicsFilter?.residence,
                     status,
                     favourite,
                     folderId,
