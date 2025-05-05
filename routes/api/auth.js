@@ -947,55 +947,58 @@ module.exports = function (app) {
     };
 
 
-    // Passport endpoints
-    app.get(config.passport.google.url, function (req, res, next) {
-        // Store original request in a cookie, so that we know where to redirect back on callback from the partner (FB, Google...)
-        setStateCookie(req, res, COOKIE_NAME_COS_AUTH_STATE);
+    if (config.passport.google) {
+        // Passport endpoints
+        app.get(config.passport.google.url, function (req, res, next) {
+            // Store original request in a cookie, so that we know where to redirect back on callback from the partner (FB, Google...)
+            setStateCookie(req, res, COOKIE_NAME_COS_AUTH_STATE);
 
-        passport.authenticate('google', {
-            scope: ['https://www.googleapis.com/auth/userinfo.email'],
-            prompt: 'select_account',
-            keepSessionInfo: true
-        })(req, res, next);
-    });
-
-
-    app.get(
-        config.passport.google.callbackUrl,
-        passport.authenticate('google', {
-            failureRedirect: urlLib.getFe('/account/login'),
-            keepSessionInfo: true
-        }),
-        function (req, res) {
-            setAuthCookie(req, res, req.user.id);
-            handleCallbackRedirect(req, res);
-        }
-    );
+            passport.authenticate('google', {
+                scope: ['https://www.googleapis.com/auth/userinfo.email'],
+                prompt: 'select_account',
+                keepSessionInfo: true
+            })(req, res, next);
+        });
 
 
-    app.get(config.passport.facebook.url, function (req, res, next) {
-        // Store original request in a cookie, so that we know where to redirect back on callback from the partner (FB, Google...)
-        setStateCookie(req, res, COOKIE_NAME_COS_AUTH_STATE);
+        app.get(
+            config.passport.google.callbackUrl,
+            passport.authenticate('google', {
+                failureRedirect: urlLib.getFe('/account/login'),
+                keepSessionInfo: true
+            }),
+            function (req, res) {
+                setAuthCookie(req, res, req.user.id);
+                handleCallbackRedirect(req, res);
+            }
+        );
+    }
 
-        passport.authenticate('facebook', {
-            scope: ['email'],
-            keepSessionInfo: true,
-            display: req.query.display ? 'popup' : null
-        })(req, res, next);
-    });
+    if (config.passport.google) {
+        app.get(config.passport.facebook.url, function (req, res, next) {
+            // Store original request in a cookie, so that we know where to redirect back on callback from the partner (FB, Google...)
+            setStateCookie(req, res, COOKIE_NAME_COS_AUTH_STATE);
+
+            passport.authenticate('facebook', {
+                scope: ['email'],
+                keepSessionInfo: true,
+                display: req.query.display ? 'popup' : null
+            })(req, res, next);
+        });
 
 
-    app.get(
-        config.passport.facebook.callbackUrl,
-        passport.authenticate('facebook', {
-            failureRedirect: urlLib.getFe('/account/login'),
-            keepSessionInfo: true
-        }),
-        function (req, res) {
-            setAuthCookie(req, res, req.user.id);
-            handleCallbackRedirect(req, res);
-        }
-    );
+        app.get(
+            config.passport.facebook.callbackUrl,
+            passport.authenticate('facebook', {
+                failureRedirect: urlLib.getFe('/account/login'),
+                keepSessionInfo: true
+            }),
+            function (req, res) {
+                setAuthCookie(req, res, req.user.id);
+                handleCallbackRedirect(req, res);
+            }
+        );
+    }
 
 
     /**
