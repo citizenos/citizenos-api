@@ -341,9 +341,8 @@ module.exports = function (app) {
             _.cloneDeep(EMAIL_OPTIONS_DEFAULT), // Deep clone to guarantee no funky business messing with the class level defaults, cant use Object.assign({}.. as this is not a deep clone.
             {
                 subject: 'Help request',
-                to: ['support@citizenos.com'],
+                to: [config.email.supportTo],
                 replyTo: debugData.email,
-                from: "no-reply@citizenos.com",
                 linkedData: {
                     translations: template.translations,
                 },
@@ -369,8 +368,7 @@ module.exports = function (app) {
             _.cloneDeep(EMAIL_OPTIONS_DEFAULT), // Deep clone to guarantee no funky business messing with the class level defaults, cant use Object.assign({}.. as this is not a deep clone.
             {
                 subject: 'Feedback',
-                to: ['support@citizenos.com'],
-                from: "no-reply@citizenos.com",
+                to: [config.email.feedbackTo],
                 linkedData: {
                     translations: template.translations,
                 },
@@ -410,7 +408,6 @@ module.exports = function (app) {
                 {
                     subject: template.translations.ACCOUNT_VERIFICATION.SUBJECT,
                     to: user.email,
-                    from: "no-reply@citizenos.com",
                     //Placeholders
                     toUser: user,
                     linkVerify: linkVerify
@@ -450,7 +447,6 @@ module.exports = function (app) {
                 {
                     subject: template.translations.PASSWORD_RESET.SUBJECT,
                     to: user.email,
-                    from: "no-reply@citizenos.com",
                     //Placeholders..
                     toUser: user,
                     linkReset: urlLib.getFe('/account/password/reset/:passwordResetCode', { passwordResetCode: passwordResetCode }, { email: user.email })
