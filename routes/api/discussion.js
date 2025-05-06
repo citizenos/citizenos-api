@@ -1241,7 +1241,7 @@ module.exports = function (app) {
         return res.ok(commentReport);
     }));
 
-    app.post('/api/topics/:topicId/discussions/:discussionId/comments/:commentId/reports/:reportId/moderate', authTokenRestrictedUse, asyncMiddleware(async function (req, res) {
+    app.post(['/api/topics/:topicId/discussions/:discussionId/comments/:commentId/reports/:reportId/moderate', '/api/topics/:topicId/comments/:commentId/reports/:reportId/moderate'], authTokenRestrictedUse, asyncMiddleware(async function (req, res) {
         const eventTokenData = req.locals.tokenDecoded;
         const type = req.body.type;
 
