@@ -7,7 +7,7 @@ module.exports = function (app) {
     const Vote = models.Vote;
     const TopicVote = models.TopicVote;
     const emailLib = app.get('email');
-    const topicLib = require('../topic')(app);
+    const voteService = require('../../../services/vote')(app);
     const moment = require('moment');
 
     const getTopicMembers = async (voteId) => {
@@ -98,7 +98,7 @@ module.exports = function (app) {
 
             votes.forEach(async vote => {
                 const users = await getTopicMembers(vote.id);
-                const voteResult = await topicLib.getVoteResults(vote.id);
+                const voteResult = await voteService.getVoteResults(vote.id);
                 vote.votersCount = 0;
                 if (voteResult.length) {
                     vote.votersCount = voteResult[0].votersCount;
