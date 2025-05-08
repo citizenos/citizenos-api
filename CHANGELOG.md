@@ -1,3 +1,6 @@
+## 2025-05-08 - v5.1.7
+  * Fix: Issue #469: BUG: Vote reminder crashing the app
+
 ## 2025-04-28 - v5.1.6
   * Fix: Issue #68: API: Set the password reset time to 1 hour
   * Fix: Issue FE #2214: IDEAS: 'Forbidden' error when deleting draft idea
