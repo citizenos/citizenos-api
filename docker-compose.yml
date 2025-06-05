@@ -1,0 +1,45 @@
+version: '3.8'
+
+services:
+  citizenos-api:
+    build: .
+    container_name: citizenos-api
+    ports:
+      - "3003:3003"
+    environment:
+      # Database connection string (adjust as needed)
+      DATABASE_URL: postgres://citizenos:citizenos@db:5432/citizenos
+      # Redis connection string
+      REDIS_URL: redis://redis:6379
+      # Add other environment variables as needed, for example:
+      # CITIZENOS_URL_API: https://api.citizenos.com
+      # CITIZENOS_URL_FE: https://app.citizenos.com
+      # CITIZENOS_API_KEY: your_api_key_here
+    depends_on:
+      - db
+      - redis
+
+  db:
+    image: postgres:15
+    container_name: citizenos-db
+    environment:
+      POSTGRES_USER: citizenos
+      POSTGRES_PASSWORD: citizenos
+      POSTGRES_DB: citizenos
+   #  ports:
+   #   - "5432:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+      - ./db/config/database.sql:/docker-entrypoint-initdb.d/database.sql:ro
+
+  redis:
+    image: redis:7
+    container_name: citizenos-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+volumes:
+  db_data:
+  redis_data:

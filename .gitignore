@@ -17,3 +17,4 @@ Thumbs.db
 /public/uploads
 /test/tmp/**
 !/test/tmp/README.md
+actions-runner
