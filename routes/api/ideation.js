@@ -2,7 +2,20 @@
 
 const { capitalizeFirstLetter } = require('../../libs/util');
 
-
+function flattenArrayValues(obj) {
+    const result = {};
+    Object.keys(obj).forEach(key => {
+        const value = obj[key];
+        if (Array.isArray(value)) {
+            value.forEach((v, idx) => {
+                result[`${key}_${idx}`] = v;
+            });
+        } else {
+            result[key] = value;
+        }
+    });
+    return result;
+}
 
 module.exports = function (app) {
     const config = app.get('config');
@@ -1027,15 +1040,32 @@ module.exports = function (app) {
         if (demographicsFilter) {
             const conditions = [];
             const demoReplacements = {};
+            console.log(demographicsFilter, "demographicsFilterdemographicsFilter")
             Object.keys(demographicsFilter).forEach(key => {
-                if (demographicsFilter[key].toLowerCase() === 'other') {
-                    // Use ILIKE substring matching for value "other"
-                    conditions.push(`("Idea".demographics ->> '${key}') ILIKE '%' || :demographics_${key} || '%'`);
+                const filterValue = demographicsFilter[key];
+                if (Array.isArray(filterValue)) {
+                    const subConditions = [];
+                    filterValue.forEach((val, idx) => {
+                        const paramName = `demographics_${key}_${idx}`;
+                        if (typeof val === 'string' && val.toLowerCase() === 'other') {
+                            subConditions.push(`("Idea".demographics ->> '${key}') ILIKE '%' || :${paramName} || '%'`);
+                        } else {
+                            subConditions.push(`"Idea".demographics ->> '${key}' = :${paramName}`);
+                        }
+                        demoReplacements[paramName] = val;
+                    });
+                    if (subConditions.length) {
+                        conditions.push('(' + subConditions.join(' OR ') + ')');
+                    }
                 } else {
-                    // Use strict equality check
-                    conditions.push(`"Idea".demographics ->> '${key}' = :demographics_${key}`);
+                    const paramName = `demographics_${key}`;
+                    if (typeof filterValue === 'string' && filterValue.toLowerCase() === 'other') {
+                        conditions.push(`("Idea".demographics ->> '${key}') ILIKE '%' || :${paramName} || '%'`);
+                    } else {
+                        conditions.push(`"Idea".demographics ->> '${key}' = :${paramName}`);
+                    }
+                    demoReplacements[paramName] = filterValue;
                 }
-                demoReplacements[`demographics_${key}`] = demographicsFilter[key];
             });
 
             if (conditions.length) {
@@ -1153,7 +1183,7 @@ module.exports = function (app) {
                     userId: req.user?.id || req.user?.userId,
                     ideationId,
                     authorId,
-                    demographics_age: demographicsFilter?.age,
+                    ...(demographicsFilter?.age && flattenArrayValues({ demographics_age: demographicsFilter.age })),
                     demographics_gender: demographicsFilter?.gender,
                     demographics_residence: demographicsFilter?.residence,
                     status,
