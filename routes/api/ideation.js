@@ -1030,7 +1030,6 @@ module.exports = function (app) {
         if (demographicsFilter) {
             const conditions = [];
             const demoReplacements = {};
-            console.log(demographicsFilter, "demographicsFilterdemographicsFilter")
             Object.keys(demographicsFilter).forEach(key => {
                 const filterValue = demographicsFilter[key];
                 if (Array.isArray(filterValue)) {
