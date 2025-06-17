@@ -2,7 +2,20 @@
 
 const { capitalizeFirstLetter } = require('../../libs/util');
 
-
+function flattenArrayValues(obj) {
+    const result = {};
+    Object.keys(obj).forEach(key => {
+        const value = obj[key];
+        if (Array.isArray(value)) {
+            value.forEach((v, idx) => {
+                result[`${key}_${idx}`] = v;
+            });
+        } else {
+            result[key] = value;
+        }
+    });
+    return result;
+}
 
 module.exports = function (app) {
     const config = app.get('config');
@@ -974,6 +987,7 @@ module.exports = function (app) {
         const favourite = req.query.favourite;
         const folderId = req.query.folderId;
         const showModerated = req.query.showModerated || false;
+        const demographicsFilter = req.query.demographics ? JSON.parse(req.query.demographics) : null;
         let status = req.query.status || null;
         if (!req.user?.id || !req.user?.userId) {
             status = 'published';
@@ -1012,6 +1026,40 @@ module.exports = function (app) {
             }
         } else {
             where += ` AND ("Idea"."status" = 'published' OR "Idea"."status" = 'draft' AND "Idea"."authorId"=:userId) `;
+        }
+        if (demographicsFilter) {
+            const conditions = [];
+            const demoReplacements = {};
+            Object.keys(demographicsFilter).forEach(key => {
+                const filterValue = demographicsFilter[key];
+                if (Array.isArray(filterValue)) {
+                    const subConditions = [];
+                    filterValue.forEach((val, idx) => {
+                        const paramName = `demographics_${key}_${idx}`;
+                        if (typeof val === 'string' && val.toLowerCase() === 'other') {
+                            subConditions.push(`("Idea".demographics ->> '${key}') ILIKE '%' || :${paramName} || '%'`);
+                        } else {
+                            subConditions.push(`"Idea".demographics ->> '${key}' = :${paramName}`);
+                        }
+                        demoReplacements[paramName] = val;
+                    });
+                    if (subConditions.length) {
+                        conditions.push('(' + subConditions.join(' OR ') + ')');
+                    }
+                } else {
+                    const paramName = `demographics_${key}`;
+                    if (typeof filterValue === 'string' && filterValue.toLowerCase() === 'other') {
+                        conditions.push(`("Idea".demographics ->> '${key}') ILIKE '%' || :${paramName} || '%'`);
+                    } else {
+                        conditions.push(`"Idea".demographics ->> '${key}' = :${paramName}`);
+                    }
+                    demoReplacements[paramName] = filterValue;
+                }
+            });
+
+            if (conditions.length) {
+                where += ' AND ' + conditions.join(' AND ');
+            }
         }
         let orderSql = ' iv."up.count" DESC, "replies.count" DESC, "Idea"."createdAt" DESC ';
         if (!showModerated || showModerated == "false") {
@@ -1124,6 +1172,9 @@ module.exports = function (app) {
                     userId: req.user?.id || req.user?.userId,
                     ideationId,
                     authorId,
+                    ...(demographicsFilter?.age && flattenArrayValues({ demographics_age: demographicsFilter.age })),
+                    demographics_gender: demographicsFilter?.gender,
+                    demographics_residence: demographicsFilter?.residence,
                     status,
                     favourite,
                     folderId,
