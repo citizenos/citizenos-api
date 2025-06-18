@@ -17,3 +17,10 @@ Thumbs.db
 /public/uploads
 /test/tmp/**
 !/test/tmp/README.md
+
+# Development and IDE files
+.env
+.cursorrules
+.vscode/
+actions-runner/
+test/api/uploads/

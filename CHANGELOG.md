@@ -1,3 +1,6 @@
+## 2025-06-18 - v5.1.8
+  * Fix: Issue FE #2139: filter out draft activities
+
 ## 2025-05-08 - v5.1.7
   * Fix: Issue #469: BUG: Vote reminder crashing the app
 
