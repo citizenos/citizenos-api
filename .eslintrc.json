@@ -10,6 +10,7 @@
         "ecmaVersion": 11
     },
     "extends": ["eslint:recommended", "plugin:mocha/recommended"],
+    "ignorePatterns": ["node_modules/", "dist/", "build/", "coverage/", "public/uploads/", "!**/node_modules/"],
     "rules": {
         "no-multi-spaces": ["error"]
     }
