@@ -3,7 +3,7 @@ import pluginJs from "@eslint/js";
 import mochaPlugin from 'eslint-plugin-mocha';
 
 export default [
-  { ignores: ["actions-runner/", "test/api/uploads/", "test/api/uploads/**"] },
+  { ignores: ["actions-runner/", "test/api/uploads/", "test/api/uploads/**", "!**/node_modules/"] },
   { files: ["**/*.js"], languageOptions: { sourceType: "commonjs" } },
   { languageOptions: { globals: { ...globals.browser, ...globals.node } } },
   pluginJs.configs.recommended,
