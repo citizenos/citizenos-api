@@ -979,6 +979,7 @@ module.exports = function (app) {
 
     const _readIdeationIdeas = async (req, res, next) => {
         const ideationId = req.params.ideationId;
+        const search = req.query.search;
         const limit = req.query.limit || 8;
         const offset = req.query.offset || 0;
         const orderBy = req.query.orderBy;
@@ -1016,6 +1017,12 @@ module.exports = function (app) {
         let returncolumns = ``;
         if (authorId) {
             where += ` AND "Idea"."authorId" = :authorId `;
+        }
+        if (search) {
+            where += ` AND (
+                "Idea"."statement" ILIKE '%' || :search || '%' OR
+                "Idea"."description" ILIKE '%' || :search || '%'
+            ) `;
         }
         if (status) {
             if (status === 'draft') {
@@ -1169,6 +1176,7 @@ module.exports = function (app) {
                 ;
             `, {
                 replacements: {
+                    search,
                     userId: req.user?.id || req.user?.userId,
                     ideationId,
                     authorId,
