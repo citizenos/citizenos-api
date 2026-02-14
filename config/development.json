@@ -161,6 +161,12 @@
             "OID": "NTREE-10747013",
             "O": "SK ID Solutions AS",
             "C":"EE"
+          },
+          {
+            "CN": "ESTEID2025",
+            "OID": "NTREE-170660493",
+            "O": "Zetes Estonia OÜ",
+            "C":"EE"
           }
         ]
       },
