@@ -12,22 +12,33 @@ export default [
         languageOptions: {
             ecmaVersion: 2022,
             sourceType: "commonjs",
+            parserOptions: {
+            },
             globals: {
                 ...globals.node,
                 ...globals.mocha,
                 ...globals.jest,
-            },
+                expect: "readonly",
+                assert: "readonly",
+                suite: "readonly",
+                test: "readonly",
+                suiteSetup: "readonly",
+                suiteTeardown: "readonly",
+                setup: "readonly",
+                teardown: "readonly"
+            }
         },
         rules: {
             "no-multi-spaces": ["error"],
             "mocha/no-setup-in-describe": "off",
             "mocha/no-mocha-arrows": "off",
             "mocha/consistent-spacing-between-blocks": "off",
-            "no-useless-assignment": "off",
             "no-unused-vars": "warn",
             "no-undef": "warn",
             "mocha/no-pending-tests": "off",
-            "no-unassigned-vars": "off"
+            "no-redeclare": "off",
+            "no-var": "off",
+            "no-useless-assignment": "off"
         }
     }
 ];

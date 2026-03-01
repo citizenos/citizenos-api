@@ -393,7 +393,6 @@ module.exports = function (app) {
         if (showExtraUserInfo) {
             extraUserInfo = `
             u.email,
-            uc."connectionData"::jsonb->>'phoneNumber' AS "phoneNumber",
             `;
         }
 

@@ -58,13 +58,47 @@ const Partner = models.Partner;
 const Topic = models.Topic;
 const TopicMemberUser = models.TopicMemberUser;
 
+const cosEtherpad = app.get('cosEtherpad');
+const cosSignature = app.get('cosSignature');
+
 module.exports.activitiesRead = activitiesRead;
 
 // API - /api/users*
 suite('Users', function () {
+    let originalSyncTopicWithPad;
+    let originalCreateTopic;
+    let originalDeleteTopic;
+    let originalCreateVoteFiles;
 
     suiteSetup(async function () {
+        originalSyncTopicWithPad = cosEtherpad.syncTopicWithPad;
+        cosEtherpad.syncTopicWithPad = async function (topicId) {
+            return Topic.findOne({where: {id: topicId}});
+        };
+
+        originalCreateTopic = cosEtherpad.createTopic;
+        cosEtherpad.createTopic = async function () {
+            return Promise.resolve();
+        };
+
+        originalDeleteTopic = cosEtherpad.deleteTopic;
+        cosEtherpad.deleteTopic = async function () {
+            return Promise.resolve();
+        };
+
+        originalCreateVoteFiles = cosSignature.createVoteFiles;
+        cosSignature.createVoteFiles = async function () {
+            return Promise.resolve();
+        };
+
         await shared.syncDb();
+    });
+
+    suiteTeardown(function() {
+        cosEtherpad.syncTopicWithPad = originalSyncTopicWithPad;
+        cosEtherpad.createTopic = originalCreateTopic;
+        cosEtherpad.deleteTopic = originalDeleteTopic;
+        cosSignature.createVoteFiles = originalCreateVoteFiles;
     });
 
     // API - /api/users/:userId/activities*

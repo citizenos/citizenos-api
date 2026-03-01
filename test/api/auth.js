@@ -738,8 +738,8 @@ suite('Auth', function () {
                 });
 
                 test('Fail - 40023 - User certificate is not activated for Estonian citizen.', async function () {
-                    const phoneNumber = '+37200001';
-                    const pid = '38002240211';
+                    const phoneNumber = '+37200000266';
+                    const pid = '60001019939';
 
                     const response = (await loginMobileInit(request.agent(app), pid, phoneNumber)).body.data;
                     const responseData = (await _loginMobilestatus(request.agent(app), response.token, 400)).body;
@@ -754,8 +754,8 @@ suite('Auth', function () {
                 });
 
                 test('Fail - 40023 - Mobile-ID is not activated for Lithuanian citizen', async function () {
-                    const phoneNumber = '+37060000001';
-                    const pid = '51001091006';
+                    const phoneNumber = '+37060000266';
+                    const pid = '50001018832';
 
                     const response = (await loginMobileInit(request.agent(app), pid, phoneNumber)).body.data;
                     const responseData = (await _loginMobilestatus(request.agent(app), response.token, 400)).body;

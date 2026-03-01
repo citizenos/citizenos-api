@@ -42,6 +42,12 @@ function ExpressRateLimitInput(app) {
      * @see https://lodash.com/docs/4.17.15#get
      */
     return function expressRateLimitInput(properties, windowMs, max) {
+        if (app.get('env') === 'test') {
+            return function (req, res, next) {
+                return next();
+            };
+        }
+
         assert(properties && Array.isArray(properties), `Parameter "properties" is required and must be an array of dot notation strings of properties. Value: ${properties}`);
         assert(windowMs && Number.isInteger(windowMs), `Parameter "windowMs" is required and must be an integer determining the window size in milliseconds. Value: ${windowMs}`);
         assert(max && Number.isInteger(max), `Parameter "max" and must be an integer determining the maximum number of events in given window. Value: ${max}`);

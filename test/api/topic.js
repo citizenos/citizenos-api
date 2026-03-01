@@ -1372,6 +1372,7 @@ const fs = app.get('fs');
 const SevenZip = app.get('SevenZip');
 const etherpadClient = app.get('etherpadClient');
 const cosEtherpad = app.get('cosEtherpad');
+const cosSignature = app.get('cosSignature');
 const jwt = app.get('jwt');
 const crypto = require('crypto');
 const cosJwt = app.get('cosJwt');
@@ -1421,6 +1422,39 @@ suite('Users', function () {
 
     // API - /api/users/:userId/topics*
     suite('Topics', function () {
+        let originalSyncTopicWithPad;
+        let originalCreateTopic;
+        let originalDeleteTopic;
+        let originalCreateVoteFiles;
+
+        suiteSetup(function() {
+            originalSyncTopicWithPad = cosEtherpad.syncTopicWithPad;
+            cosEtherpad.syncTopicWithPad = async function (topicId) {
+                return Topic.findOne({where: {id: topicId}});
+            };
+
+            originalCreateTopic = cosEtherpad.createTopic;
+            cosEtherpad.createTopic = async function () {
+                return Promise.resolve();
+            };
+
+            originalDeleteTopic = cosEtherpad.deleteTopic;
+            cosEtherpad.deleteTopic = async function () {
+                return Promise.resolve();
+            };
+
+            originalCreateVoteFiles = cosSignature.createVoteFiles;
+            cosSignature.createVoteFiles = async function () {
+                return Promise.resolve();
+            };
+        });
+
+        suiteTeardown(function() {
+            cosEtherpad.syncTopicWithPad = originalSyncTopicWithPad;
+            cosEtherpad.createTopic = originalCreateTopic;
+            cosEtherpad.deleteTopic = originalDeleteTopic;
+            cosSignature.createVoteFiles = originalCreateVoteFiles;
+        });
 
         suite('Create', function () {
             const agent = request.agent(app);
@@ -1448,6 +1482,9 @@ suite('Users', function () {
 
             test('Success - description', async function () {
                 const description = '<!DOCTYPE HTML><html><body><h1>H1</h1><br><h2>h2</h2><br><h3>h3</h3><br><script>alert("owned!");</script><br><br>script<br><br></body></html>';
+
+                // Override global mock for this test
+                etherpadClient.getHTMLAsync = async () => Promise.resolve({html: '<!DOCTYPE HTML><html><body><h1>H1</h1><br><h2>h2</h2><br><h3>h3</h3><br><br><br>script<br><br><br></body></html>'});
 
                 const topic = (await topicCreate(agent, user.id, 'H1', Topic.STATUSES.inProgress, description, Topic.VISIBILITY.public, [Topic.CATEGORIES.environment, Topic.CATEGORIES.health])).body.data;
                 const getHtmlResult = await etherpadClient.getHTMLAsync({ padID: topic.id });
@@ -7366,8 +7403,8 @@ suite('Users', function () {
                         });
                         //Something has changed in SK MID
                         test('Fail - 40023 - User certificate is not activated for Estonian citizen.', async function () {
-                            const phoneNumber = '+37200000366';
-                            const pid = '60001019928';
+                            const phoneNumber = '+37200000266';
+                            const pid = '60001019939';
 
                             const voteList = [
                                 {
@@ -7375,12 +7412,12 @@ suite('Users', function () {
                                 }
                             ];
 
-                            const resBody = (await _topicVoteVote(agent, user.id, topic.id, vote.id, voteList, null, pid, phoneNumber, null, 404)).body;
+                            const resBody = (await _topicVoteVote(agent, user.id, topic.id, vote.id, voteList, null, pid, phoneNumber, null, 400)).body;
 
                             const expectedResponse = {
                                 status: {
-                                    code: 40400,
-                                    message: "Not Found"
+                                    code: 40013,
+                                    message: "Mobile-ID functionality of the phone is not yet ready"
                                 }
                             };
 
@@ -7388,8 +7425,8 @@ suite('Users', function () {
                         });
                         //Something has changed in SK MID
                         test('Fail - 40023 - Mobile-ID is not activated for Lithuanian citizen', async function () {
-                            const phoneNumber = '+37060000366';
-                            const pid = '50001018821';
+                            const phoneNumber = '+37060000266';
+                            const pid = '50001018832';
 
                             const voteList = [
                                 {
@@ -7397,11 +7434,11 @@ suite('Users', function () {
                                 }
                             ];
 
-                            const resBody = (await _topicVoteVote(agent, user.id, topic.id, vote.id, voteList, null, pid, phoneNumber, null, 404)).body;
+                            const resBody = (await _topicVoteVote(agent, user.id, topic.id, vote.id, voteList, null, pid, phoneNumber, null, 400)).body;
                             const expectedResponse = {
                                 status: {
-                                    code: 40400,
-                                    message: "Not Found"
+                                    code: 40013,
+                                    message: "Mobile-ID functionality of the phone is not yet ready"
                                 }
                             };
 
@@ -8958,9 +8995,40 @@ suite('Users', function () {
 
 // API - /api/topics - unauthenticated endpoints
 suite('Topics', function () {
+    let originalSyncTopicWithPad;
+    let originalCreateTopic;
+    let originalDeleteTopic;
+    let originalCreateVoteFiles;
 
     suiteSetup(async function () {
+        originalSyncTopicWithPad = cosEtherpad.syncTopicWithPad;
+        cosEtherpad.syncTopicWithPad = async function (topicId) {
+            return Topic.findOne({where: {id: topicId}});
+        };
+
+        originalCreateTopic = cosEtherpad.createTopic;
+        cosEtherpad.createTopic = async function () {
+            return Promise.resolve();
+        };
+
+        originalDeleteTopic = cosEtherpad.deleteTopic;
+        cosEtherpad.deleteTopic = async function () {
+            return Promise.resolve();
+        };
+
+        originalCreateVoteFiles = cosSignature.createVoteFiles;
+        cosSignature.createVoteFiles = async function () {
+            return Promise.resolve();
+        };
+
         return shared.syncDb();
+    });
+
+    suiteTeardown(function() {
+        cosEtherpad.syncTopicWithPad = originalSyncTopicWithPad;
+        cosEtherpad.createTopic = originalCreateTopic;
+        cosEtherpad.deleteTopic = originalDeleteTopic;
+        cosSignature.createVoteFiles = originalCreateVoteFiles;
     });
 
     suite('Read', function () {

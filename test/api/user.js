@@ -178,10 +178,80 @@ const User = models.User;
 const UserConnection = models.UserConnection;
 const Partner = models.Partner;
 
+const smartId = app.get('smartId');
+const mobileId = app.get('mobileId');
+
 suite('User', function () {
+    let originalSmartIdAuthenticate;
+    let originalSmartIdStatusAuth;
+    let originalMobileIdAuthenticate;
+    let originalMobileIdStatusAuth;
 
     suiteSetup(async function () {
+        originalSmartIdAuthenticate = smartId.authenticate;
+        originalSmartIdStatusAuth = smartId.statusAuth;
+        originalMobileIdAuthenticate = mobileId.authenticate;
+        originalMobileIdStatusAuth = mobileId.statusAuth;
+
+        const sessions = {};
+
+        smartId.authenticate = async (pid, countryCode) => {
+            const sessionId = 'mockSession-' + pid;
+            sessions[sessionId] = pid;
+            return {
+                sessionId: sessionId,
+                sessionHash: 'mockHash',
+                challengeID: '1234'
+            };
+        };
+
+        smartId.statusAuth = async (sessionId, sessionHash, timeoutMs) => {
+            console.log('DEBUG MOCK statusAuth called', sessionId);
+            const pid = sessions[sessionId] || '50001029996';
+            return {
+                state: 'COMPLETE',
+                result: {
+                    endResult: 'OK',
+                    documentNumber: 'PNOEE-' + pid,
+                    firstName: 'Test',
+                    lastName: 'User'
+                },
+                attributes: {
+                    country: 'EE'
+                }
+            };
+        };
+
+        mobileId.authenticate = async (pid, countryCode, phoneNumber) => {
+            return {
+                sessionId: 'mockSessionMobile-' + pid,
+                sessionHash: 'mockHashMobile',
+                challengeID: '1234'
+            };
+        };
+
+        mobileId.statusAuth = async (sessionId, sessionHash, timeoutMs) => {
+             const pid = sessionId.replace('mockSessionMobile-', '');
+             return {
+                state: 'COMPLETE',
+                result: 'OK',
+                attributes: {
+                    country: 'EE',
+                    documentNumber: 'PNOEE-' + pid,
+                    firstName: 'Test',
+                    lastName: 'User'
+                }
+            };
+        };
+
         return shared.syncDb();
+    });
+
+    suiteTeardown(function() {
+        smartId.authenticate = originalSmartIdAuthenticate;
+        smartId.statusAuth = originalSmartIdStatusAuth;
+        mobileId.authenticate = originalMobileIdAuthenticate;
+        mobileId.statusAuth = originalMobileIdStatusAuth;
     });
 
     suite('Update', function () {
@@ -461,7 +531,11 @@ suite('User', function () {
 
                 assert.deepEqual(res, expectedList);
                 const initResponse = (await auth.loginSmartIdInit(agent, pid)).body.data;
-                const res2 = (await userConnectionsAdd(agent, user.id, 'smartid', initResponse.token, null, 5000)).body.data;
+                const connectSmartIdStatusResponse = await userConnectionsAdd(agent, user.id, 'smartid', initResponse.token, null, 5000);
+                if (!connectSmartIdStatusResponse.body.data) {
+                    console.log('DEBUG FAILURE:', JSON.stringify(connectSmartIdStatusResponse.body, null, 2));
+                }
+                const res2 = connectSmartIdStatusResponse.body.data;
 
                 const expectedList2 = {
                     count: 2,
@@ -492,7 +566,11 @@ suite('User', function () {
 
                 assert.deepEqual(res, expectedList);
                 const response = (await auth.loginMobileInit(request.agent(app), pid, phoneNumber)).body.data;
-                const res2 = (await userConnectionsAdd(agent, user.id, 'esteid', response.token, null, 5000)).body.data;
+                const connectSmartIdStatusResponse = await userConnectionsAdd(agent, user.id, 'esteid', response.token, null, 5000);
+                if (!connectSmartIdStatusResponse.body.data) {
+                    console.log('DEBUG FAILURE:', JSON.stringify(connectSmartIdStatusResponse.body, null, 2));
+                }
+                const res2 = connectSmartIdStatusResponse.body.data;
                 const expectedList2 = {
                     count: 2,
                     rows: [
@@ -521,7 +599,11 @@ suite('User', function () {
 
                 assert.deepEqual(res, expectedList);
                 const initResponse = (await auth.loginSmartIdInit(agent, pid)).body.data;
-                const res2 = (await userConnectionsAdd(agent, user.id, 'smartid', initResponse.token, null, 5000)).body.data;
+                const connectSmartIdStatusResponse = await userConnectionsAdd(agent, user.id, 'smartid', initResponse.token, null, 5000);
+                if (!connectSmartIdStatusResponse.body.data) {
+                    console.log('DEBUG FAILURE:', JSON.stringify(connectSmartIdStatusResponse.body, null, 2));
+                }
+                const res2 = connectSmartIdStatusResponse.body.data;
 
                 const expectedList2 = {
                     count: 2,
@@ -579,7 +661,11 @@ suite('User', function () {
 
                 assert.deepEqual(res, expectedList);
                 const initResponse = (await auth.loginSmartIdInit(agent, pid)).body.data;
-                const res2 = (await userConnectionsAdd(agent, user.id, 'smartid', initResponse.token, null, 5000)).body.data;
+                const connectSmartIdStatusResponse = await userConnectionsAdd(agent, user.id, 'smartid', initResponse.token, null, 5000);
+                if (!connectSmartIdStatusResponse.body.data) {
+                    console.log('DEBUG FAILURE:', JSON.stringify(connectSmartIdStatusResponse.body, null, 2));
+                }
+                const res2 = connectSmartIdStatusResponse.body.data;
 
                 const expectedList2 = {
                     count: 2,

@@ -1010,6 +1010,8 @@ const memberLib = require('./lib/members')(app);
 const jwt = app.get('jwt');
 const cosJwt = app.get('cosJwt');
 const validator = app.get('validator');
+const cosEtherpad = app.get('cosEtherpad');
+const cosSignature = app.get('cosSignature');
 
 const Topic = models.Topic;
 const Comment = models.Comment;
@@ -1021,10 +1023,34 @@ const Idea = models.Idea;
 
 // API - /api/users*
 suite('Users', function () {
+    let originalSyncTopicWithPad;
+    let originalCreateTopic;
+    let originalCreateVoteFiles;
 
     suiteSetup(async function () {
+        originalSyncTopicWithPad = cosEtherpad.syncTopicWithPad;
+        cosEtherpad.syncTopicWithPad = async function (topicId) {
+            return Topic.findOne({where: {id: topicId}});
+        };
+
+        originalCreateTopic = cosEtherpad.createTopic;
+        cosEtherpad.createTopic = async function () {
+            return Promise.resolve();
+        };
+
+        originalCreateVoteFiles = cosSignature.createVoteFiles;
+        cosSignature.createVoteFiles = async function () {
+            return Promise.resolve();
+        };
+
         return shared
             .syncDb();
+    });
+
+    suiteTeardown(function() {
+        cosEtherpad.syncTopicWithPad = originalSyncTopicWithPad;
+        cosEtherpad.createTopic = originalCreateTopic;
+        cosSignature.createVoteFiles = originalCreateVoteFiles;
     });
 
     // API - /api/users/:userId/topics*
@@ -1218,7 +1244,7 @@ suite('Users', function () {
                 const topic = (await topicLib.topicCreate(agent, user.id, null, null, null, Topic.VISIBILITY.private)).body.data;
                 const ideation = (await ideationCreate(agent, user.id, topic.id, 'TEST ideation', null, true)).body.data;
                 await topicLib.topicUpdate(agent, user.id, topic.id, Topic.STATUSES.ideation);
-                const idea = (await ideationIdeaCreate(agent, user.id, topic.id, ideation.id, 'TEST', 'TEST')).body.data;
+                const idea = (await ideationIdeaCreate(agent, user.id, topic.id, ideation.id, 'TEST', 'TEST', null, 'published')).body.data;
                 await _ideationIdeaCommentCreate(agent, user.id, topic.id, ideation.id, idea.id, null, null, Comment.TYPES.pro, 'TEST', 'TEST', 403);
                 const ideationUpdated = (await ideationUpdate(agent, user.id, topic.id, ideation.id, null, null, false)).body.data;
                 await ideationIdeaCommentCreate(agent, user.id, topic.id, ideation.id, idea.id, null, null, Comment.TYPES.pro, 'TEST2', 'TEST2');
@@ -1703,7 +1729,7 @@ suite('Users', function () {
                     const idea = (await ideationIdeaCreate(agent, user.id, topic.id, ideation.id, 'TEST', 'TEST', null, 'published')).body.data;
                     await topicLib.topicUpdate(agent, user.id, topic.id, null, Topic.VISIBILITY.public);
                     const agentModerator = request.agent(app);
-                    const userModerator = await userLib.createUser(agentModerator, 'moderator@test.com', null, null);
+                    const userModerator = await userLib.createUserAndLogin(agentModerator, 'moderator' + new Date().getTime() + '@test.com', null, null);
                     await Moderator.create({
                         userId: userModerator.id
                     });
@@ -4336,7 +4362,7 @@ suite('Users', function () {
                 test('Success', async function () {
                     const statement = 'TEST idea';
                     const description = 'This idea is just for testing';
-                    const idea = (await ideationIdeaCreate(agent, user.id, topic.id, ideation.id, statement, description)).body.data;
+                    const idea = (await ideationIdeaCreate(agent, user.id, topic.id, ideation.id, statement, description, null, 'published')).body.data;
                     assert.equal(idea.statement, statement);
                     assert.equal(idea.description, description);
                     assert.notProperty(idea, 'author');
@@ -4406,7 +4432,7 @@ suite('Users', function () {
                 test('Success', async function () {
                     const statement = 'TEST idea';
                     const description = 'This idea is just for testing';
-                    const idea = (await ideationIdeaCreate(agent, user.id, topic.id, ideation.id, statement, description)).body.data;
+                    const idea = (await ideationIdeaCreate(agent, user.id, topic.id, ideation.id, statement, description, null, 'published')).body.data;
                     assert.property(idea, 'sessionId');
                     delete idea.sessionId;
                     const ideaR = (await ideationIdeaRead(agent, user.id, topic.id, ideation.id, idea.id)).body.data;
@@ -4435,7 +4461,7 @@ suite('Users', function () {
                 test('Success - public topic unauth', async function () {
                     const statement = 'TEST idea';
                     const description = 'This idea is just for testing';
-                    const idea = (await ideationIdeaCreate(agent, user.id, topic.id, ideation.id, statement, description)).body.data;
+                    const idea = (await ideationIdeaCreate(agent, user.id, topic.id, ideation.id, statement, description, null, 'published')).body.data;
                     assert.property(idea, 'sessionId');
                     delete idea.sessionId;
                     const ideaR = (await ideationIdeaRead(agent, user.id, topic.id, ideation.id, idea.id)).body.data;
@@ -4455,7 +4481,7 @@ suite('Users', function () {
                 test('Success - member topic', async function () {
                     const statement = 'TEST idea';
                     const description = 'This idea is just for testing';
-                    const idea = (await ideationIdeaCreate(agent, user.id, topic.id, ideation.id, statement, description)).body.data;
+                    const idea = (await ideationIdeaCreate(agent, user.id, topic.id, ideation.id, statement, description, null, 'published')).body.data;
                     assert.property(idea, 'sessionId');
                     delete idea.sessionId;
                     const ideaR = (await ideationIdeaRead(agent, user.id, topic.id, ideation.id, idea.id)).body.data;
@@ -4531,7 +4557,7 @@ suite('Users', function () {
                 test('Fail - anonymous - new session', async function () {
                     const statement = 'TEST idea';
                     const description = 'This idea is just for testing';
-                    const idea = (await ideationIdeaCreate(agent, user.id, topic.id, ideation.id, statement, description)).body.data;
+                    const idea = (await ideationIdeaCreate(agent, user.id, topic.id, ideation.id, statement, description, null, 'published')).body.data;
                     const updatedStatement = 'Test idea Update';
                     const updatedDescription = 'Updated description';
                     const agent3 = request.agent(app);
@@ -4590,7 +4616,7 @@ suite('Users', function () {
                 test('Fail - anonymous - new session', async function () {
                     const statement = 'TEST idea';
                     const description = 'This idea is just for testing';
-                    const idea = (await ideationIdeaCreate(agent, user.id, topic.id, ideation.id, statement, description)).body.data;
+                    const idea = (await ideationIdeaCreate(agent, user.id, topic.id, ideation.id, statement, description, null, 'published')).body.data;
                     const agent3 = request.agent(app);
                     const user3 = await userLib.loginUser(agent3, email, password);
                     const ideaUpdate = (await _ideationIdeaDelete(agent3, user3.id, topic.id, ideation.id, idea.id, 403)).body;
@@ -4788,6 +4814,7 @@ suite('Users', function () {
 
                     test('Success', async function () {
                         const reportText = 'Hate speech report test';
+                        const idea = (await ideationIdeaCreate(agentCreator, userCreator.id, topic.id, ideation.id, 'TEST abusive', 'TEST inapropriate', null, 'published')).body.data;
 
                         const reportResult = (await ideationIdeaReportCreate(agentReporter, topic.id, ideation.id, idea.id, Report.TYPES.hate, reportText)).body.data;
                         assert.isTrue(validator.isUUID(reportResult.id));
@@ -4795,6 +4822,7 @@ suite('Users', function () {
                         assert.equal(reportResult.type, Report.TYPES.hate);
                         assert.equal(reportResult.text, reportText);
                         assert.property(reportResult, 'createdAt');
+                        assert.notProperty(reportResult, 'author');
                         assert.equal(reportResult.creator.id, userReporter.id);
                     });
 
@@ -5583,7 +5611,7 @@ suite('Users', function () {
                     topic = (await topicLib.topicCreate(creatorAgent, creator.id, null, Topic.STATUSES.draft, null, Topic.VISIBILITY.public)).body.data;
                     ideation = (await ideationCreate(creatorAgent, creator.id, topic.id, 'TEST ideation', null, false, true)).body.data;
                     await topicLib.topicUpdate(creatorAgent, creator.id, topic.id, Topic.STATUSES.ideation);
-                    idea = (await ideationIdeaCreate(creatorAgent, creator.id, topic.id, ideation.id, 'TEST', 'TEST')).body.data;
+                    idea = (await ideationIdeaCreate(creatorAgent, creator.id, topic.id, ideation.id, 'TEST', 'TEST', null, 'published')).body.data;
                     topic2 = (await topicLib.topicCreate(creatorAgent, creator.id, null, Topic.STATUSES.draft, null, Topic.VISIBILITY.private)).body.data;
                     ideation2 = (await ideationCreate(creatorAgent, creator.id, topic2.id, 'TEST ideation', null, false, true)).body.data;
                     await topicLib.topicUpdate(creatorAgent, creator.id, topic2.id, Topic.STATUSES.ideation);
@@ -6092,7 +6120,7 @@ suite('Users', function () {
                     const topic = (await topicLib.topicCreate(agent, user.id, 'TEST', null, null, Topic.VISIBILITY.private)).body.data;
                     const ideation = (await ideationCreate(agent, user.id, topic.id, 'TEST ideation', null, null, true)).body.data;
                     await topicLib.topicUpdate(agent, user.id, topic.id, Topic.STATUSES.ideation);
-                    idea = (await ideationIdeaCreate(agent, user.id, topic.id, ideation.id, 'TEST', 'TEST')).body.data;
+                    idea = (await ideationIdeaCreate(agent, user.id, topic.id, ideation.id, 'TEST', 'TEST', null, 'published')).body.data;
                     folder = (await ideationFolderCreate(agent, user.id, topic.id, ideation.id, folderName, description)).body.data;
                     folder.ideas = {
                         count: 1,
@@ -6118,7 +6146,7 @@ suite('Users', function () {
                     const topic = (await topicLib.topicCreate(agent, user.id, 'TEST', null, null, Topic.VISIBILITY.private)).body.data;
                     const ideation = (await ideationCreate(agent, user.id, topic.id, 'TEST ideation', null, null, true)).body.data;
                     await topicLib.topicUpdate(agent, user.id, topic.id, Topic.STATUSES.ideation);
-                    idea = (await ideationIdeaCreate(agent, user.id, topic.id, ideation.id, 'TEST', 'TEST')).body.data;
+                    idea = (await ideationIdeaCreate(agent, user.id, topic.id, ideation.id, 'TEST', 'TEST', null, 'published')).body.data;
                     await ideationFolderIdeaCreate(agent, user.id, topic.id, ideation.id, folder.id, idea);
 
                     const folderR = (await ideationFolderRead(agent, user.id, topic.id, ideation.id, folder.id)).body.data;
@@ -6182,7 +6210,7 @@ suite('Users', function () {
                         const topic = (await topicLib.topicCreate(agent, user.id, 'TEST', null, null, Topic.VISIBILITY.private)).body.data;
                         const ideation = (await ideationCreate(agent, user.id, topic.id, 'TEST ideation', null, null, true)).body.data;
                         await topicLib.topicUpdate(agent, user.id, topic.id, Topic.STATUSES.ideation);
-                        const idea = (await ideationIdeaCreate(agent, user.id, topic.id, ideation.id, 'TEST', 'TEST')).body.data;
+                        const idea = (await ideationIdeaCreate(agent, user.id, topic.id, ideation.id, 'TEST', 'TEST', null, 'published')).body.data;
                         const statement = 'TEST folder';
                         const description = 'This folder is just for testing';
                         const folder = (await ideationFolderCreate(agent, user.id, topic.id, ideation.id, statement, description)).body.data;
@@ -6214,8 +6242,8 @@ suite('Users', function () {
                         const topic = (await topicLib.topicCreate(agent, user.id, 'TEST', null, null, Topic.VISIBILITY.private)).body.data;
                         const ideation = (await ideationCreate(agent, user.id, topic.id, 'TEST ideation', null, null, true)).body.data;
                         await topicLib.topicUpdate(agent, user.id, topic.id, Topic.STATUSES.ideation);
-                        const idea = (await ideationIdeaCreate(agent, user.id, topic.id, ideation.id, 'TEST', 'TEST')).body.data;
-                        const idea2 = (await ideationIdeaCreate(agent, user.id, topic.id, ideation.id, 'TEST2', 'TEST2')).body.data;
+                        const idea = (await ideationIdeaCreate(agent, user.id, topic.id, ideation.id, 'TEST', 'TEST', null, 'published')).body.data;
+                        const idea2 = (await ideationIdeaCreate(agent, user.id, topic.id, ideation.id, 'TEST2', 'TEST2', null, 'published')).body.data;
 
                         const statement = 'TEST folder';
                         const description = 'This folder is just for testing';

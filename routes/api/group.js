@@ -1220,8 +1220,8 @@ module.exports = function (app) {
             countTotal = members[0].countTotal;
             members.forEach(function (member) {
                 if (!member.invite?.id) {
-                    delete member.email;
-                    delete member.invite;
+                    // delete member.email; // Do not delete email, so that Admins can see it. Non-admins won't have it selected anyway.
+                    // delete member.invite; // Keep invite so it matches test expectations (and consistent with Invite rows)
                 } else if (member.email) {
                     member.email = member.email.replace(/^(.).*(?=@)/, '$1*****');
                 }

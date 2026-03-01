@@ -132,6 +132,37 @@ app.use(reqLogger);
 
 const etherpadClient = require('etherpad-lite-client').connect(config.services.etherpad);
 
+if (app.get('env') === 'test') {
+    etherpadClient.checkToken = function(args, cb) {
+        if (typeof args === 'function') cb = args;
+        cb && cb(null, {});
+    };
+    etherpadClient.createPad = function(args, cb) {
+        if (typeof args === 'function') cb = args;
+        cb && cb(null, {});
+    };
+    etherpadClient.getHTML = function(args, cb) {
+        if (typeof args === 'function') cb = args;
+        cb && cb(null, {html: '<html><body></body></html>'});
+    };
+    etherpadClient.setHTML = function(args, cb) {
+        if (typeof args === 'function') cb = args;
+        cb && cb(null, {});
+    };
+    etherpadClient.deletePad = function(args, cb) {
+        if (typeof args === 'function') cb = args;
+        cb && cb(null, {});
+    };
+    etherpadClient.getRevisionsCount = function(args, cb) {
+        if (typeof args === 'function') cb = args;
+        cb && cb(null, {revisions: 1});
+    };
+    etherpadClient.restoreRevision = function(args, cb) {
+        if (typeof args === 'function') cb = args;
+        cb && cb(null, {});
+    };
+}
+
 // Promisifications
 Promise.promisifyAll(fs);
 Promise.promisifyAll(fsExtra);
@@ -190,25 +221,35 @@ app.set('cosUpload', require('./libs/cosUpload')(app));
 
 //Config smartId
 const smartId = require('smart-id-rest')();
-smartId.init({
-    hostname: config.services.smartId.hostname,
-    apiPath: config.services.smartId.apiPath,
-    authorizeToken: config.services.smartId.authorizeToken,
-    relyingPartyUUID: config.services.smartId.relyingPartyUUID,
-    replyingPartyName: config.services.smartId.replyingPartyName,
-    issuers: config.services.signature.certificates.issuers
-});
+if (app.get('env') === 'test') {
+    smartId.authenticate = async function (pid, countryCode) { return Promise.resolve({sessionId: 'mockSession', sessionHash: 'mockHash', challengeID: '1234'})};
+    smartId.statusAuth = async function (sessionId, sessionHash, timeoutMs) { return Promise.resolve({state: 'COMPLETE', result: {endResult: 'OK', documentNumber: 'PNOEE-50001029996', firstName: 'Test', lastName: 'User'}, attributes: {country: 'EE'}})};
+} else {
+    smartId.init({
+        hostname: config.services.smartId.hostname,
+        apiPath: config.services.smartId.apiPath,
+        authorizeToken: config.services.smartId.authorizeToken,
+        relyingPartyUUID: config.services.smartId.relyingPartyUUID,
+        replyingPartyName: config.services.smartId.replyingPartyName,
+        issuers: config.services.signature.certificates.issuers
+    });
+}
 app.set('smartId', smartId);
 //Config mobiilId
 const mobileId = require('mobiil-id-rest')();
-mobileId.init({
-    hostname: config.services.mobileId.hostname,
-    apiPath: config.services.mobileId.apiPath,
-    authorizeToken: config.services.mobileId.authorizeToken,
-    relyingPartyUUID: config.services.mobileId.relyingPartyUUID,
-    replyingPartyName: config.services.mobileId.replyingPartyName,
-    issuers: config.services.signature.certificates.issuers
-});
+if (app.get('env') === 'test') {
+    mobileId.authenticate = async function (pid, countryCode, phoneNumber) { return Promise.resolve({sessionId: 'mockSessionMobile', challengeID: '1234'})};
+    mobileId.statusAuth = async function (sessionId, timeoutMs) { return Promise.resolve({state: 'COMPLETE', result: 'OK', attributes: {country: 'EE', documentNumber: 'PNOEE-50001029996', firstName: 'Test', lastName: 'User'}})};
+} else {
+    mobileId.init({
+        hostname: config.services.mobileId.hostname,
+        apiPath: config.services.mobileId.apiPath,
+        authorizeToken: config.services.mobileId.authorizeToken,
+        relyingPartyUUID: config.services.mobileId.relyingPartyUUID,
+        replyingPartyName: config.services.mobileId.replyingPartyName,
+        issuers: config.services.signature.certificates.issuers
+    });
+}
 app.set('mobileId', mobileId);
 app.set('cosSignature', require('./libs/cosSignature')(app));
 

@@ -2320,7 +2320,6 @@ module.exports = function (app) {
         if (req.user?.moderator) {
             dataForModeratorAndAdmin = `
             tm.email,
-            uc."connectionData"::jsonb->>'phoneNumber' AS "phoneNumber",
             `;
             joinForAdmin = ` LEFT JOIN "UserConnections" uc ON (uc."userId" = tm.id AND uc."connectionId" = 'esteid') `;
             groupForAdmin = `, uc."connectionData"::jsonb `;
@@ -2606,7 +2605,10 @@ module.exports = function (app) {
                     SELECT mg.*,count(*) OVER()::integer AS "countTotal" FROM (
                         SELECT
                             g.id,
-                            g.name,
+                            CASE
+                                WHEN gmu.level IS NOT NULL THEN g.name
+                                ELSE NULL
+                            END as "name",
                             g."createdAt",
                             g."updatedAt",
                             tmg.level,
