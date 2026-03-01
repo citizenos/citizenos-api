@@ -7691,7 +7691,7 @@ suite('Users', function () {
                                 });
 
                                 test('Success - Vote, delete account, re-vote & count, delete account re-count', async () => {
-                                    const pid = 30303039914;
+                                    const pid = 50001029996;
                                     const countryCode = 'EE';
                                     const topic = (await topicCreate(agent, user.id, 'TEST VOTE AND DELETE ACCOUNT AND RE-VOTE', null, '<html><head></head><body><h2>TEST VOTE AND DELETE ACCOUNT AND RE-VOTE</h2></body></html>', Topic.VISIBILITY.public)).body.data;
                                     const agentUser1 = request.agent(app);
@@ -7892,7 +7892,7 @@ suite('Users', function () {
                                 .destroy({
                                     where: {
                                         connectionId: [UserConnection.CONNECTION_IDS.esteid, UserConnection.CONNECTION_IDS.smartid],
-                                        connectionUserId: ['PNOEE-30403039917', 'PNOEE-30303039914', 'PNOEE-11412090004']
+                                        connectionUserId: ['PNOEE-30403039917', 'PNOEE-50001029996', 'PNOEE-11412090004']
                                     },
                                     force: true
                                 });
@@ -7902,13 +7902,13 @@ suite('Users', function () {
                             await UserConnection.destroy({
                                 where: {
                                     connectionId: [UserConnection.CONNECTION_IDS.esteid, UserConnection.CONNECTION_IDS.smartid],
-                                    connectionUserId: ['PNOEE-30403039917', 'PNOEE-30303039914', 'PNOEE-11412090004']
+                                    connectionUserId: ['PNOEE-30403039917', 'PNOEE-50001029996', 'PNOEE-11412090004']
                                 },
                                 force: true
                             });
 
                             const countryCode = 'EE';
-                            const pid = '30303039914';
+                            const pid = '50001029996';
 
                             const voteList = [
                                 {
@@ -7927,13 +7927,13 @@ suite('Users', function () {
                             await UserConnection.destroy({
                                 where: {
                                     connectionId: [UserConnection.CONNECTION_IDS.esteid, UserConnection.CONNECTION_IDS.smartid],
-                                    connectionUserId: ['PNOEE-30403039917', 'PNOEE-30303039914', 'PNOEE-11412090004']
+                                    connectionUserId: ['PNOEE-30403039917', 'PNOEE-50001029996', 'PNOEE-11412090004']
                                 },
                                 force: true
                             });
 
                             const countryCode = 'EE';
-                            const pid = '30303039914';
+                            const pid = '50001029996';
 
                             const voteList = [
                                 {
@@ -7952,13 +7952,13 @@ suite('Users', function () {
                             await UserConnection.destroy({
                                 where: {
                                     connectionId: [UserConnection.CONNECTION_IDS.esteid, UserConnection.CONNECTION_IDS.smartid],
-                                    connectionUserId: ['PNOEE-30403039917', 'PNOEE-30303039914', 'PNOEE-11412090004']
+                                    connectionUserId: ['PNOEE-30403039917', 'PNOEE-50001029996', 'PNOEE-11412090004']
                                 },
                                 force: true
                             });
 
                             const countryCode = 'EE';
-                            const pid = '30303039914';
+                            const pid = '50001029996';
 
                             const voteList = [
                                 {
@@ -7981,7 +7981,7 @@ suite('Users', function () {
 
                         test('Success - Latvian PID', async function () {
                             const countryCode = 'LV';
-                            const pid = '030303-10012';
+                            const pid = '030303-10215';
 
                             const voteList = [
                                 {
@@ -7996,7 +7996,7 @@ suite('Users', function () {
 
                         test('Success - Lithuanian PID', async function () {
                             const countryCode = 'LT';
-                            const pid = '30303039914';
+                            const pid = '50001029996';
 
                             const voteList = [
                                 {
@@ -8011,7 +8011,7 @@ suite('Users', function () {
 
                         test('Success - Personal ID already connected to another user account.', async function () {
                             const countryCode = 'EE';
-                            const pid = '30303039914';
+                            const pid = '50001029996';
 
                             const voteList = [
                                 {
@@ -8036,7 +8036,7 @@ suite('Users', function () {
                             this.timeout(30000);
 
                             const countryCode = 'EE';
-                            const pid = '30303039914';
+                            const pid = '50001029996';
 
                             const voteList = [
                                 {
@@ -8177,7 +8177,7 @@ suite('Users', function () {
                                 }
                             });
                             const countryCode = 'EE';
-                            const pid = '30303039914';
+                            const pid = '50001029996';
 
                             const voteList = [
                                 {

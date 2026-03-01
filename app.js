@@ -39,7 +39,7 @@ const rateLimit = require('express-rate-limit')
 const app = express();
 app.set('redis', require('./libs/redis')(app));
 
-const { rateLimitStore, speedLimitStore } = app.get('redis');
+const { getRateLimitStore, getSpeedLimitStore } = app.get('redis');
 
 const rateLimiter = function (allowedRequests, blockTime, skipSuccess) {
     if (app.get('env') === 'test') {
@@ -49,7 +49,7 @@ const rateLimiter = function (allowedRequests, blockTime, skipSuccess) {
     }
 
     return rateLimit({
-        store: rateLimitStore,
+        store: getRateLimitStore(),
         windowMs: blockTime || (15 * 60 * 1000), // default 15 minutes
         max: allowedRequests || 100,
         skipSuccessfulRequests: skipSuccess || true,
@@ -69,7 +69,7 @@ const speedLimiter = function (allowedRequests, skipSuccess, blockTime, delay) {
         }
     }
     return SlowDown.slowDown({
-        store: speedLimitStore,
+        store: getSpeedLimitStore(),
         windowMs: blockTime || (15 * 60 * 1000), // default 15 minutes
         delayAfter: allowedRequests || 15, // allow 15 requests per 15 minutes, then...
         delayMs: () => delay || 1000, // response time increases by default 1s per request

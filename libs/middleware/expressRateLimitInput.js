@@ -3,13 +3,14 @@ const _ = require('lodash');
 const { RateLimiterMemory, RateLimiterRedis } = require('rate-limiter-flexible'); // FIXME: Allow configurable RateLimiter...
 const assert = require('assert');
 const { createClient } = require('redis');
+const { getRedisClientConfig } = require('../redis/clientConfig');
 
 function ExpressRateLimitInput(app) {
     const config = app.get('config');
     const logger = app.get('logger');
     let client;
     if (config.rateLimit && config.rateLimit.storageType === 'redis') {
-        const redisConf = Object.assign({ url: process.env.REDIS_URL || config.rateLimit.client.url }, config.rateLimit.client.options);
+        const redisConf = getRedisClientConfig(config);
         client = createClient(redisConf);
 
         client.on('error', err => logger.error('Redis Client Error', err))
@@ -17,7 +18,12 @@ function ExpressRateLimitInput(app) {
             logger.log('Redis connection ended');
         });
 
-        client.connect();
+        client.connect().then(() => {
+            const pingInterval = setInterval(() => {
+                client.ping().catch(err => logger.error('Redis PING failed', err));
+            }, 30 * 1000);
+            pingInterval.unref();
+        });
 
     }
     /**
@@ -50,6 +56,7 @@ function ExpressRateLimitInput(app) {
 
             rateLimiter = new RateLimiterRedis({
                 storeClient: client,
+                useRedisPackage: true, // Required for node-redis v4+
                 duration: windowMs / 1000,
                 points: max
             });

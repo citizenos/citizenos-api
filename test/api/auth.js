@@ -851,7 +851,7 @@ suite('Auth', function () {
 
         suite('Smart-ID', function () {
             suite('Init', function () {
-                let pid = '30303039914';
+                let pid = '50001029996';
                 teardown(async function () {
                     return UserConnection
                         .destroy({
@@ -897,7 +897,7 @@ suite('Auth', function () {
             });
 
             suite('Status', function () {
-                let pid = '30303039914';
+                let pid = '50001029996';
 
                 suite('New User', function () {
                     teardown(async function () {
@@ -1093,7 +1093,7 @@ suite('Auth', function () {
 
                     test('Success - 20002 - existing User', async function () {
                         this.timeout(30000);
-                        pid = '30303039914';
+                        pid = '50001029996';
                         const user = await userLib.createUser(agent2, null, null, null);
 
                         await UserConnection

@@ -448,7 +448,7 @@ suite('User', function () {
             });
 
             test('Success - Smart-ID', async() => {
-                const pid = '30303039914';
+                const pid = '50001029996';
                 const res = (await userConnectionsList(agent, user.email)).body.data;
                 const expectedList = {
                     count: 1,
@@ -508,7 +508,7 @@ suite('User', function () {
             });
 
             test('Success - Smart-ID - User has connection with same pid', async() => {
-                const pid = '30303039914';
+                const pid = '50001029996';
                 const res = (await userConnectionsList(agent, user.email)).body.data;
                 const expectedList = {
                     count: 1,
@@ -541,7 +541,7 @@ suite('User', function () {
             });
 
             test('Fail - invalid connection', async() => {
-                const pid = '30303039914';
+                const pid = '50001029996';
                 const initResponse = (await auth.loginSmartIdInit(agent, pid)).body.data;
                 const result = (await userConnectionsAdd(agent, user.id, 'smart', initResponse.token, null, 5000)).body;
                 const expectedBody = {
@@ -565,8 +565,8 @@ suite('User', function () {
             });
 
             test('Fail - Smart-ID - User has connection with different pid - logout', async() => {
-                const pid = '30303039914';
-                const pid2 = '30303039903';
+                const pid = '50001029996';
+                const pid2 = '40404040009';
                 const res = (await userConnectionsList(agent, user.email)).body.data;
                 const expectedList = {
                     count: 1,

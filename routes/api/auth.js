@@ -557,6 +557,9 @@ module.exports = function (app) {
             }
             if (e.code === 400) {
                 return res.badRequest();
+            } else if (e.code > 400 && e.code < 500) {
+                logger.error('Smart-ID authentication failed', e.code, e.message);
+                return res.badRequest(e.message);
             }
 
             return next(e);

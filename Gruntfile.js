@@ -23,7 +23,7 @@ module.exports = function (grunt) {
         },
         eslint: {
             dev: {
-                src: ['**/*.js', '!node_modules/**']
+                src: ['**/*.js', '!node_modules/**', '!actions-runner/**', '!docs/**', '!coverage/**', '!dist/**', '!build/**']
             }
         },
         plantuml: {

@@ -24,13 +24,9 @@ suite('cosBdoc', function () {
     const User = models.User;
     const UserConnection = models.UserConnection;
 
-    let topic;
-    let vote;
+    let topic = null;
+    let vote = null;
     const voteOptions = [];
-    let user;
-
-    let voteFileDir;
-
     suiteSetup(async function () {
         return shared.syncDb();
     });

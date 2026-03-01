@@ -2607,8 +2607,8 @@ suite('Users', function () {
                     let idea;
                     let partner;
                     let comment1;
-                    let comment2;
-                    let comment3;
+                    let comment2 = {};
+                    let comment3 = {};
 
                     setup(async function () {
                         user = await userLib.createUserAndLogin(agent, null, null, null);
@@ -5504,8 +5504,8 @@ suite('Users', function () {
                     let ideation;
                     let idea;
                     let comment1;
-                    let comment2;
-                    let comment3;
+                    let comment2 = {};
+                    let comment3 = {};
 
                     setup(async function () {
                         user = await userLib.createUserAndLogin(agent, null, null, null);
