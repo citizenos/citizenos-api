@@ -141,50 +141,54 @@ module.exports = function (app) {
         });
 
         // GOOGLE
-        passport.use(new GoogleStrategy(
-            {
-                clientID: config.passport.google.clientId,
-                clientSecret: config.passport.google.clientSecret,
-                callbackURL: urlLib.getApi(config.passport.google.callbackUrl),
-                userProfileURL: 'https://www.googleapis.com/oauth2/v3/userinfo',
-                passReqToCallback: true // http://passportjs.org/guide/authorize/#association_in_verify_callback
-            },
-            async function (req, accessToken, refreshToken, profile, done) {
-                logger.debug('Google responded with profile: ', profile);
+	if (passport.google) {
+            passport.use(new GoogleStrategy(
+                {
+                    clientID: config.passport.google.clientId,
+                    clientSecret: config.passport.google.clientSecret,
+                    callbackURL: urlLib.getApi(config.passport.google.callbackUrl),
+                    userProfileURL: 'https://www.googleapis.com/oauth2/v3/userinfo',
+                    passReqToCallback: true // http://passportjs.org/guide/authorize/#association_in_verify_callback
+                },
+                async function (req, accessToken, refreshToken, profile, done) {
+                    logger.debug('Google responded with profile: ', profile);
 
-                try {
-                    const user = await _findOrCreateUser(UserConnection.CONNECTION_IDS.google, User.SOURCES.google, profile, req);
+                    try {
+                        const user = await _findOrCreateUser(UserConnection.CONNECTION_IDS.google, User.SOURCES.google, profile, req);
 
-                    return done(null, user.toJSON());
-                } catch (err) {
-                    console.log(err);
-                    done(err);
+                        return done(null, user.toJSON());
+                    } catch (err) {
+                        console.log(err);
+                        done(err);
+                    }
                 }
-            }
-        ));
+            ));
+        }
 
         // FACEBOOK
-        passport.use(new FacebookStrategy(
-            {
-                clientID: config.passport.facebook.clientId,
-                clientSecret: config.passport.facebook.clientSecret,
-                callbackURL: urlLib.getApi(config.passport.facebook.callbackUrl),
-                enableProof: false,
-                profileFields: ['id', 'displayName', 'cover', 'email'],
-                passReqToCallback: true
-            },
-            async function (req, accessToken, refreshToken, profile, done) {
-                logger.info('Facebook responded with profile: ', profile);
-                try {
-                    const user = await _findOrCreateUser(UserConnection.CONNECTION_IDS.facebook, User.SOURCES.facebook, profile, req);
+	if (passport.facebook) {
+            passport.use(new FacebookStrategy(
+                {
+                    clientID: config.passport.facebook.clientId,
+                    clientSecret: config.passport.facebook.clientSecret,
+                    callbackURL: urlLib.getApi(config.passport.facebook.callbackUrl),
+                    enableProof: false,
+                    profileFields: ['id', 'displayName', 'cover', 'email'],
+                    passReqToCallback: true
+                },
+                async function (req, accessToken, refreshToken, profile, done) {
+                    logger.info('Facebook responded with profile: ', profile);
+                    try {
+                        const user = await _findOrCreateUser(UserConnection.CONNECTION_IDS.facebook, User.SOURCES.facebook, profile, req);
 
-                    return done(null, user.toJSON());
-                } catch (err) {
-                    console.log(err);
-                    done(err);
+                        return done(null, user.toJSON());
+                    } catch (err) {
+                        console.log(err);
+                        done(err);
+                    }
                 }
-            }
-        ));
+            ));
+        }
 
         // LOCAL
         passport.use(new LocalStrategy(

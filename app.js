@@ -189,27 +189,33 @@ app.set('cosJwt', require('./libs/cosJwt')(app));
 app.set('cosUpload', require('./libs/cosUpload')(app));
 
 //Config smartId
-const smartId = require('smart-id-rest')();
-smartId.init({
-    hostname: config.services.smartId.hostname,
-    apiPath: config.services.smartId.apiPath,
-    authorizeToken: config.services.smartId.authorizeToken,
-    relyingPartyUUID: config.services.smartId.relyingPartyUUID,
-    replyingPartyName: config.services.smartId.replyingPartyName,
-    issuers: config.services.signature.certificates.issuers
-});
-app.set('smartId', smartId);
+if (config.services.smartId) {
+    const smartId = require('smart-id-rest')();
+    smartId.init({
+        hostname: config.services.smartId.hostname,
+        apiPath: config.services.smartId.apiPath,
+        authorizeToken: config.services.smartId.authorizeToken,
+        relyingPartyUUID: config.services.smartId.relyingPartyUUID,
+        replyingPartyName: config.services.smartId.replyingPartyName,
+        issuers: config.services.signature.certificates.issuers
+    });
+    app.set('smartId', smartId);
+}
+
 //Config mobiilId
-const mobileId = require('mobiil-id-rest')();
-mobileId.init({
-    hostname: config.services.mobileId.hostname,
-    apiPath: config.services.mobileId.apiPath,
-    authorizeToken: config.services.mobileId.authorizeToken,
-    relyingPartyUUID: config.services.mobileId.relyingPartyUUID,
-    replyingPartyName: config.services.mobileId.replyingPartyName,
-    issuers: config.services.signature.certificates.issuers
-});
-app.set('mobileId', mobileId);
+if (config.services.mobileId) {
+    const mobileId = require('mobiil-id-rest')();
+    mobileId.init({
+        hostname: config.services.mobileId.hostname,
+        apiPath: config.services.mobileId.apiPath,
+        authorizeToken: config.services.mobileId.authorizeToken,
+        relyingPartyUUID: config.services.mobileId.relyingPartyUUID,
+        replyingPartyName: config.services.mobileId.replyingPartyName,
+        issuers: config.services.signature.certificates.issuers
+    });
+    app.set('mobileId', mobileId);
+}
+
 app.set('cosSignature', require('./libs/cosSignature')(app));
 
 if (typeof config.email === 'string') {
