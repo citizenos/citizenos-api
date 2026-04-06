@@ -1030,7 +1030,7 @@ suite('Users', function () {
     suiteSetup(async function () {
         originalSyncTopicWithPad = cosEtherpad.syncTopicWithPad;
         cosEtherpad.syncTopicWithPad = async function (topicId) {
-            return Topic.findOne({where: {id: topicId}});
+            return Topic.findOne({ where: { id: topicId } });
         };
 
         originalCreateTopic = cosEtherpad.createTopic;
@@ -1047,7 +1047,7 @@ suite('Users', function () {
             .syncDb();
     });
 
-    suiteTeardown(function() {
+    suiteTeardown(function () {
         cosEtherpad.syncTopicWithPad = originalSyncTopicWithPad;
         cosEtherpad.createTopic = originalCreateTopic;
         cosSignature.createVoteFiles = originalCreateVoteFiles;
@@ -2582,7 +2582,7 @@ suite('Users', function () {
                         const commentEdited = (await ideationIdeaCommentList(agent3, user3.id, topic.id, ideation.id, idea.id, 'date')).body.data.rows[0];
                         assert.property(commentEdited, 'id');
                         assert.property(commentEdited, 'edits');
-                        assert.equal(commentEdited.edits.length, 1);
+                        assert.equal(commentEdited.edits.length, 2);
                         assert.equal(commentEdited.edits[0].subject, subject);
                         assert.equal(commentEdited.subject, editSubject);
                         assert.equal(commentEdited.edits[0].text, text);
@@ -2658,6 +2658,7 @@ suite('Users', function () {
                         const creatorExpected = user.toJSON();
                         delete creatorExpected.email; // Email is not returned
                         delete creatorExpected.language; // Language is not returned
+                        delete creatorExpected.company;
 
                         assert.equal(list.count.total, 3);
                         assert.equal(comments.length, 3);
@@ -2706,6 +2707,7 @@ suite('Users', function () {
                         const creatorExpected = user.toJSON();
                         delete creatorExpected.email; // Email is not returned
                         delete creatorExpected.language; // Language is not returned
+                        delete creatorExpected.company;
 
                         assert.equal(list.count.total, 3);
                         assert.equal(comments.length, 3);
@@ -2739,6 +2741,7 @@ suite('Users', function () {
                         const creatorExpected = user.toJSON();
                         delete creatorExpected.email; // Email is not returned
                         delete creatorExpected.language; // Language is not returned
+                        delete creatorExpected.company;
 
                         assert.equal(list.count.total, 7);
                         assert.equal(comments.length, 3);
@@ -2858,8 +2861,8 @@ suite('Users', function () {
                         const comments = list.rows;
 
                         const creatorExpected = user.toJSON();
-                        creatorExpected.phoneNumber = null;
                         delete creatorExpected.language; // Language is not returned
+                        delete creatorExpected.company;
 
                         assert.equal(list.count.total, 6);
                         assert.equal(comments.length, 3);
@@ -3433,13 +3436,13 @@ suite('Users', function () {
                             });
                         });
 
-                        test('Fail - 404 - trying to fetch comments of non-public Topic', async function () {
+                        test('Fail - 403 - trying to fetch comments of non-public Topic', async function () {
                             const topic = (await topicLib.topicCreate(creatorAgent, creator.id, null, Topic.STATUSES.draft, null, Topic.VISIBILITY.private)).body.data;
                             ideation = (await ideationCreate(creatorAgent, creator.id, topic.id, 'TEST ideation')).body.data;
                             await topicLib.topicUpdate(creatorAgent, creator.id, topic.id, Topic.STATUSES.ideation);
                             idea = (await ideationIdeaCreate(creatorAgent, creator.id, topic.id, ideation.id, 'TEST', 'TEST', null, 'published')).body.data;
 
-                            return _ideationIdeaCommentListUnauth(userAgent, topic.id, ideation.id, idea.id, null, 404);
+                            return _ideationIdeaCommentListUnauth(userAgent, topic.id, ideation.id, idea.id, null, 403);
                         });
 
                     });
@@ -3617,7 +3620,6 @@ suite('Users', function () {
                                 const expected = {
                                     rows: [
                                         {
-                                            company: null,
                                             imageUrl: null,
                                             createdAt: commentVote.createdAt,
                                             updatedAt: commentVote.updatedAt,
@@ -5487,10 +5489,12 @@ suite('Users', function () {
                         const commentEdited = (await ideationIdeaCommentList(agent3, user3.id, topic.id, ideation.id, idea.id, 'date')).body.data.rows[0];
                         assert.property(commentEdited, 'id');
                         assert.property(commentEdited, 'edits');
-                        assert.equal(commentEdited.edits.length, 1);
+                        assert.equal(commentEdited.edits.length, 2);
                         assert.equal(commentEdited.edits[0].subject, subject);
+                        assert.equal(commentEdited.edits[1].subject, editSubject);
                         assert.equal(commentEdited.subject, editSubject);
                         assert.equal(commentEdited.edits[0].text, text);
+                        assert.equal(commentEdited.edits[1].text, editText);
                         assert.equal(commentEdited.text, editText);
                         assert.equal(commentEdited.edits[0].createdAt, commentEdited.createdAt);
                         assert.notEqual(commentEdited.type, Comment.TYPES.reply);

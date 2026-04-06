@@ -415,7 +415,7 @@ const _commentAttachmentList = async function (agent, userId, topicId, discussio
 
     return agent
         .get(path)
-        .query({type})
+        .query({ type })
         .expect(expectedHttpCode)
         .expect('Content-Type', /json/);
 };
@@ -433,7 +433,7 @@ const _commentAttachmentListUnauth = async function (agent, topicId, discussionI
     return agent
         .get(path)
         .expect(expectedHttpCode)
-        .query({type})
+        .query({ type })
         .expect('Content-Type', /json/);
 };
 
@@ -505,7 +505,7 @@ suite('Users', function () {
     suiteSetup(async function () {
         originalSyncTopicWithPad = cosEtherpad.syncTopicWithPad;
         cosEtherpad.syncTopicWithPad = async function (topicId) {
-            return Topic.findOne({where: {id: topicId}});
+            return Topic.findOne({ where: { id: topicId } });
         };
 
         originalCreateTopic = cosEtherpad.createTopic;
@@ -522,7 +522,7 @@ suite('Users', function () {
             .syncDb();
     });
 
-    suiteTeardown(function() {
+    suiteTeardown(function () {
         cosEtherpad.syncTopicWithPad = originalSyncTopicWithPad;
         cosEtherpad.createTopic = originalCreateTopic;
         cosSignature.createVoteFiles = originalCreateVoteFiles;
@@ -1010,7 +1010,7 @@ suite('Users', function () {
 
                 test('Success - Comments with replies v2 orderBy popularity', async function () {
                     // setup has: comment2 (1 vote), comment1 (1 vote), comment3 (0 votes)
-                    
+
                     // Vote on comment3 (1 vote)
                     await topicCommentVotesCreate(creatorAgent, topic.id, discussion.id, comment3.id, 1);
 
@@ -1042,7 +1042,7 @@ suite('Users', function () {
 
                     const data = (await topicCommentList(creatorAgent, creator.id, topic.id, discussion.id, 'popularity')).body.data;
                     const expectedResult = {
-                        rows: [comment3, comment1, comment2], 
+                        rows: [comment3, comment1, comment2],
                         count: {
                             total: 14,
                             pro: 2,
@@ -1146,12 +1146,12 @@ suite('Users', function () {
                     });
                 });
 
-                test('Fail - 404 - trying to fetch comments of non-public Topic', async function () {
+                test('Fail - 403 - trying to fetch comments of non-public Topic', async function () {
                     const topic = (await topicLib.topicCreate(creatorAgent, creator.id, null, Topic.STATUSES.draft, null, Topic.VISIBILITY.private)).body.data;
-                    const discussion = (await discussionCreate(creatorAgent, creator.id, topic.id, 'TEST Question'));
+                    const discussion = (await discussionCreate(creatorAgent, creator.id, topic.id, 'TEST Question')).body.data;
                     await topicLib.topicUpdate(creatorAgent, creator.id, topic.id, Topic.STATUSES.inProgress);
 
-                    return _topicCommentListUnauth(userAgent, topic.id, discussion.id, null, 404);
+                    return _topicCommentListUnauth(userAgent, topic.id, discussion.id, null, 403);
                 });
 
             });
@@ -1325,7 +1325,6 @@ suite('Users', function () {
                         const expected = {
                             rows: [
                                 {
-                                    company: null,
                                     imageUrl: null,
                                     createdAt: commentVote.createdAt,
                                     updatedAt: commentVote.updatedAt,
@@ -1937,6 +1936,7 @@ suite('Users', function () {
                     const creatorExpected = user.toJSON();
                     delete creatorExpected.email; // Email is not returned
                     delete creatorExpected.language; // Language is not returned
+                    delete creatorExpected.company;
 
                     assert.equal(list.count.total, 3);
                     assert.equal(comments.length, 3);
@@ -1985,6 +1985,7 @@ suite('Users', function () {
                     const creatorExpected = user.toJSON();
                     delete creatorExpected.email; // Email is not returned
                     delete creatorExpected.language; // Language is not returned
+                    delete creatorExpected.company;
 
                     assert.equal(list.count.total, 3);
                     assert.equal(comments.length, 3);
@@ -2018,6 +2019,7 @@ suite('Users', function () {
                     const creatorExpected = user.toJSON();
                     delete creatorExpected.email; // Email is not returned
                     delete creatorExpected.language; // Language is not returned
+                    delete creatorExpected.company;
 
                     assert.equal(list.count.total, 7);
                     assert.equal(comments.length, 3);
@@ -2137,8 +2139,8 @@ suite('Users', function () {
                     const comments = list.rows;
 
                     const creatorExpected = user.toJSON();
-                    creatorExpected.phoneNumber = null;
                     delete creatorExpected.language; // Language is not returned
+                    delete creatorExpected.company;
 
                     assert.equal(list.count.total, 6);
                     assert.equal(comments.length, 3);

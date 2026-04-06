@@ -690,7 +690,7 @@ module.exports = function (app) {
 
             await db.transaction(async function (t) {
                 await topic.save({ transaction: t });
-                const topicJoinPromise = TopicJoin.create(
+                const topicJoin = await TopicJoin.create(
                     {
                         topicId: topic.id
                     },
@@ -699,7 +699,7 @@ module.exports = function (app) {
                     }
                 );
 
-                const memberUserPromise = topic.addMemberUser(// Magic method by Sequelize - https://github.com/sequelize/sequelize/wiki/API-Reference-Associations#hasmanytarget-options
+                await topic.addMemberUser(
                     user.id,
                     {
                         through: {
@@ -709,7 +709,7 @@ module.exports = function (app) {
                     }
                 );
 
-                const activityPromise = cosActivities.createActivity(
+                await cosActivities.createActivity(
                     topic,
                     null,
                     {
@@ -720,7 +720,6 @@ module.exports = function (app) {
                     , req.method + ' ' + req.path,
                     t
                 );
-                [topicJoin] = await Promise.all([topicJoinPromise, memberUserPromise, activityPromise]);
                 t.afterCommit(async () => {
                     topic = await cosEtherpad.syncTopicWithPad(
                         topic.id,
@@ -787,7 +786,7 @@ module.exports = function (app) {
             });
 
             topic.padUrl = cosEtherpad.getTopicPadUrl(topic.id);
-
+            console.log('pad', topic.padUrl);
             if (req.locals.partner) {
                 topic.sourcePartnerId = req.locals.partner.id;
             }
@@ -821,7 +820,7 @@ module.exports = function (app) {
                         transaction: t
                     }
                 );
-                attachments.forEach(async (attachment) => {
+                for (const attachment of attachments) {
                     const attachmentClone = await Attachment.create(
                         {
                             name: attachment.name,
@@ -845,7 +844,7 @@ module.exports = function (app) {
                             transaction: t
                         }
                     );
-                });
+                }
 
                 await cosActivities.createActivity(
                     topic,

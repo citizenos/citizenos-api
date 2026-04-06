@@ -42,7 +42,7 @@ function ExpressRateLimitInput(app) {
      * @see https://lodash.com/docs/4.17.15#get
      */
     return function expressRateLimitInput(properties, windowMs, max) {
-        if (app.get('env') === 'test') {
+        if (app.get('env') === 'test' && process.env.ENABLE_RATE_LIMIT !== 'true') {
             return function (req, res, next) {
                 return next();
             };

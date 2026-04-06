@@ -149,7 +149,7 @@ module.exports = function (app) {
                 redirectSuccess,
             };
 
-            const token = jwt.sign(tokenData, config.session.privateKey, {algorithm: config.session.algorithm});
+            const token = jwt.sign(tokenData, config.session.privateKey, { algorithm: config.session.algorithm });
 
             await emailLib.sendAccountVerification(user.email, user.emailVerificationCode, token);
         }
@@ -439,7 +439,6 @@ module.exports = function (app) {
         const cert = req.headers['x-ssl-client-cert'] || req.body.cert;
         const timeoutMs = req.query.timeoutMs || 5000;
         let personalInfo;
-
         if (!UserConnection.CONNECTION_IDS[connection]) {
             return res.badRequest('Invalid connection');
         }
@@ -496,43 +495,31 @@ module.exports = function (app) {
                             transaction: t
                         }
                     );
-                    t.afterCommit(async () => {
-                        const userConnections = await UserConnection.findAll({
-                            where: {
-                                userId: req.user.id
-                            },
-                            attributes: ['connectionId'],
-                            order: [[db.cast(db.col('connectionId'), 'TEXT'), 'ASC']] // Cast as we want alphabetical order, not enum order.
-                        });
-
-                        return res.ok({
-                            count: userConnections.length,
-                            rows: userConnections
-                        });
-                    });
                 } else if (userConnectionInfo.connectionUserId !== connectionUserId) {
                     await authUser.clearSessionCookies(req, res);
                     t.afterCommit(() => {
                         return res.forbidden();
                     });
+
+                    return;
                 }
+            });
+
+            const userConnections = await UserConnection.findAll({
+                where: {
+                    userId: req.user.id
+                },
+                attributes: ['connectionId'],
+                order: [[db.cast(db.col('connectionId'), 'TEXT'), 'ASC']] // Cast as we want alphabetical order, not enum order.
+            });
+
+            return res.ok({
+                count: userConnections.length,
+                rows: userConnections
             });
         } else {
             return res.badRequest();
         }
-
-        const userConnections = await UserConnection.findAll({
-            where: {
-                userId: req.user.id
-            },
-            attributes: ['connectionId'],
-            order: [[db.cast(db.col('connectionId'), 'TEXT'), 'ASC']] // Cast as we want alphabetical order, not enum order.
-        });
-
-        return res.ok({
-            count: userConnections.length,
-            rows: userConnections
-        });
     }));
 
 

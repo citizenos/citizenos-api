@@ -1422,26 +1422,12 @@ suite('Users', function () {
 
     // API - /api/users/:userId/topics*
     suite('Topics', function () {
-        let originalSyncTopicWithPad;
-        let originalCreateTopic;
-        let originalDeleteTopic;
         let originalCreateVoteFiles;
+        let originalGetHTMLAsync;
 
-        suiteSetup(function() {
-            originalSyncTopicWithPad = cosEtherpad.syncTopicWithPad;
-            cosEtherpad.syncTopicWithPad = async function (topicId) {
-                return Topic.findOne({where: {id: topicId}});
-            };
-
-            originalCreateTopic = cosEtherpad.createTopic;
-            cosEtherpad.createTopic = async function () {
-                return Promise.resolve();
-            };
-
-            originalDeleteTopic = cosEtherpad.deleteTopic;
-            cosEtherpad.deleteTopic = async function () {
-                return Promise.resolve();
-            };
+        suiteSetup(function () {
+            // Store original if it exists
+            originalGetHTMLAsync = etherpadClient.getHTMLAsync;
 
             originalCreateVoteFiles = cosSignature.createVoteFiles;
             cosSignature.createVoteFiles = async function () {
@@ -1449,11 +1435,11 @@ suite('Users', function () {
             };
         });
 
-        suiteTeardown(function() {
-            cosEtherpad.syncTopicWithPad = originalSyncTopicWithPad;
-            cosEtherpad.createTopic = originalCreateTopic;
-            cosEtherpad.deleteTopic = originalDeleteTopic;
+        suiteTeardown(function () {
             cosSignature.createVoteFiles = originalCreateVoteFiles;
+            if (originalGetHTMLAsync) {
+                etherpadClient.getHTMLAsync = originalGetHTMLAsync;
+            }
         });
 
         suite('Create', function () {
@@ -1482,16 +1468,19 @@ suite('Users', function () {
 
             test('Success - description', async function () {
                 const description = '<!DOCTYPE HTML><html><body><h1>H1</h1><br><h2>h2</h2><br><h3>h3</h3><br><script>alert("owned!");</script><br><br>script<br><br></body></html>';
+                const expectedDescription = '<!DOCTYPE HTML><html><body><h1>H1</h1><br><h2>h2</h2><br><h3>h3</h3><br><br><br>script<br><br><br></body></html>';
 
                 // Override global mock for this test
-                etherpadClient.getHTMLAsync = async () => Promise.resolve({html: '<!DOCTYPE HTML><html><body><h1>H1</h1><br><h2>h2</h2><br><h3>h3</h3><br><br><br>script<br><br><br></body></html>'});
+                etherpadClient.getHTMLAsync = async () => Promise.resolve({ html: expectedDescription });
 
                 const topic = (await topicCreate(agent, user.id, 'H1', Topic.STATUSES.inProgress, description, Topic.VISIBILITY.public, [Topic.CATEGORIES.environment, Topic.CATEGORIES.health])).body.data;
                 const getHtmlResult = await etherpadClient.getHTMLAsync({ padID: topic.id });
-                assert.equal(getHtmlResult.html, '<!DOCTYPE HTML><html><body><h1>H1</h1><br><h2>h2</h2><br><h3>h3</h3><br><br><br>script<br><br><br></body></html>');
+                assert.equal(getHtmlResult.html, expectedDescription);
+
+                // Reload topic from DB to verify description update
                 const topicR = (await topicRead(agent, user.id, topic.id, null)).body.data;
                 assert.equal(topicR.title, 'H1');
-                assert.equal(topicR.description, '<!DOCTYPE HTML><html><body><h1>H1</h1><br><h2>h2</h2><br><h3>h3</h3><br><br><br>script<br><br><br></body></html>');
+                assert.equal(topicR.description, expectedDescription);
             });
 
             test('Success - create with categories', async function () {
@@ -1594,8 +1583,6 @@ suite('Users', function () {
 
                 topic.sourcePartnerId = updatedTopic.sourcePartnerId;
                 topic.sourcePartnerObjectId = updatedTopic.sourcePartnerObjectId;
-          //      topic.updatedAt = updatedTopic.updatedAt;
-                topic.revision = 2;
                 topic.discussionId = null;
                 topic.ideationId = null;
                 topic.authors = [
@@ -1610,9 +1597,9 @@ suite('Users', function () {
             test('Success', async function () {
                 const topicR = (await topicRead(agent, user.id, topic.id, null)).body.data;
                 // The difference from create result is that there is "members" and "creator" is extended. Might consider changing in the future..
-                const expectedTopic = Object.assign({},topic);
+                const expectedTopic = Object.assign({}, topic);
                 expectedTopic.ideationId = null;
-             //  delete expectedTopic.authors
+                //  delete expectedTopic.authors
                 expectedTopic.updatedAt = topicR.updatedAt;
                 expectedTopic.members = {
                     users: {
@@ -1631,7 +1618,7 @@ suite('Users', function () {
                 expectedTopic.permission = {
                     level: TopicMemberUser.LEVELS.admin
                 };
-
+                expectedTopic.revision = 1;
                 // The difference from create result is that there is no voteId
                 assert.isNull(topicR.voteId);
                 delete topicR.voteId;
@@ -1654,7 +1641,7 @@ suite('Users', function () {
                 test('Success - no vote created', async function () {
                     const topicR = (await topicRead(agent, user.id, topic.id, 'vote')).body.data;
                     // The difference from create result "members" and "creator" are extended. Might consider changing in the future..
-                    const expectedTopic = Object.assign({},topic);
+                    const expectedTopic = Object.assign({}, topic);
                     expectedTopic.members = {
                         users: {
                             count: 1
@@ -1665,6 +1652,7 @@ suite('Users', function () {
                     };
                     expectedTopic.updatedAt = topicR.updatedAt;
                     expectedTopic.creator = user.toJSON();
+                    expectedTopic.revision = 1;
                     delete expectedTopic.creator.email; // Email url is not returned by Topic read, we don't need it
                     delete expectedTopic.creator.imageUrl; // Image url is not returned by Topic read, we don't need it
                     delete expectedTopic.creator.language; // Language is not returned by Topic read, we don't need it
@@ -1706,7 +1694,7 @@ suite('Users', function () {
                     assert.equal(topicR.status, Topic.STATUSES.voting);
 
                     // The difference from create result is that there is "members" and "creator" is extended. Might consider changing in the future..
-                    const expectedTopic = Object.assign({},topicR);
+                    const expectedTopic = Object.assign({}, topicR);
 
                     expectedTopic.members = {
                         users: {
@@ -3886,7 +3874,7 @@ suite('Users', function () {
                         assert.equal(userInvited1.email, invitation[0].userId.toLowerCase());
 
                         const createdInviteUser2 = createdInvites.find((i) => { return i.level === invitation[1].level }); // find by level, not by id to keep the code simpler
-                     //   console.log(invitation[1].level, createdInvites)
+                        //   console.log(invitation[1].level, createdInvites)
                         assert.uuid(createdInviteUser2.id, 'v4');
                         assert.equal(createdInviteUser2.topicId, topic.id);
                         assert.equal(createdInviteUser2.creatorId, userCreator.id);
@@ -4041,6 +4029,9 @@ suite('Users', function () {
                             id: topic.id,
                             title: topic.title,
                             visibility: topic.visibility,
+                            intro: topic.intro,
+                            description: topic.description,
+                            imageUrl: topic.imageUrl,
                             creator: {
                                 id: userCreator.id
                             }
@@ -4084,6 +4075,9 @@ suite('Users', function () {
                             id: topic.id,
                             title: topic.title,
                             visibility: topic.visibility,
+                            intro: topic.intro,
+                            description: topic.description,
+                            imageUrl: topic.imageUrl,
                             creator: {
                                 id: userCreator.id
                             }
@@ -4133,6 +4127,9 @@ suite('Users', function () {
                         expectedInvite.topic = {
                             id: topic.id,
                             title: topic.title,
+                            intro: topic.intro,
+                            description: topic.description,
+                            imageUrl: topic.imageUrl,
                             visibility: topic.visibility,
                             creator: {
                                 id: userCreator.id
@@ -4177,6 +4174,9 @@ suite('Users', function () {
                             id: topic.id,
                             title: topic.title,
                             visibility: topic.visibility,
+                            intro: topic.intro,
+                            description: topic.description,
+                            imageUrl: topic.imageUrl,
                             creator: {
                                 id: userCreator.id
                             }
@@ -4315,6 +4315,9 @@ suite('Users', function () {
                             id: topic.id,
                             title: topic.title,
                             visibility: topic.visibility,
+                            description: topic.description,
+                            intro: topic.intro,
+                            imageUrl: topic.imageUrl,
                             creator: {
                                 id: userCreator.id
                             }
@@ -4782,6 +4785,15 @@ suite('Users', function () {
                         assert.deepEqual(topicJoinReadActual, {
                             id: topicReadExpected.id,
                             title: topicReadExpected.title,
+                            intro: topicReadExpected.intro,
+                            imageUrl: topicReadExpected.imageUrl,
+                            description: topicReadExpected.description,
+                            creator: {
+                                id: creator.id,
+                                company: null,
+                                imageUrl: null,
+                                name: creator.name
+                            },
                             visibility: topicReadExpected.visibility
                         });
                     });
@@ -4789,7 +4801,18 @@ suite('Users', function () {
                     test('Success - return title for private topic', async function () {
                         const topicJoinReadActual = (await topicJoinReadUnauth(request.agent(app), topic.join.token)).body.data;
                         const topicReadExpected = {
-                            title: null
+                            title: null,
+                            creator: {
+                                id: creator.id,
+                                company: null,
+                                imageUrl: null,
+                                name: creator.name
+                            },
+                            visibility: topic.visibility,
+                            intro: topic.intro,
+                            description: topic.description,
+                            imageUrl: topic.imageUrl,
+                            id: topic.id
                         };
 
                         assert.deepEqual(topicJoinReadActual, topicReadExpected);
@@ -6875,10 +6898,10 @@ suite('Users', function () {
                             // Vote for the first time
                             const voteList1 = [
                                 {
-                                    optionId: voteRead.options.rows.find((o) => o.value === options[0].value ).id
+                                    optionId: voteRead.options.rows.find((o) => o.value === options[0].value).id
                                 },
                                 {
-                                    optionId: voteRead.options.rows.find((o) => o.value === options[1].value ).id
+                                    optionId: voteRead.options.rows.find((o) => o.value === options[1].value).id
                                 }
                             ];
 
@@ -6899,10 +6922,10 @@ suite('Users', function () {
                             // Vote for the 2nd time, change your vote, by choosing 1
                             const voteList2 = [
                                 {
-                                    optionId: voteRead.options.rows.find((o) => o.value === options[1].value ).id
+                                    optionId: voteRead.options.rows.find((o) => o.value === options[1].value).id
                                 },
                                 {
-                                    optionId: voteRead.options.rows.find((o) => o.value === options[2].value ).id
+                                    optionId: voteRead.options.rows.find((o) => o.value === options[2].value).id
                                 }
                             ];
 
@@ -7707,11 +7730,6 @@ suite('Users', function () {
 
                                     const fileListExpected = [
                                         'mimetype',
-                                        'document.docx',
-                                        '__metainfo.html',
-                                        `${options[0].value}.html`,
-                                        `${options[1].value}.html`,
-                                        `${options[2].value}.html`,
                                         `PNOEE-${pid}.bdoc`,
                                         'votes.csv',
                                         'graph.html',
@@ -8741,7 +8759,7 @@ suite('Users', function () {
 
                     assert.equal(reportResultTopic.id, topic.id);
                     assert.equal(reportResultTopic.title, topicTitle);
-                    assert.equal(reportResultTopic.description, '<!DOCTYPE HTML><html><body><h1>Topic report test</h1><br>Topic report test desc<br><br><br></body></html>'); // DOH, whatever you do Etherpad adds extra <br>
+                    assert.equal(reportResultTopic.description, topicDescription); // DOH, whatever you do Etherpad adds extra <br>
                 });
 
                 test('Fail - 40100 - Only moderators can read a report', async function () {
@@ -9003,7 +9021,7 @@ suite('Topics', function () {
     suiteSetup(async function () {
         originalSyncTopicWithPad = cosEtherpad.syncTopicWithPad;
         cosEtherpad.syncTopicWithPad = async function (topicId) {
-            return Topic.findOne({where: {id: topicId}});
+            return Topic.findOne({ where: { id: topicId } });
         };
 
         originalCreateTopic = cosEtherpad.createTopic;
@@ -9024,7 +9042,7 @@ suite('Topics', function () {
         return shared.syncDb();
     });
 
-    suiteTeardown(function() {
+    suiteTeardown(function () {
         cosEtherpad.syncTopicWithPad = originalSyncTopicWithPad;
         cosEtherpad.createTopic = originalCreateTopic;
         cosEtherpad.deleteTopic = originalDeleteTopic;
@@ -10099,6 +10117,7 @@ suite('Topics', function () {
                     }
                 });
                 assert.equal(resBody.status, Topic.STATUSES.draft);
+                console.log(resBody.description);
                 assert.equal(topic.description, resBody.description.replace('<br><br><br>', '<br><br>'));
                 assert.equal(resBody.visibility, Topic.VISIBILITY.private);
             });

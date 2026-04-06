@@ -181,8 +181,8 @@ module.exports = function (app) {
      */
     const hasPermission = function (level, allowPublic, topicStatusesAllowed, allowSelf) {
         return async function (req, res, next) {
-            const userId = req.user?.userId || req.user?.id;
-            const partnerId = req.user?.partnerId;
+            const userId = req.user?.userId || req.user?.id || null;
+            const partnerId = req.user?.partnerId || null;
             const topicId = req.params.topicId;
 
             allowPublic = allowPublic ? allowPublic : false;

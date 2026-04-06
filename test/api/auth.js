@@ -1,4 +1,6 @@
 'use strict';
+process.env.ENABLE_RATE_LIMIT = 'true';
+
 
 /**
  * Log in - call '/api/auth/login' API endpoint
@@ -48,7 +50,7 @@ const _loginId = async function (agent, token, clientCert, expectedHttpCode) {
     }
 
     if (token) {
-        a.send({token: token});
+        a.send({ token: token });
     }
 
     return a.expect(expectedHttpCode)
@@ -109,7 +111,7 @@ const _loginSmartIdInit = async function (agent, pid, userId, expectedHttpCode) 
     return agent
         .post(path)
         .set('Content-Type', 'application/json')
-        .send({pid, userId})
+        .send({ pid, userId })
         .expect(expectedHttpCode)
         .expect('Content-Type', /json/);
 };
@@ -344,7 +346,7 @@ const _passwordResetSend = async function (agent, email, expectedHttpCode) {
     return agent
         .post(path)
         .set('Content-Type', 'application/json')
-        .send({email: email})
+        .send({ email: email })
         .expect(expectedHttpCode)
         .expect('Content-Type', /json/);
 };
@@ -591,7 +593,7 @@ suite('Auth', function () {
                 this.timeout(5000);
 
                 const agent = request.agent(app);
-                const cert = fs.readFileSync('./test/resources/certificates/good-jaak-kristjan_jõeorg_esteid_sign.pem', {encoding: 'utf8'}).replace(/\n/g, '');
+                const cert = fs.readFileSync('./test/resources/certificates/good-jaak-kristjan_jõeorg_esteid_sign.pem', { encoding: 'utf8' }).replace(/\n/g, '');
                 await _loginId(agent, null, cert, 200);
             });
 
@@ -624,7 +626,7 @@ suite('Auth', function () {
 
                     assert.equal(response.status.code, 20001);
                     assert.match(response.data.challengeID, /[0-9]{4}/);
-                    const tokenData = jwt.verify(response.data.token, config.session.publicKey, {algorithms: [config.session.algorithm]});
+                    const tokenData = jwt.verify(response.data.token, config.session.publicKey, { algorithms: [config.session.algorithm] });
                     const loginMobileFlowData = cryptoLib.decrypt(config.session.secret, tokenData.sessionDataEncrypted);
                     assert.property(loginMobileFlowData, 'sessionHash');
 
@@ -654,7 +656,7 @@ suite('Auth', function () {
 
                     assert.equal(response.status.code, 20001);
                     assert.match(response.data.challengeID, /[0-9]{4}/);
-                    const tokenData = jwt.verify(response.data.token, config.session.publicKey, {algorithms: [config.session.algorithm]});
+                    const tokenData = jwt.verify(response.data.token, config.session.publicKey, { algorithms: [config.session.algorithm] });
                     const loginMobileFlowData = cryptoLib.decrypt(config.session.secret, tokenData.sessionDataEncrypted);
                     assert.property(loginMobileFlowData, 'sessionHash');
 
@@ -872,7 +874,7 @@ suite('Auth', function () {
                     const token = response.data.token;
                     assert.isNotNull(token);
 
-                    const tokenData = jwt.verify(token, config.session.publicKey, {algorithms: [config.session.algorithm]});
+                    const tokenData = jwt.verify(token, config.session.publicKey, { algorithms: [config.session.algorithm] });
                     const loginMobileFlowData = cryptoLib.decrypt(config.session.secret, tokenData.sessionDataEncrypted);
 
                     assert.property(loginMobileFlowData, 'sessionId');
@@ -900,6 +902,20 @@ suite('Auth', function () {
                 let pid = '50001029996';
 
                 suite('New User', function () {
+                    setup(async function () {
+                        await UserConnection
+                            .destroy({
+                                where: {
+                                    connectionId: UserConnection.CONNECTION_IDS.smartid,
+                                    connectionUserId: [
+                                        'PNOEE-50001029996',
+                                        'PNOEE-30403039939',
+                                        'PNOEE-30403039983'
+                                    ]
+                                },
+                                force: true
+                            });
+                    });
                     teardown(async function () {
                         await UserConnection
                             .destroy({
@@ -937,7 +953,7 @@ suite('Auth', function () {
                         const token = response.data.token;
                         assert.isNotNull(token);
 
-                        const tokenData = jwt.verify(token, config.session.publicKey, {algorithms: [config.session.algorithm]});
+                        const tokenData = jwt.verify(token, config.session.publicKey, { algorithms: [config.session.algorithm] });
                         const loginMobileFlowData = cryptoLib.decrypt(config.session.secret, tokenData.sessionDataEncrypted);
 
                         assert.property(loginMobileFlowData, 'sessionId');
@@ -958,7 +974,7 @@ suite('Auth', function () {
                         const token2 = response2.data.token;
                         assert.isNotNull(token2);
 
-                        const tokenData2 = jwt.verify(token2, config.session.publicKey, {algorithms: [config.session.algorithm]});
+                        const tokenData2 = jwt.verify(token2, config.session.publicKey, { algorithms: [config.session.algorithm] });
                         const loginMobileFlowData2 = cryptoLib.decrypt(config.session.secret, tokenData2.sessionDataEncrypted);
 
                         assert.property(loginMobileFlowData2, 'sessionId');
@@ -1000,7 +1016,7 @@ suite('Auth', function () {
                         const token = response.data.token;
                         assert.isNotNull(token);
 
-                        const tokenData = jwt.verify(token, config.session.publicKey, {algorithms: [config.session.algorithm]});
+                        const tokenData = jwt.verify(token, config.session.publicKey, { algorithms: [config.session.algorithm] });
                         const loginMobileFlowData = cryptoLib.decrypt(config.session.secret, tokenData.sessionDataEncrypted);
 
                         assert.property(loginMobileFlowData, 'sessionId');
@@ -1022,14 +1038,14 @@ suite('Auth', function () {
                         const token2 = response2.data.token;
                         assert.isNotNull(token2);
 
-                        const tokenData2 = jwt.verify(token2, config.session.publicKey, {algorithms: [config.session.algorithm]});
+                        const tokenData2 = jwt.verify(token2, config.session.publicKey, { algorithms: [config.session.algorithm] });
                         const loginMobileFlowData2 = cryptoLib.decrypt(config.session.secret, tokenData2.sessionDataEncrypted);
 
                         assert.property(loginMobileFlowData2, 'sessionId');
                         assert.property(loginMobileFlowData2, 'sessionHash');
                         assert.property(loginMobileFlowData2, 'challengeID');
                         assert.property(loginMobileFlowData2, 'userId');
-                        assert.equal(loginMobileFlowData2.userId, randomUUID)
+                        assert.equal(loginMobileFlowData2.userId, randomUUID);
                         assert.equal(loginMobileFlowData2.challengeID, response2.data.challengeID);
 
                         const userInfoFromSmartIdStatusResponse2 = (await loginSmartIdstatus(agent, token2)).body;
@@ -1049,7 +1065,7 @@ suite('Auth', function () {
                         assert.equal(userInfoFromSmartIdStatusResponse.status.code, 20003);
                         const userFromStatus = (await status(agent)).body.data;
                         assert.deepEqual(userFromStatus, userInfoFromSmartIdStatusResponse.data);
-                        assert.equal('Ok Testnumber', userInfoFromSmartIdStatusResponse.data.name); // Special check for encoding issues
+                        assert.equal(userInfoFromSmartIdStatusResponse.data.name, 'Ok Test'); // Special check for encoding issues
                     });
 
                     test('Fail - 40010 - User refused', async function () {
@@ -1066,13 +1082,13 @@ suite('Auth', function () {
                                 message: 'User refused'
                             }
                         };
-                        assert.deepEqual(expectedResponse, smartIdStatusResponse);
+                        assert.deepEqual(smartIdStatusResponse, expectedResponse);
                     });
 
 
                     test('Fail - 40011 - Timeout', async function () {
                         this.timeout(120000);
-                        pid = '30403039983'
+                        pid = '30403039983';
                         const agent = request.agent(app);
 
                         const initResponse = (await loginSmartIdInit(agent, pid)).body.data;
@@ -1083,7 +1099,7 @@ suite('Auth', function () {
                                 message: 'The transaction has expired'
                             }
                         };
-                        assert.deepEqual(expectedResponse, smartIdStatusResponse);
+                        assert.deepEqual(smartIdStatusResponse, expectedResponse);
                     });
                 });
 
@@ -1336,7 +1352,7 @@ suite('Auth', function () {
             return agent
                 .get('/api/auth/verify/thisCodeDoesNotExist')
                 .expect(302)
-                .expect('Location', urlLib.getFe('/', null, {error: 'emailVerificationFailed'}));
+                .expect('Location', urlLib.getFe('/', null, { error: 'emailVerificationFailed' }));
         });
 
     });
@@ -1499,13 +1515,13 @@ suite('Auth', function () {
                 test('Success', async function () {
                     await passwordResetComplete(agent, email, password, passwordResetCode);
                     const loginRes = await login(agent, email, password);
-                    assert.equal(email, loginRes.body.data.email);
+                    assert.equal(loginRes.body.data.email, email);
                 });
 
                 test('Fail - reset code expired after reset', async function () {
                     await passwordResetComplete(agent, email, password, passwordResetCode);
                     const loginRes = await login(agent, email, password);
-                    assert.equal(email, loginRes.body.data.email);
+                    assert.equal(loginRes.body.data.email, email);
                     await _passwordResetComplete(agent, email, password, passwordResetCode, 400);
                 });
 
