@@ -14,7 +14,7 @@
  *
  * @see http://expressjs.com/en/guide/error-handling.html
  */
-function cosErrorHandler (err, req, res) {
+function cosErrorHandler (err, req, res, next) {
     const logger = req.app.get('logger') || console;
 
     logger.error(
@@ -32,7 +32,7 @@ function cosErrorHandler (err, req, res) {
         // If the request Content-Type is JSON...
         if (req.is('json')) {
             // body-parser has 2 validations - 1 based on first character and other is just JSON parser exception, need to handle both
-            if ((err.message = 'invalid json' || err instanceof SyntaxError) && err.status === 400 && 'body' in err) { //eslint-disable-line
+            if ((err.message === 'invalid json' || err instanceof SyntaxError) && err.status === 400 && 'body' in err) { //eslint-disable-line
                 status = 400;
                 message = 'Invalid JSON in request body';
             }

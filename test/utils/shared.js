@@ -11,9 +11,10 @@ const logger = app.get('logger');
 const db = app.get('models').sequelize;
 
 const syncDb = async function () {
-    if (process.env.FORCE_DB_SYNC == true && app.get('env') !== 'production') {
+    if (['true', '1'].indexOf(process.env.FORCE_DB_SYNC) > -1 && app.get('env') !== 'production') {
         return db
             .sync({
+                force: true,
                 logging: function (msg) {
                     logger.info(msg);
                 }

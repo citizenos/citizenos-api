@@ -1,19 +1,44 @@
+import js from "@eslint/js";
+import mochaPlugin from "eslint-plugin-mocha";
 import globals from "globals";
-import pluginJs from "@eslint/js";
-import mochaPlugin from 'eslint-plugin-mocha';
 
 export default [
-  { ignores: ["actions-runner/", "test/api/uploads/", "test/api/uploads/**", "!**/node_modules/"] },
-  { files: ["**/*.js"], languageOptions: { sourceType: "commonjs" } },
-  { languageOptions: { globals: { ...globals.browser, ...globals.node } } },
-  pluginJs.configs.recommended,
-  mochaPlugin.configs.flat.recommended,
-  {
-    rules: {
-      "mocha/no-mocha-arrows": "off",
-      "mocha/no-setup-in-describe": "off",
-      "mocha/no-skipped-tests": "off",
-      "mocha/no-exports": "off"
+    {
+        ignores: ["**/node_modules/", "dist/", "build/", "coverage/", "public/uploads/", "actions-runner/", "docs/"]
+    },
+    js.configs.recommended,
+    mochaPlugin.configs.recommended,
+    {
+        languageOptions: {
+            ecmaVersion: 2022,
+            sourceType: "commonjs",
+            parserOptions: {
+            },
+            globals: {
+                ...globals.node,
+                ...globals.mocha,
+                ...globals.jest,
+                expect: "readonly",
+                assert: "readonly",
+                suite: "readonly",
+                test: "readonly",
+                suiteSetup: "readonly",
+                suiteTeardown: "readonly",
+                setup: "readonly",
+                teardown: "readonly"
+            }
+        },
+        rules: {
+            "no-multi-spaces": ["error"],
+            "mocha/no-setup-in-describe": "off",
+            "mocha/no-mocha-arrows": "off",
+            "mocha/consistent-spacing-between-blocks": "off",
+            "no-unused-vars": "warn",
+            "no-undef": "warn",
+            "mocha/no-pending-tests": "off",
+            "no-redeclare": "off",
+            "no-var": "off",
+            "no-useless-assignment": "off"
+        }
     }
-  }
 ];

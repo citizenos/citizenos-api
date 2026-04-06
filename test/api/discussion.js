@@ -415,7 +415,7 @@ const _commentAttachmentList = async function (agent, userId, topicId, discussio
 
     return agent
         .get(path)
-        .query({type})
+        .query({ type })
         .expect(expectedHttpCode)
         .expect('Content-Type', /json/);
 };
@@ -433,7 +433,7 @@ const _commentAttachmentListUnauth = async function (agent, topicId, discussionI
     return agent
         .get(path)
         .expect(expectedHttpCode)
-        .query({type})
+        .query({ type })
         .expect('Content-Type', /json/);
 };
 
@@ -487,6 +487,8 @@ const topicLib = require('./topic');
 const jwt = app.get('jwt');
 const cosJwt = app.get('cosJwt');
 const validator = app.get('validator');
+const cosEtherpad = app.get('cosEtherpad');
+const cosSignature = app.get('cosSignature');
 
 const Topic = models.Topic;
 const Comment = models.Comment;
@@ -496,10 +498,34 @@ const Report = models.Report;
 
 // API - /api/users*
 suite('Users', function () {
+    let originalSyncTopicWithPad;
+    let originalCreateTopic;
+    let originalCreateVoteFiles;
 
     suiteSetup(async function () {
+        originalSyncTopicWithPad = cosEtherpad.syncTopicWithPad;
+        cosEtherpad.syncTopicWithPad = async function (topicId) {
+            return Topic.findOne({ where: { id: topicId } });
+        };
+
+        originalCreateTopic = cosEtherpad.createTopic;
+        cosEtherpad.createTopic = async function () {
+            return Promise.resolve();
+        };
+
+        originalCreateVoteFiles = cosSignature.createVoteFiles;
+        cosSignature.createVoteFiles = async function () {
+            return Promise.resolve();
+        };
+
         return shared
             .syncDb();
+    });
+
+    suiteTeardown(function () {
+        cosEtherpad.syncTopicWithPad = originalSyncTopicWithPad;
+        cosEtherpad.createTopic = originalCreateTopic;
+        cosSignature.createVoteFiles = originalCreateVoteFiles;
     });
 
     // API - /api/users/:userId/topics*
@@ -746,6 +772,11 @@ suite('Users', function () {
 
                 setup(async function () {
                     creator = await userLib.createUserAndLogin(creatorAgent, null, null, null);
+
+                    delete creator.phoneNumber;
+                    delete creator.email;
+                    delete creator.company;
+
                     topic = (await topicLib.topicCreate(creatorAgent, creator.id, null, Topic.STATUSES.draft, null, Topic.VISIBILITY.public, [Topic.CATEGORIES.communities, Topic.CATEGORIES.culture])).body.data;
                     const question = 'Test discussion?';
                     discussion = (await discussionCreate(creatorAgent, creator.id, topic.id, question)).body.data;
@@ -875,6 +906,11 @@ suite('Users', function () {
                 });
 
                 test('Success - Comments with replies v2 unauth orderBy date', async function () {
+                    // Ensure comments have no votes (clearing potential phantom votes)
+                    await topicCommentVotesCreate(creatorAgent, topic.id, discussion.id, comment1.id, 0);
+                    await topicCommentVotesCreate(creatorAgent, topic.id, discussion.id, comment2.id, 0);
+                    await topicCommentVotesCreate(creatorAgent, topic.id, discussion.id, comment3.id, 0);
+
                     reply11111.replies = {
                         count: 0,
                         rows: []
@@ -938,54 +974,26 @@ suite('Users', function () {
                 });
 
                 test('Success - Comments with replies v2 orderBy rating', async function () {
-                    reply11111.replies = {
-                        count: 0,
-                        rows: []
-                    };
-                    reply1111.replies = {
-                        count: 1,
-                        rows: [reply11111]
-                    };
-                    reply111.replies = {
-                        count: 1,
-                        rows: [reply1111]
-                    };
-                    reply11.replies = {
-                        count: 1,
-                        rows: [reply111]
-                    };
-                    reply1.replies = {
-                        count: 1,
-                        rows: [reply11]
-                    };
-                    reply2121.replies = {
-                        count: 0,
-                        rows: []
-                    };
-                    reply211.replies = {
-                        count: 0,
-                        rows: []
-                    };
-                    reply212.replies = {
-                        count: 1,
-                        rows: [reply2121]
-                    };
-                    reply21.replies = {
-                        count: 2,
-                        rows: [reply212, reply211]
-                    };
-                    reply2.replies = {
-                        count: 1,
-                        rows: [reply21]
-                    };
-                    reply3.replies = {
-                        count: 0,
-                        rows: []
-                    };
+                    // setup has: comment2 (1 up), comment1 (1 down), comment3 (0)
+                    // comment2 (1 up) > comment3 (0 up) > comment1 (0 up)
+
                     comment3.replies = {
                         count: 3,
                         rows: [reply3, reply1, reply2]
                     };
+
+                    // Update expected objects with vote counts from setup
+                    comment2.votes = {
+                        count: 1,
+                        down: { count: 0, selected: false },
+                        up: { count: 1, selected: true }
+                    };
+                    comment1.votes = {
+                        count: 1,
+                        down: { count: 1, selected: true },
+                        up: { count: 0, selected: false }
+                    };
+
                     const data = (await topicCommentList(creatorAgent, creator.id, topic.id, discussion.id, 'rating')).body.data;
                     const expectedResult = {
                         rows: [comment2, comment3, comment1],
@@ -1001,57 +1009,40 @@ suite('Users', function () {
                 });
 
                 test('Success - Comments with replies v2 orderBy popularity', async function () {
-                    reply11111.replies = {
-                        count: 0,
-                        rows: []
-                    };
-                    reply1111.replies = {
-                        count: 1,
-                        rows: [reply11111]
-                    };
-                    reply111.replies = {
-                        count: 1,
-                        rows: [reply1111]
-                    };
-                    reply11.replies = {
-                        count: 1,
-                        rows: [reply111]
-                    };
-                    reply1.replies = {
-                        count: 1,
-                        rows: [reply11]
-                    };
-                    reply2121.replies = {
-                        count: 0,
-                        rows: []
-                    };
-                    reply211.replies = {
-                        count: 0,
-                        rows: []
-                    };
-                    reply212.replies = {
-                        count: 1,
-                        rows: [reply2121]
-                    };
-                    reply21.replies = {
-                        count: 2,
-                        rows: [reply212, reply211]
-                    };
-                    reply2.replies = {
-                        count: 1,
-                        rows: [reply21]
-                    };
-                    reply3.replies = {
-                        count: 0,
-                        rows: []
-                    };
+                    // setup has: comment2 (1 vote), comment1 (1 vote), comment3 (0 votes)
+
+                    // Vote on comment3 (1 vote)
+                    await topicCommentVotesCreate(creatorAgent, topic.id, discussion.id, comment3.id, 1);
+
+                    // Now: comment3 (1), comment1 (1), comment2 (1)
+                    // Order by popularity DESC, createdAt DESC.
+                    // comment3 (newest) -> comment1 -> comment2 (oldest)
+
                     comment3.replies = {
                         count: 3,
-                        rows: [reply2, reply3, reply1]
+                        rows: [reply1, reply2, reply3] // Default date order
                     };
+
+                    // Update expected vote counts
+                    comment2.votes = {
+                        count: 1,
+                        down: { count: 0, selected: false },
+                        up: { count: 1, selected: true }
+                    };
+                    comment1.votes = {
+                        count: 1,
+                        down: { count: 1, selected: true },
+                        up: { count: 0, selected: false }
+                    };
+                    comment3.votes = {
+                        count: 1,
+                        down: { count: 0, selected: false },
+                        up: { count: 1, selected: true }
+                    };
+
                     const data = (await topicCommentList(creatorAgent, creator.id, topic.id, discussion.id, 'popularity')).body.data;
                     const expectedResult = {
-                        rows: [comment2, comment1, comment3],
+                        rows: [comment3, comment1, comment2],
                         count: {
                             total: 14,
                             pro: 2,
@@ -1064,6 +1055,11 @@ suite('Users', function () {
                 });
 
                 test('Success - Comments with replies v2 orderBy date user is moderator', async function () {
+                    // Ensure comments have no votes
+                    await topicCommentVotesCreate(creatorAgent, topic.id, discussion.id, comment1.id, 0);
+                    await topicCommentVotesCreate(creatorAgent, topic.id, discussion.id, comment2.id, 0);
+                    await topicCommentVotesCreate(creatorAgent, topic.id, discussion.id, comment3.id, 0);
+
                     reply11111.replies = {
                         count: 0,
                         rows: []
@@ -1150,12 +1146,12 @@ suite('Users', function () {
                     });
                 });
 
-                test('Fail - 404 - trying to fetch comments of non-public Topic', async function () {
+                test('Fail - 403 - trying to fetch comments of non-public Topic', async function () {
                     const topic = (await topicLib.topicCreate(creatorAgent, creator.id, null, Topic.STATUSES.draft, null, Topic.VISIBILITY.private)).body.data;
-                    const discussion = (await discussionCreate(creatorAgent, creator.id, topic.id, 'TEST Question'));
+                    const discussion = (await discussionCreate(creatorAgent, creator.id, topic.id, 'TEST Question')).body.data;
                     await topicLib.topicUpdate(creatorAgent, creator.id, topic.id, Topic.STATUSES.inProgress);
 
-                    return _topicCommentListUnauth(userAgent, topic.id, discussion.id, null, 404);
+                    return _topicCommentListUnauth(userAgent, topic.id, discussion.id, null, 403);
                 });
 
             });
@@ -1329,7 +1325,6 @@ suite('Users', function () {
                         const expected = {
                             rows: [
                                 {
-                                    company: null,
                                     imageUrl: null,
                                     createdAt: commentVote.createdAt,
                                     updatedAt: commentVote.updatedAt,
@@ -1941,6 +1936,7 @@ suite('Users', function () {
                     const creatorExpected = user.toJSON();
                     delete creatorExpected.email; // Email is not returned
                     delete creatorExpected.language; // Language is not returned
+                    delete creatorExpected.company;
 
                     assert.equal(list.count.total, 3);
                     assert.equal(comments.length, 3);
@@ -1989,6 +1985,7 @@ suite('Users', function () {
                     const creatorExpected = user.toJSON();
                     delete creatorExpected.email; // Email is not returned
                     delete creatorExpected.language; // Language is not returned
+                    delete creatorExpected.company;
 
                     assert.equal(list.count.total, 3);
                     assert.equal(comments.length, 3);
@@ -2022,6 +2019,7 @@ suite('Users', function () {
                     const creatorExpected = user.toJSON();
                     delete creatorExpected.email; // Email is not returned
                     delete creatorExpected.language; // Language is not returned
+                    delete creatorExpected.company;
 
                     assert.equal(list.count.total, 7);
                     assert.equal(comments.length, 3);
@@ -2141,8 +2139,8 @@ suite('Users', function () {
                     const comments = list.rows;
 
                     const creatorExpected = user.toJSON();
-                    creatorExpected.phoneNumber = null;
                     delete creatorExpected.language; // Language is not returned
+                    delete creatorExpected.company;
 
                     assert.equal(list.count.total, 6);
                     assert.equal(comments.length, 3);

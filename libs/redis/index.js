@@ -3,23 +3,27 @@
 const config = require("config");
 const { createClient } = require("redis");
 const log4js = require("log4js");
+const { getRedisClientConfig } = require("./clientConfig");
+
+/** Interval (ms) for PING to keep connection alive when idle (e.g. cloud Redis timeouts). */
+const PING_INTERVAL_MS = 30 * 1000;
 
 module.exports = function (app) {
   const logger = log4js.getLogger(app.settings.env);
 
-  const redisUrl = config.rateLimit?.client?.url;
-  const redisOptions = config.rateLimit?.client?.options;
-  const redisConf = Object.assign(
-    { url: process.env.REDIS_URL || redisUrl },
-    redisOptions
-  );
+  const redisConf = getRedisClientConfig(config);
   const client = createClient(redisConf);
 
   client.on("error", (err) => logger.error("Redis Client Error", err));
   client.on("end", () => {
     logger.log("Redis connection ended");
   });
-  client.connect();
+  client.connect().then(() => {
+    const pingInterval = setInterval(() => {
+      client.ping().catch((err) => logger.error("Redis PING failed", err));
+    }, PING_INTERVAL_MS);
+    pingInterval.unref();
+  });
 
   const {
     setResetPasswordToken,
@@ -27,11 +31,14 @@ module.exports = function (app) {
     deleteResetPasswordToken,
   } = require("./cache")(client);
 
-  const { rateLimitStore, speedLimitStore } = require("./limitStores")(client);
+  const {
+    getRateLimitStore,
+    getSpeedLimitStore,
+  } = require("./limitStores")(client);
 
   return {
-    rateLimitStore,
-    speedLimitStore,
+    getRateLimitStore,
+    getSpeedLimitStore,
     client,
     setResetPasswordToken,
     getResetPasswordToken,

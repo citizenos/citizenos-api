@@ -12,6 +12,9 @@ const topicLib = require('./topic');
 const Topic = models.Topic;
 const Partner = models.Partner;
 
+const cosEtherpad = app.get('cosEtherpad');
+const cosSignature = app.get('cosSignature');
+
 const _partnerRead = async function (agent, partnerId, expectedHttpCode) {
     const path = '/api/partners/:partnerId'
         .replace(':partnerId', partnerId);
@@ -45,10 +48,41 @@ const partnerTopicRead = async function (agent, partnerId, sourcePartnerObjectId
 };
 
 suite('Partners', function () {
+    let originalSyncTopicWithPad;
+    let originalCreateTopic;
+    let originalDeleteTopic;
+    let originalCreateVoteFiles;
 
     suiteSetup(async function () {
+        originalSyncTopicWithPad = cosEtherpad.syncTopicWithPad;
+        cosEtherpad.syncTopicWithPad = async function (topicId) {
+            return Topic.findOne({where: {id: topicId}});
+        };
+
+        originalCreateTopic = cosEtherpad.createTopic;
+        cosEtherpad.createTopic = async function () {
+            return Promise.resolve();
+        };
+
+        originalDeleteTopic = cosEtherpad.deleteTopic;
+        cosEtherpad.deleteTopic = async function () {
+            return Promise.resolve();
+        };
+
+        originalCreateVoteFiles = cosSignature.createVoteFiles;
+        cosSignature.createVoteFiles = async function () {
+            return Promise.resolve();
+        };
+
         return shared
             .syncDb();
+    });
+
+    suiteTeardown(function() {
+        cosEtherpad.syncTopicWithPad = originalSyncTopicWithPad;
+        cosEtherpad.createTopic = originalCreateTopic;
+        cosEtherpad.deleteTopic = originalDeleteTopic;
+        cosSignature.createVoteFiles = originalCreateVoteFiles;
     });
 
     suite('Read', function () {

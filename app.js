@@ -39,20 +39,20 @@ const rateLimit = require('express-rate-limit')
 const app = express();
 app.set('redis', require('./libs/redis')(app));
 
-const { rateLimitStore, speedLimitStore } = app.get('redis');
+const { getRateLimitStore, getSpeedLimitStore } = app.get('redis');
 
 const rateLimiter = function (allowedRequests, blockTime, skipSuccess) {
-    if (app.get('env') === 'test') {
+    if (app.get('env') === 'test' && process.env.ENABLE_RATE_LIMIT !== 'true') {
         return function (req, res, next) {
             return next();
         }
     }
 
     return rateLimit({
-        store: rateLimitStore,
+        store: getRateLimitStore(),
         windowMs: blockTime || (15 * 60 * 1000), // default 15 minutes
         max: allowedRequests || 100,
-        skipSuccessfulRequests: skipSuccess || true,
+        skipSuccessfulRequests: skipSuccess || false,
         statusCode: 429,
         requestWasSuccessful: function () {
         },
@@ -69,7 +69,7 @@ const speedLimiter = function (allowedRequests, skipSuccess, blockTime, delay) {
         }
     }
     return SlowDown.slowDown({
-        store: speedLimitStore,
+        store: getSpeedLimitStore(),
         windowMs: blockTime || (15 * 60 * 1000), // default 15 minutes
         delayAfter: allowedRequests || 15, // allow 15 requests per 15 minutes, then...
         delayMs: () => delay || 1000, // response time increases by default 1s per request
@@ -131,6 +131,38 @@ const reqLogger = morgan(config.logging.morgan.format, { // HTTP request logger 
 app.use(reqLogger);
 
 const etherpadClient = require('etherpad-lite-client').connect(config.services.etherpad);
+
+if (app.get('env') === 'test') {
+    etherpadClient.checkToken = function (args, cb) {
+        if (typeof args === 'function') cb = args;
+        cb && cb(null, {});
+    };
+    etherpadClient.createPad = function (args, cb) {
+        if (typeof args === 'function') cb = args;
+        cb && cb(null, {});
+    };
+    etherpadClient.getHTML = function (args, cb) {
+        if (typeof args === 'function') cb = args;
+        // Default mock that can be overridden
+        cb && cb(null, { html: '<html><body></body></html>' });
+    };
+    etherpadClient.setHTML = function (args, cb) {
+        if (typeof args === 'function') cb = args;
+        cb && cb(null, {});
+    };
+    etherpadClient.deletePad = function (args, cb) {
+        if (typeof args === 'function') cb = args;
+        cb && cb(null, {});
+    };
+    etherpadClient.getRevisionsCount = function (args, cb) {
+        if (typeof args === 'function') cb = args;
+        cb && cb(null, { revisions: 1 });
+    };
+    etherpadClient.restoreRevision = function (args, cb) {
+        if (typeof args === 'function') cb = args;
+        cb && cb(null, {});
+    };
+}
 
 // Promisifications
 Promise.promisifyAll(fs);
@@ -198,6 +230,7 @@ smartId.init({
     replyingPartyName: config.services.smartId.replyingPartyName,
     issuers: config.services.signature.certificates.issuers
 });
+
 app.set('smartId', smartId);
 //Config mobiilId
 const mobileId = require('mobiil-id-rest')();

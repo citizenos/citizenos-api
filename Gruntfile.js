@@ -21,11 +21,11 @@ module.exports = function (grunt) {
                 cmd: 'npm test'
             }
         },
-        eslint: {
-            dev: {
-                src: ['**/*.js', '!node_modules/**']
-            }
-        },
+    eslint: {
+      dev: {
+        src: ['**/*.js', '!node_modules/**', '!actions-runner/**', '!docs/**', '!coverage/**', '!dist/**', '!build/**']
+      }
+    },
         plantuml: {
             dev: {
                 src: ['docs/src/schematics/*.puml'],
