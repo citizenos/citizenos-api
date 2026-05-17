@@ -28,7 +28,6 @@ module.exports = function (app) {
     const emailLib = app.get('email');
     const db = models.sequelize;
     const Op = db.Sequelize.Op;
-    const { injectReplacements } = require('sequelize/lib/utils/sql');
     const QueryStream = app.get('QueryStream');
     const fastCsv = app.get('fastCsv');
     const cosUpload = app.get('cosUpload');
@@ -45,17 +44,14 @@ module.exports = function (app) {
     const FolderIdea = models.FolderIdea;
     const IdeaVote = models.IdeaVote;
     const IdeaFavourite = models.IdeaFavourite;
-    const Comment = models.Comment;
     const IdeaComment = models.IdeaComment;
     const Report = models.Report;
-    const CommentReport = models.CommentReport;
-    const CommentVote = models.CommentVote;
     const IdeaReport = models.IdeaReport;
     const IdeaAttachment = models.IdeaAttachment;
     const Attachment = models.Attachment;
-    const topicService = require('../../services/topic')(app);
+    const topicService = app.get('topicService');
 
-    const commentsService = require('../../services/comments')(app);
+    const commentsService = app.get('commentsService');
     const commentsLib = commentsService({
         parentModel: Idea,
         parentIdParam: 'ideaId',

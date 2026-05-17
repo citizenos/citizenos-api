@@ -19,8 +19,8 @@ module.exports = function (app) {
     const logger = app.get('logger');
     const loginCheck = app.get('middleware.loginCheck');
     const authTokenRestrictedUse = app.get('middleware.authTokenRestrictedUse');
-    const voteService = require('../../services/vote')(app);
-    const topicService = require('../../services/topic')(app);
+    const voteService = app.get('voteService');
+    const topicService = app.get('topicService');
     const cosEtherpad = app.get('cosEtherpad');
 
     /**

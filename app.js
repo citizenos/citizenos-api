@@ -37,6 +37,14 @@ const SlowDown = require('express-slow-down');
 const rateLimit = require('express-rate-limit')
 
 const app = express();
+process.on('uncaughtException', (err) => {
+    console.error('UNCAUGHT EXCEPTION:', err);
+    process.exit(1);
+});
+process.on('unhandledRejection', (reason, _promise) => {
+    console.error('UNHANDLED REJECTION:', reason);
+    process.exit(1);
+});
 app.set('redis', require('./libs/redis')(app));
 
 const { getRateLimitStore, getSpeedLimitStore } = app.get('redis');
@@ -329,13 +337,14 @@ app.set('middleware.asyncMiddleware', require('./libs/middleware/asyncMiddleware
 // Bot header logger
 app.use(require('./libs/middleware/botHeaderLogger'));
 
-// Load all services
+// Load all services and register each on app by derived name (e.g. topic.js → topicService)
 const routesServices = './services/';
 fs.readdirSync(routesServices).forEach(function (file) {
     if (!file.match(/\.js$/)) { // Exclude folders
         return;
     }
-    require(routesServices + file)(app);
+    const serviceName = path.basename(file, '.js') + 'Service';
+    app.set(serviceName, require(routesServices + file)(app));
 });
 
 // Load all API routes

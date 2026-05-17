@@ -26,6 +26,8 @@ suite('cosBdoc', function () {
 
     let topic = null;
     let vote = null;
+    let user = { id: 'test' };
+    const voteFileDir = '/tmp';
     const voteOptions = [];
     suiteSetup(async function () {
         return shared.syncDb();

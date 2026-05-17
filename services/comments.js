@@ -20,7 +20,8 @@ module.exports = function (app) {
     const CommentAttachment = models.CommentAttachment;
     const User = models.User;
 
-    const topicService = require('./topic')(app);
+    // commentsService is registered before topicService alphabetically, so app.get('topicService') is not yet available at factory time
+    const topicService = () => app.get('topicService');
 
     const isCommentCreator = function () {
         return async function (req, res, next) {
@@ -194,7 +195,7 @@ module.exports = function (app) {
                         );
                     }
 
-                    await topicService.addUserAsMember(req.user.userId || req.user.id, topic.id, t);
+                    await topicService().addUserAsMember(req.user.userId || req.user.id, topic.id, t);
 
                     const joinCreateData = {
                         commentId: comment.id
@@ -760,7 +761,7 @@ module.exports = function (app) {
                         transaction: t
                     });
 
-                    await topicService.addUserAsMember(req.user.userId, req.params.topicId, t);
+                    await topicService().addUserAsMember(req.user.userId, req.params.topicId, t);
 
                     if (vote) {
                         vote.value = (vote.value === value) ? 0 : value;

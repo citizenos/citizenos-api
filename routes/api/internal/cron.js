@@ -7,7 +7,7 @@ module.exports = function (app) {
     const Vote = models.Vote;
     const TopicVote = models.TopicVote;
     const emailLib = app.get('email');
-    const voteService = require('../../../services/vote')(app);
+    const voteService = app.get('voteService');
     const moment = require('moment');
 
     const getTopicMembers = async (voteId) => {

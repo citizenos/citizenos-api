@@ -14,7 +14,6 @@ module.exports = function (app) {
     const util = app.get('util');
     const urlLib = app.get('urlLib');
     const emailLib = app.get('email');
-    const cosSignature = app.get('cosSignature');
     const cosActivities = app.get('cosActivities');
 
     const cosEtherpad = app.get('cosEtherpad');
@@ -23,7 +22,6 @@ module.exports = function (app) {
     const https = require('https');
     const path = require('path');
     const stream = require('stream');
-    const fs = require('fs');
 
     const loginCheck = app.get('middleware.loginCheck');
     const asyncMiddleware = app.get('middleware.asyncMiddleware');
@@ -37,7 +35,6 @@ module.exports = function (app) {
     const UserConnection = models.UserConnection;
     const Group = models.Group;
     const Topic = models.Topic;
-    const Discussion = models.Discussion;
     const TopicMemberUser = models.TopicMemberUser;
     const TopicMemberGroup = models.TopicMemberGroup;
     const TopicJoin = models.TopicJoin;
@@ -54,9 +51,8 @@ module.exports = function (app) {
     const TopicFavourite = models.TopicFavourite;
     const UserNotificationSettings = models.UserNotificationSettings;
 
-    const Ideation = models.Ideation;
-    const topicService = require('../../services/topic')(app);
-    const voteService = require('../../services/vote')(app);
+    const topicService = app.get('topicService');
+    const voteService = app.get('voteService');
 
     const _topicReadUnauth = async function (topicId, include) {
         await topicService.syncTopicAuthors(topicId); // TODO: On every public topic read we sync authors with EP, can we do better?
@@ -650,12 +646,10 @@ module.exports = function (app) {
      */
     app.post('/api/users/:userId/topics', loginCheck(['partner']), partnerParser, async function (req, res, next) {
         try {
-            // I wish Sequelize Model.build supported "fields". This solution requires you to add a field here once new are defined in model.
-            let topic = Topic.build({
+            const data = {
                 title: req.body.title,
                 visibility: req.body.visibility || Topic.VISIBILITY.private,
                 status: req.body.status || Topic.STATUSES.draft,
-                creatorId: req.user.userId,
                 categories: req.body.categories,
                 imageUrl: req.body.imageUrl,
                 hashtag: req.body.hashtag,
@@ -665,16 +659,16 @@ module.exports = function (app) {
                 language: req.body.language,
                 endsAt: req.body.endsAt,
                 sourcePartnerObjectId: req.body.sourcePartnerObjectId,
-                authorIds: [req.user.userId]
-            });
+                description: req.body.description,
+                sourcePartnerId: req.locals.partner ? req.locals.partner.id : null
+            };
 
-            topic.padUrl = cosEtherpad.getTopicPadUrl(topic.id);
+            const activityContext = {
+                ip: req.ip,
+                path: req.method + ' ' + req.path
+            };
 
-            if (req.locals.partner) {
-                topic.sourcePartnerId = req.locals.partner.id;
-            }
-
-            const topicDescription = req.body.description;
+            const topic = await topicService.create(data, req.user.userId, activityContext);
 
             const user = await User.findOne({
                 where: {
@@ -683,82 +677,29 @@ module.exports = function (app) {
                 attributes: ['id', 'name', 'language']
             });
 
-            // Create topic on Etherpad side
-            await cosEtherpad.createTopic(topic.id, user.language, topicDescription);
-
-            let topicJoin;
-
-            await db.transaction(async function (t) {
-                await topic.save({ transaction: t });
-                const topicJoin = await TopicJoin.create(
-                    {
-                        topicId: topic.id
-                    },
-                    {
-                        transaction: t
-                    }
-                );
-
-                await topic.addMemberUser(
-                    user.id,
-                    {
-                        through: {
-                            level: TopicMemberUser.LEVELS.admin
-                        },
-                        transaction: t
-                    }
-                );
-
-                await cosActivities.createActivity(
-                    topic,
-                    null,
-                    {
-                        type: 'User',
-                        id: req.user.userId,
-                        ip: req.ip
-                    }
-                    , req.method + ' ' + req.path,
-                    t
-                );
-                t.afterCommit(async () => {
-                    topic = await cosEtherpad.syncTopicWithPad(
-                        topic.id,
-                        req.method + ' ' + req.path,
-                        {
-                            type: 'User',
-                            id: req.user.userId,
-                            ip: req.ip
-                        }
-                    );
-                    const authors = await User.findAll({
-                        where: {
-                            id: topic.authorIds
-                        },
-                        attributes: ['id', 'name'],
-                        raw: true
-                    });
-
-                    const resObject = topic.toJSON();
-                    resObject.authors = authors;
-                    resObject.padUrl = cosEtherpad.getUserAccessUrl(topic, user.id, user.name, user.language, req.locals.partner);
-                    resObject.url = urlLib.getFe('/topics/:topicId', { topicId: topic.id });
-
-                    if (req.locals.partner) {
-                        resObject.sourcePartnerId = req.locals.partner.id;
-                    } else {
-                        resObject.sourcePartnerId = null;
-                    }
-
-                    resObject.favourite = false;
-                    resObject.permission = {
-                        level: TopicMemberUser.LEVELS.admin
-                    };
-
-                    resObject.join = topicJoin.toJSON();
-
-                    return res.created(resObject);
-                });
+            const authors = await User.findAll({
+                where: {
+                    id: topic.authorIds
+                },
+                attributes: ['id', 'name'],
+                raw: true
             });
+
+            const resObject = topic.toJSON();
+            resObject.authors = authors;
+            resObject.padUrl = cosEtherpad.getUserAccessUrl(topic, user.id, user.name, user.language, req.locals.partner);
+            resObject.url = urlLib.getFe('/topics/:topicId', { topicId: topic.id });
+
+            resObject.sourcePartnerId = req.locals.partner ? req.locals.partner.id : null;
+            resObject.favourite = false;
+            resObject.permission = {
+                level: TopicMemberUser.LEVELS.admin
+            };
+
+            const topicJoin = await TopicJoin.findOne({ where: { topicId: topic.id } });
+            resObject.join = topicJoin.toJSON();
+
+            return res.created(resObject);
         } catch (err) {
             return next(err);
         }
@@ -768,11 +709,7 @@ module.exports = function (app) {
     app.get('/api/users/:userId/topics/:topicId/duplicate', loginCheck(['partner']), partnerParser, topicService.hasPermission(TopicMemberUser.LEVELS.admin), async function (req, res, next) {
         try {
             // I wish Sequelize Model.build supported "fields". This solution requires you to add a field here once new are defined in model.
-            const sourceTopic = await Topic.findOne({
-                where: {
-                    id: req.params.topicId
-                }
-            });
+            const sourceTopic = await topicService.getById(req.params.topicId);
 
             let topic = Topic.build({
                 title: sourceTopic.title,
@@ -1060,11 +997,7 @@ module.exports = function (app) {
             //     const FILE_CREATE_MODE = '0760';
             const destinationDir = `/tmp/${topicId}`;
             //  await fs.mkdir(destinationDir, FILE_CREATE_MODE);
-            const topic = await Topic.findOne({
-                where: {
-                    id: topicId
-                }
-            });
+            const topic = await topicService.getById(topicId);
 
             const filePath = `${destinationDir} / ${topicId}.docx`;
 
@@ -1109,130 +1042,28 @@ module.exports = function (app) {
     const _topicUpdate = async function (req, res, next) {
         try {
             const topicId = req.params.topicId;
-            const statusNew = req.body.status;
+            const activityContext = {
+                ip: req.ip,
+                path: req.method + ' ' + req.path
+            };
 
-            let isBackToVoting = false;
-
-            const topic = await Topic
-                .findOne({
-                    where: { id: topicId },
-                    include: [Vote, Ideation, Discussion]
-                });
-
-            if (!topic) {
-                return res.badRequest();
-            }
-
-            const statuses = Object.values(Topic.STATUSES);
-            const vote = topic.Votes[0];
-            const ideation = topic.Ideations[0];
-            const discussion = topic.Discussions[0];
-            if (statusNew && statusNew !== topic.status && topic.status !== Topic.STATUSES.draft) {
-                // The only flow that allows going back in status flow is reopening for voting
-                if (statusNew === Topic.STATUSES.voting) {
-                    if (!vote) {
-                        return res.badRequest('Invalid status flow. Cannot change Topic status from ' + topic.status + ' to ' + statusNew + ' when the Topic has no Vote created');
-                    }
-                    if (topic.status === Topic.STATUSES.followUp)
-                        isBackToVoting = true;
-                } else if (statusNew === Topic.STATUSES.indeation) {
-                    if (!ideation) {
-                        return res.badRequest('Invalid status flow. Cannot change Topic status from ' + topic.status + ' to ' + statusNew + ' when the Topic has no Ideation created');
-                    }
-                } else if (statusNew === Topic.STATUSES.inProgress) {
-                    if (!discussion) {
-                        return res.badRequest('Invalid status flow. Cannot change Topic status from ' + topic.status + ' to ' + statusNew + ' when the Topic has no Discussion created');
-                    }
-                }
-
-                else if (statuses.indexOf(topic.status) > statuses.indexOf(statusNew) || [Topic.STATUSES.voting].indexOf(statusNew) > -1) { // You are not allowed to go "back" in the status flow nor you are allowed to set "voting" directly, it can only be done creating a Vote.
-                    return res.badRequest('Invalid status flow. Cannot change Topic status from ' + topic.status + ' to ' + statusNew);
-                }
-            }
-
-            if (Object.keys(req.body).indexOf('imageUrl') > -1 && !req.body.imageUrl && topic.imageUrl) {
-                const currentImageURL = new URL(topic.imageUrl);
-                //FIXME: No delete from DB?
-                if (config.storage?.type.toLowerCase() === 's3' && currentImageURL.href.indexOf(`https://${config.storage.bucket}.s3.${config.storage.region}.amazonaws.com/users/${req.user.id}`) === 0) {
-                    await cosUpload.delete(currentImageURL.pathname)
-                } else if (config.storage?.type.toLowerCase() === 'local' && currentImageURL.hostname === (new URL(config.url.api)).hostname) {
-                    const appDir = __dirname.replace('/routes/api', '/public/uploads/topics');
-                    const baseFolder = config.storage.baseFolder || appDir;
-
-                    fs.unlinkSync(`${baseFolder}/${path.parse(currentImageURL.pathname).base}`);
-                }
-            }
-
-            // NOTE: Description is handled separately below
             const fieldsAllowedToUpdate = ['title', 'categories', 'endsAt', 'hashtag', 'imageUrl', 'contact', 'country', 'language', 'intro', 'sourcePartnerObjectId'];
             if (req.locals.topic.permissions.level === TopicMemberUser.LEVELS.admin) {
                 fieldsAllowedToUpdate.push('visibility');
                 fieldsAllowedToUpdate.push('status');
             }
 
+            const data = {};
             Object.keys(req.body).forEach(function (key) {
                 if (fieldsAllowedToUpdate.indexOf(key) >= 0) {
-                    topic.set(key, req.body[key]);
+                    data[key] = req.body[key];
                 }
             });
-            const promisesList = [];
-            await db
-                .transaction(async function (t) {
-                    if (req.body.description) {
-                        if (topic.status === Topic.STATUSES.inProgress || topic.status === Topic.STATUSES.draft || topic.status === Topic.STATUSES.ideation) {
-                            promisesList.push(cosEtherpad
-                                .updateTopic(
-                                    topicId,
-                                    req.body.description
-                                ));
-                        } else {
-                            return res.badRequest(`Cannot update Topic content when status ${topic.status}`);
-                        }
-                    }
-
-                    promisesList.push(cosActivities
-                        .updateActivity(
-                            topic,
-                            null,
-                            {
-                                type: 'User',
-                                id: req.user.userId,
-                                ip: req.ip
-                            },
-                            req.method + ' ' + req.path,
-                            t
-                        ));
-
-                    promisesList.push(topic.save({ transaction: t }));
-
-                    if (isBackToVoting) {
-                        promisesList.push(cosSignature.deleteFinalBdoc(topicId, vote.id));
-
-                        promisesList.push(TopicEvent
-                            .destroy({
-                                where: {
-                                    topicId: topicId
-                                },
-                                force: true,
-                                transaction: t
-                            }));
-                    }
-                    await Promise.all(promisesList);
-                });
-            if (req.body.description && (topic.status === Topic.STATUSES.inProgress || topic.status === Topic.STATUSES.draft || topic.status === Topic.STATUSES.ideation)) {
-                await cosEtherpad
-                    .syncTopicWithPad(
-                        topicId,
-                        req.method + ' ' + req.path,
-                        {
-                            type: 'User',
-                            id: req.user.userId,
-                            ip: req.ip
-                        },
-                        null,
-                        true
-                    );
+            if (req.body.description) {
+                data.description = req.body.description;
             }
+
+            await topicService.update(topicId, data, req.user.userId, activityContext);
         } catch (err) {
             return next(err);
         }
@@ -1240,11 +1071,7 @@ module.exports = function (app) {
 
     app.post('/api/users/:userId/topics/:topicId/upload', loginCheck(['partner']), topicService.hasPermission(TopicMemberUser.LEVELS.edit, null, [Topic.STATUSES.draft, Topic.STATUSES.ideation, Topic.STATUSES.inProgress, Topic.STATUSES.voting, Topic.STATUSES.followUp]), asyncMiddleware(async function (req, res) {
         const topicId = req.params.topicId;
-        let topic = await Topic.findOne({
-            where: {
-                id: topicId
-            }
-        });
+        let topic = await topicService.getById(topicId);
 
         if (topic) {
             let imageUrl;
@@ -1400,51 +1227,14 @@ module.exports = function (app) {
      */
     app.delete('/api/users/:userId/topics/:topicId', loginCheck(['partner']), topicService.hasPermission(TopicMemberUser.LEVELS.admin), async function (req, res, next) {
         try {
-            const topic = await Topic.findByPk(req.params.topicId);
-            if (!topic) {
-                return res.notFound('No such topic found.');
-            }
+            const activityContext = {
+                ip: req.ip,
+                path: req.method + ' ' + req.path
+            };
 
-            await db.transaction(async function (t) {
-                try {
-                    await cosEtherpad.deleteTopic(topic.id);
-                } catch (err) {
-                    if (!err.message || err.message !== 'padID does not exist') {
-                        throw err;
-                    }
-                }
+            await topicService.destroy(req.params.topicId, req.user.userId, activityContext);
 
-                // Delete TopicMembers beforehand. Sequelize does not cascade and set "deletedAt" for related objects if "paranoid: true".
-                await TopicMemberUser.destroy({
-                    where: {
-                        topicId: topic.id
-                    },
-                    force: true,
-                    transaction: t
-                });
-
-                await TopicMemberGroup.destroy({
-                    where: {
-                        topicId: topic.id
-                    },
-                    force: true,
-                    transaction: t
-                });
-
-                await topic.destroy({
-                    transaction: t
-                });
-
-                await cosActivities.deleteActivity(topic, null, {
-                    type: 'User',
-                    id: req.user.userId,
-                    ip: req.ip
-                }, req.method + ' ' + req.path, t);
-
-                t.afterCommit(() => {
-                    return res.ok();
-                });
-            });
+            return res.ok();
         } catch (err) {
             return next(err);
         }
@@ -2430,12 +2220,11 @@ module.exports = function (app) {
         }
     }
     app.get('/api/topics/:topicId/members/users', async function (req, res, next) {
-        const topic = await Topic.findOne({
+        const topic = await topicService.getById(req.params.topicId, null, {
             where: {
-                id: req.params.topicId,
                 visibility: Topic.VISIBILITY.public
             }
-        })
+        });
         if (topic) {
             return _topicMemberUsers(req, res, next);
         }
@@ -3355,11 +3144,7 @@ module.exports = function (app) {
             }
 
             // Need the Topic just for the activity
-            const topic = await Topic.findOne({
-                where: {
-                    id: topicId
-                }
-            });
+            const topic = await topicService.getById(topicId);
 
             validUserIdMembers = validUserIdMembers.filter(function (member) {
                 return member.userId !== req.user.userId; // Make sure user does not invite self
@@ -3909,11 +3694,7 @@ module.exports = function (app) {
 
 
         // Topic needed just for the activity
-        const topic = await Topic.findOne({
-            where: {
-                id: finalInvite.topicId
-            }
-        });
+        const topic = await topicService.getById(finalInvite.topicId);
 
         await db.transaction(async function (t) {
             const member = await TopicMemberUser.create(
@@ -4015,10 +3796,7 @@ module.exports = function (app) {
                 nest: true
             });
         }
-        let topic = await Topic.findOne({
-            where: {
-                id: topicJoin.topicId
-            },
+        let topic = await topicService.getById(topicJoin.topicId, null, {
             include: [
                 {
                     model: User,
@@ -4061,11 +3839,7 @@ module.exports = function (app) {
             return res.badRequest('Matching token not found', 1);
         }
 
-        const topic = await Topic.findOne({
-            where: {
-                id: topicJoin.topicId
-            }
-        });
+        const topic = await topicService.getById(topicJoin.topicId);
 
         await db.transaction(async function (t) {
             const [memberUser, created] = await TopicMemberUser.findOrCreate({//eslint-disable-line
@@ -4125,9 +3899,8 @@ module.exports = function (app) {
     app.post('/api/users/:userId/topics/:topicId/join', loginCheck(['partner']), asyncMiddleware(async function (req, res) {
         const userId = req.user.userId;
 
-        const topic = await Topic.findOne({
+        const topic = await topicService.getById(req.params.topicId, null, {
             where: {
-                id: req.params.topicId,
                 visibility: Topic.VISIBILITY.public
             }
         });
@@ -4195,10 +3968,7 @@ module.exports = function (app) {
         const attachmentLimit = config.attachments.limit || 5;
         const topicId = req.params.topicId;
         try {
-            const topic = await Topic.findOne({
-                where: {
-                    id: topicId
-                },
+            const topic = await topicService.getById(topicId, null, {
                 include: [Attachment]
             });
 
@@ -4265,10 +4035,7 @@ module.exports = function (app) {
         }
 
         try {
-            const topic = await Topic.findOne({
-                where: {
-                    id: topicId
-                },
+            const topic = await topicService.getById(topicId, null, {
                 include: [Attachment]
             });
             if (!topic) {
@@ -4635,11 +4402,7 @@ module.exports = function (app) {
         const moderatedReasonType = req.body.type; // Delete reason type which is provided in case deleted/hidden by moderator due to a user report
         const moderatedReasonText = req.body.text; // Free text with reason why the comment was deleted/hidden
         try {
-            const topic = await Topic.findOne({
-                where: {
-                    id: req.params.topicId
-                }
-            });
+            const topic = await topicService.getById(req.params.topicId);
 
             let topicReportRead = await TopicReport.findOne({
                 where: {
@@ -5246,11 +5009,7 @@ module.exports = function (app) {
         try {
             await db
                 .transaction(async function (t) {
-                    const topicPromise = Topic.findOne({
-                        where: {
-                            id: topicId
-                        }
-                    });
+                    const topicPromise = topicService.getById(topicId);
 
                     await topicService.addUserAsMember(userId, topicId, t);
 
@@ -5301,11 +5060,7 @@ module.exports = function (app) {
     */
     app.delete('/api/users/:userId/topics/:topicId/notificationsettings', loginCheck(), asyncMiddleware(async function (req, res, next) {
         try {
-            const topicPromise = Topic.findOne({
-                where: {
-                    id: req.params.topicId
-                }
-            });
+            const topicPromise = topicService.getById(req.params.topicId);
             const userSettingsPromise = UserNotificationSettings.findOne({
                 where: {
                     userId: req.user.id,

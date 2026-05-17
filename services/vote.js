@@ -26,7 +26,7 @@ module.exports = function (app) {
     const { injectReplacements } = require('sequelize/lib/utils/sql');
     const Op = db.Sequelize.Op;
     const User = models.User;
-    const topicService = require('./topic')(app);
+    const topicService = () => app.get('topicService');
 
     const createDataHash = (dataToHash) => {
         const hmac = crypto.createHmac('sha256', config.encryption.salt);
@@ -479,7 +479,7 @@ module.exports = function (app) {
                     transaction: t
                 });
 
-                await topicService.addUserAsMember(idSignFlowData.userId, topicId, t);
+                await topicService().addUserAsMember(idSignFlowData.userId, topicId, t);
 
                 await VoteUserContainer.upsert(
                     {
@@ -706,7 +706,7 @@ module.exports = function (app) {
             await db
                 .transaction(async function (t) {
                     // Store vote options
-                    await topicService.addUserAsMember(userId, topicId, t);
+                    await topicService().addUserAsMember(userId, topicId, t);
 
                     const optionGroupId = Math.random().toString(36).substring(2, 10);
 
@@ -806,7 +806,7 @@ module.exports = function (app) {
         if (vote.autoClose) {
             const promises = vote.autoClose.map(async (condition) => {
                 if (condition.enabled && condition.value === Vote.AUTO_CLOSE.allMembersVoted) {
-                    const topicMembers = await topicService.getAllTopicMembers(topicId, userId, false);
+                    const topicMembers = await topicService().getAllTopicMembers(topicId, userId, false);
                     const voteResults = await getVoteResults(voteId, userId);
                     if (voteResults.length && topicMembers.users.count === voteResults[0].votersCount) {
                         vote.endsAt = (new Date()).toISOString();

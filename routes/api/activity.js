@@ -11,7 +11,7 @@ module.exports = function (app) {
     const _ = app.get('lodash');
     const cosActivities = app.get('cosActivities');
     const loginCheck = app.get('middleware.loginCheck');
-    const topicService = require('../../services/topic')(app);
+    const topicService = app.get('topicService');
     const groupLib = require('./group')(app);
 
     const Activity = models.Activity;
