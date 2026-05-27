@@ -37,14 +37,6 @@ const SlowDown = require('express-slow-down');
 const rateLimit = require('express-rate-limit')
 
 const app = express();
-process.on('uncaughtException', (err) => {
-    console.error('UNCAUGHT EXCEPTION:', err);
-    process.exit(1);
-});
-process.on('unhandledRejection', (reason, _promise) => {
-    console.error('UNHANDLED REJECTION:', reason);
-    process.exit(1);
-});
 app.set('redis', require('./libs/redis')(app));
 
 const { getRateLimitStore, getSpeedLimitStore } = app.get('redis');

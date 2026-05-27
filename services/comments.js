@@ -314,13 +314,13 @@ module.exports = function (app) {
                         LEFT JOIN "UserConnections" uc ON (u.id = uc."userId" AND uc."connectionId" = 'esteid')
                         LEFT JOIN "Users" dbu ON (dbu.id = c."deletedById")
                         LEFT JOIN (
-                            SELECT SUM(value), "commentId" FROM "CommentVotes" WHERE value > 0 GROUP BY "commentId"
+                            SELECT SUM(value) AS sum, "commentId" FROM "CommentVotes" WHERE value > 0 GROUP BY "commentId"
                         ) cvu ON (cvu."commentId" = c.id)
                         LEFT JOIN (
                             SELECT "commentId", value, true AS selected FROM "CommentVotes" WHERE value > 0 AND "creatorId"=:userId
                         ) cvus ON (c.id = cvus."commentId")
                         LEFT JOIN (
-                            SELECT SUM(ABS(value)), "commentId" FROM "CommentVotes" WHERE value < 0 GROUP BY "commentId"
+                            SELECT SUM(ABS(value)) AS sum, "commentId" FROM "CommentVotes" WHERE value < 0 GROUP BY "commentId"
                         ) cvd ON (cvd."commentId" = c.id)
                         LEFT JOIN (
                             SELECT "commentId", true AS selected FROM "CommentVotes" WHERE value < 0 AND "creatorId"=:userId
@@ -353,17 +353,17 @@ module.exports = function (app) {
                         LEFT JOIN "UserConnections" uc ON (u.id = uc."userId" AND uc."connectionId" = 'esteid')
                         LEFT JOIN "Users" dbu ON (dbu.id = c."deletedById")
                         LEFT JOIN (
-                            SELECT SUM(value), "commentId" FROM "CommentVotes" WHERE value > 0 GROUP BY "commentId"
+                            SELECT SUM(value) AS sum, "commentId" FROM "CommentVotes" WHERE value > 0 GROUP BY "commentId"
                         ) cvu ON (cvu."commentId" = c.id)
                         LEFT JOIN (
                             SELECT "commentId", value, true AS selected FROM "CommentVotes" WHERE value > 0 AND "creatorId" = :userId
                         ) cvus ON (cvus."commentId" = c.id)
                         LEFT JOIN (
-                            SELECT SUM(ABS(value)), "commentId" FROM "CommentVotes" WHERE value < 0 GROUP BY "commentId"
+                            SELECT SUM(ABS(value)) AS sum, "commentId" FROM "CommentVotes" WHERE value < 0 GROUP BY "commentId"
                         ) cvd ON (cvd."commentId" = c.id)
                         LEFT JOIN (
                             SELECT "commentId", true AS selected FROM "CommentVotes" WHERE value < 0 AND "creatorId" = :userId
-                        ) cvds ON (cvds."commentId"= c.id)
+                        ) cvds ON (cvds."commentId" = c.id)
                 ),`, db.dialect, {
                 userId: userId,
                 dateFormat: 'YYYY-MM-DDThh24:mi:ss.msZ',
@@ -440,7 +440,7 @@ module.exports = function (app) {
             } else {
                 // Specific for Ideas
                 selectSql = injectReplacements(`
-                    SELECT ct.id, ct.type, ct.parent, ct.subject, ct.text, ct.edits, ct.creator, ct."deletedBy", ct."deletedReasonType", ct."deletedReasonText", ct.report, ct.votes, ct."createdAt", ct."updatedAt", ct."deletedAt", ct.replies::jsonb
+                    SELECT ct.id, ct.type, ct.parent, ct.subject, ct.text, jm."${joinParentIdField}" AS "${joinParentIdField}", ct.edits, ct.creator, ct."deletedBy", ct."deletedReasonType", ct."deletedReasonText", ct.report, ct.votes, ct."createdAt", ct."updatedAt", ct."deletedAt", ct.replies::jsonb
                     FROM "${tableName}" jm
                     JOIN "Comments" c ON c.id = jm."commentId" AND c.id = c."parentId"
                     JOIN pg_temp.getCommentTree(jm."commentId") ct ON ct.id = ct.id
@@ -467,7 +467,7 @@ module.exports = function (app) {
 
                 const [comments, commentsCount] = await Promise.all([commentsQuery, commentCountQuery]);
 
-                if (listByTopic) {
+                if (joinParentIdField) {
                     const setJoinId = (jId, reply) => {
                         reply[joinParentIdField] = jId;
                         if (reply.replies.rows.length) {
