@@ -156,7 +156,7 @@ module.exports = function (app) {
     const isModerator = function () {
         return async function (req, res, next) {
             const topicId = req.params.topicId;
-            const userId = req.user?.userId;
+            const userId = req.user?.userId || req.user?.id;
             if (!topicId || !userId) return next(null, req, res);
 
             const result = await _isModerator(topicId, userId);

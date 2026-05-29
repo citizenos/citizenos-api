@@ -26,7 +26,7 @@ module.exports = function (app) {
      */
     app.post('/api/users/:userId/topics/:topicId/ideations/:ideationId/ideas/:ideaId/comments', loginCheck(['partner']), topicService.hasPermission(TopicMemberUser.LEVELS.read, true), commentsLib.createComment);
     
-    app.get('/api/users/:userId/topics/:topicId/ideations/:ideationId/ideas/:ideaId/comments', loginCheck(['partner']), topicService.hasPermission(TopicMemberUser.LEVELS.read, true), async (req, res, next) => {
+    app.get('/api/users/:userId/topics/:topicId/ideations/:ideationId/ideas/:ideaId/comments', loginCheck(['partner']), topicService.hasPermission(TopicMemberUser.LEVELS.read, true), topicService.isModerator(), async (req, res, next) => {
         return commentsLib.listComments(req, res, next);
     });
 

@@ -1467,22 +1467,22 @@ module.exports = function (app) {
                      c.name as "creator.name",
                      c.company as "creator.company",
                      COALESCE(tmup.level, tmgp.level, 'none') as "permission.level",
-                     muc.count as "members.users.count",
+                     t."memberCount" as "members.users.count",
                      COALESCE(mgc.count, 0) as "members.groups.count",
                      tv."voteId" as "voteId",
                      tv."voteId" as "vote.id",
                      ti."ideationId" as "ideationId",
                      ti."ideationId" as "ideation.id",
                      ti."ideaCount" as "ideation.ideas.count",
-                     COALESCE(MAX(a."updatedAt"), t."updatedAt") as "lastActivity",
+                     COALESCE(t."lastActivityAt", t."updatedAt") as "lastActivity",
                      CASE WHEN t.status = 'voting' THEN 1
                         WHEN t.status = 'inProgress' THEN 2
                         WHEN t.status = 'followUp' THEN 3
                      ELSE 4
                      END AS "order",
-                     COALESCE(tc.count, 0) AS "comments.count",
+                     t."commentCount" AS "comments.count",
                      count(*) OVER()::integer AS "countTotal",
-                     com."createdAt" AS "comments.lastCreatedAt"
+                     NULL AS "comments.lastCreatedAt"
                     ${returncolumns}
                 FROM "Topics" t
                     LEFT JOIN (
@@ -1506,25 +1506,6 @@ module.exports = function (app) {
                         GROUP BY "topicId", "userId"
                     ) AS tmgp ON (tmgp."topicId" = t.id AND tmgp."userId" = :userId)
                     LEFT JOIN "Users" c ON (c.id = t."creatorId")
-                    LEFT JOIN (
-                        SELECT tmu."topicId", COUNT(tmu."memberId") AS "count" FROM (
-                            SELECT
-                                tmuu."topicId",
-                                tmuu."userId" AS "memberId"
-                            FROM "TopicMemberUsers" tmuu
-                            WHERE tmuu."deletedAt" IS NULL
-                            UNION
-                            SELECT
-                                tmg."topicId",
-                                gm."userId" AS "memberId"
-                            FROM "TopicMemberGroups" tmg
-                                JOIN "GroupMemberUsers" gm ON (tmg."groupId" = gm."groupId")
-                                JOIN "Groups" g ON g.id = tmg."groupId"
-                            WHERE tmg."deletedAt" IS NULL
-                            AND g."deletedAt" IS NULL
-                            AND gm."deletedAt" IS NULL
-                        ) AS tmu GROUP BY "topicId"
-                    ) AS muc ON (muc."topicId" = t.id)
                     LEFT JOIN (
                         SELECT
                             tmg."topicId",
@@ -1562,31 +1543,6 @@ module.exports = function (app) {
                                 ON v.id = tv."voteId"
                     ) AS tv ON (tv."topicId" = t.id)
                     LEFT JOIN (
-                        SELECT
-                            "topicId",
-                            COUNT(*) AS count
-                        FROM "DiscussionComments" dc
-                        JOIN "TopicDiscussions" td ON td."discussionId" = dc."discussionId"
-                        GROUP BY "topicId"
-                    ) AS tc ON (tc."topicId" = t.id)
-                    LEFT JOIN (
-                        SELECT
-                            tcc."topicId",
-                            MAX(tcc."createdAt") as "createdAt"
-                            FROM
-                                (SELECT
-                                    td."topicId",
-                                    c."createdAt"
-                                FROM "DiscussionComments" dc
-                                JOIN "TopicDiscussions" td ON td."discussionId" = dc."discussionId"
-                                JOIN "Comments" c ON c.id = dc."commentId"
-                                GROUP BY td."topicId", c."createdAt"
-                                ORDER BY c."createdAt" DESC
-                                ) AS tcc
-                            GROUP BY tcc."topicId"
-                    ) AS com ON (com."topicId" = t.id)
-                    LEFT JOIN "Activities" a ON ARRAY[t.id::text] <@ a."topicIds"
-                    LEFT JOIN (
 					SELECT
 						ti."topicId",
 						ti."ideationId",
@@ -1615,7 +1571,7 @@ module.exports = function (app) {
                     LEFT JOIN "TopicJoins" tj ON (tj."topicId" = t.id AND tj."deletedAt" IS NULL)
                     ${join}
                 WHERE ${where}
-                GROUP BY t.id, tr.id, tr."moderatedReasonType", tr."moderatedReasonText", ti."ideationId", ti."ideaCount", tj."token", tj.level, c.id, muc.count, mgc.count, tv."voteId", tc.count, com."createdAt", tmup.level, tmgp.level, tf."topicId"
+                GROUP BY t.id, tr.id, tr."moderatedReasonType", tr."moderatedReasonText", ti."ideationId", ti."ideaCount", tj."token", tj.level, c.id, mgc.count, tv."voteId", tmup.level, tmgp.level, tf."topicId"
                 ${groupBy}
                 ${orderSql}
                 OFFSET :offset LIMIT :limit
@@ -1852,9 +1808,9 @@ module.exports = function (app) {
                         t."sourcePartnerObjectId",
                         c.id as "creator.id",
                         c.name as "creator.name",
-                        COALESCE(MAX(a."updatedAt"), t."updatedAt") as "lastActivity",
+                        COALESCE(t."lastActivityAt", t."updatedAt") as "lastActivity",
                         c.company as "creator.company",
-                        muc.count as "members.users.count",
+                        t."memberCount" as "members.users.count",
                         COALESCE(mgc.count, 0) as "members.groups.count",
                         CASE WHEN t.status = 'voting' THEN 1
                             WHEN t.status = 'inProgress' THEN 2
@@ -1862,8 +1818,8 @@ module.exports = function (app) {
                         ELSE 4
                         END AS "order",
                         tv."voteId",
-                        COALESCE(tc.count, 0) AS "comments.count",
-                        COALESCE(com."createdAt", NULL) AS "comments.lastCreatedAt",
+                        t."commentCount" AS "comments.count",
+                        NULL AS "comments.lastCreatedAt",
                         ti."ideationId" as "ideationId",
                         ti."ideationId" as "ideation.id",
                         ti."ideaCount" as "ideation.ideas.count",
@@ -1873,25 +1829,6 @@ module.exports = function (app) {
                         LEFT JOIN "Users" c ON (c.id = t."creatorId")
                         LEFT JOIN "TopicReports" tr ON (tr."topicId" = t.id AND tr."resolvedById" IS NULL AND tr."deletedAt" IS NULL)
                         LEFT JOIN (
-                            SELECT tmu."topicId", COUNT(tmu."memberId")::integer AS "count" FROM (
-                                SELECT
-                                    tmuu."topicId",
-                                    tmuu."userId" AS "memberId"
-                                FROM "TopicMemberUsers" tmuu
-                                WHERE tmuu."deletedAt" IS NULL
-                                UNION
-                                SELECT
-                                    tmg."topicId",
-                                    gm."userId" AS "memberId"
-                                FROM "TopicMemberGroups" tmg
-                                    JOIN "GroupMemberUsers" gm ON (tmg."groupId" = gm."groupId")
-                                    JOIN "Groups" g ON g.id = tmg."groupId"
-                                WHERE tmg."deletedAt" IS NULL
-                                AND g."deletedAt" IS NULL
-                                AND gm."deletedAt" IS NULL
-                            ) AS tmu GROUP BY "topicId"
-                        ) AS muc ON (muc."topicId" = t.id)
-                        LEFT JOIN (
                             SELECT tmg."topicId", count(tmg."groupId")::integer AS "count"
                             FROM "TopicMemberGroups" tmg
                             JOIN "Groups" g
@@ -1900,30 +1837,6 @@ module.exports = function (app) {
                             AND g."deletedAt" IS NULL
                             GROUP BY tmg."topicId"
                         ) AS mgc ON (mgc."topicId" = t.id)
-                        LEFT JOIN (
-                            SELECT
-                                "topicId",
-                                COUNT(*) AS count
-                            FROM "DiscussionComments" dc
-                            JOIN "TopicDiscussions" td ON td."discussionId" = dc."discussionId"
-                            GROUP BY "topicId"
-                        ) AS tc ON (tc."topicId" = t.id)
-                        LEFT JOIN (
-                            SELECT
-                                tcc."topicId",
-                                MAX(tcc."createdAt") as "createdAt"
-                                FROM
-                                    (SELECT
-                                        td."topicId",
-                                        c."createdAt"
-                                    FROM "DiscussionComments" dc
-                                    JOIN "TopicDiscussions" td ON td."discussionId" = dc."discussionId"
-                                    JOIN "Comments" c ON c.id = dc."commentId"
-                                    GROUP BY td."topicId", c."createdAt"
-                                    ORDER BY c."createdAt" DESC
-                                    ) AS tcc
-                                GROUP BY tcc."topicId"
-                        ) AS com ON (com."topicId" = t.id)
                         LEFT JOIN (
                             SELECT
                                 tv."topicId",
@@ -1948,7 +1861,6 @@ module.exports = function (app) {
                             LEFT JOIN "Votes" v
                                     ON v.id = tv."voteId"
                         ) AS tv ON (tv."topicId" = t.id)
-                        LEFT JOIN "Activities" a ON ARRAY[t.id::text] <@ a."topicIds"
                         LEFT JOIN (
                             SELECT
                                 ti."topicId",
@@ -1977,7 +1889,7 @@ module.exports = function (app) {
                         LEFT JOIN "TopicJoins" tj ON (tj."topicId" = t.id AND tj."deletedAt" IS NULL)
                         ${join}
                     WHERE ${where}
-                    GROUP BY t.id, tr.id, tr."moderatedReasonType", tr."moderatedReasonText", ti."ideationId", ti."ideaCount", tj."token", tj.level, c.id, muc.count, mgc.count, tv."voteId", tc.count, com."createdAt"
+                    GROUP BY t.id, tr.id, tr."moderatedReasonType", tr."moderatedReasonText", ti."ideationId", ti."ideaCount", tj."token", tj.level, c.id, mgc.count, tv."voteId"
                     ${groupBy}
                     ORDER BY "lastActivity" DESC
                     LIMIT :limit OFFSET :offset

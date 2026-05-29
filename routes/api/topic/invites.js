@@ -721,6 +721,11 @@ module.exports = function (app) {
                 transaction: t
             });
 
+            await Topic.increment('memberCount', {
+                where: { id: finalInvite.topicId },
+                transaction: t
+            });
+
             const user = User.build({ id: member.userId });
             user.dataValues.id = member.userId;
 

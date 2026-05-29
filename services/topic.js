@@ -405,6 +405,11 @@ module.exports = function (app) {
                     userId,
                     topicId,
                     level: TopicMemberUser.LEVELS.read
+                }, { transaction: t });
+
+                await Topic.increment('memberCount', {
+                    where: { id: topicId },
+                    transaction: t
                 });
             }
         };

@@ -972,8 +972,14 @@ module.exports = function (app) {
                                 type: db.QueryTypes.DELETE,
                                 raw: true
                             }
-                        );
-                    t.afterCommit(() => res.ok());
+                            );
+
+                            await Topic.decrement('memberCount', {
+                            where: { id: topicId },
+                            transaction: t
+                            });
+
+                            t.afterCommit(() => res.ok());
                 });
             } else {
                 return res.forbidden();

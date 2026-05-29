@@ -110,7 +110,7 @@ module.exports = function (app) {
             limit = 8,
             offset = 0,
             orderBy,
-            order = 'ASC',
+            order = 'DESC',
             authorId,
             favourite,
             folderId,
@@ -261,18 +261,6 @@ module.exports = function (app) {
             joinSql += ` JOIN "FolderIdeas" fi ON fi."ideaId" = "Idea".id AND fi."folderId" = :folderId `
         }
 
-        // Permissions for author email
-        let isModerator = false;
-        if (userId) {
-            const topic = await Topic.findOne({
-                include: [{ model: Ideation, where: { id: ideationId } }]
-            });
-            if (topic) {
-                const permissionsService = app.get('permissionsService');
-                isModerator = await permissionsService.isModerator(topic.id, userId);
-            }
-        }
-
         const ideas = await db.query(`
             SELECT
                 "Idea"."id" AS "id",
@@ -334,14 +322,8 @@ module.exports = function (app) {
             delete idea.dummy;
             if (idea.author && (!idea.author.id || (ideation && ideation.allowAnonymous && idea.status !== 'draft'))) {
                 delete idea.author;
-            } else if (idea.author && !isModerator) {
-                delete idea.author.email;
             }
-            if (ideation && ideation.allowAnonymous && idea.status !== 'draft' && keepSessionId) {
-                // Keep sessionId
-            } else {
-                delete idea.sessionId;
-            }
+            delete idea.sessionId; // Always delete in list
         });
 
         return {
@@ -422,18 +404,6 @@ module.exports = function (app) {
             }
         }
 
-        // Permissions for author email
-        let isModerator = false;
-        if (userId) {
-            const topic = await Topic.findOne({
-                include: [{ model: Ideation, where: { id: ideationId } }]
-            });
-            if (topic) {
-                const permissionsService = app.get('permissionsService');
-                isModerator = await permissionsService.isModerator(topic.id, userId);
-            }
-        }
-
         if (folderId) {
             joinSql += ` JOIN "FolderIdeas" fi ON fi."ideaId" = "Idea".id AND fi."folderId" = :folderId `
         }
@@ -489,8 +459,6 @@ module.exports = function (app) {
             delete idea.dummy;
             if (idea.author && (!idea.author.id || (ideation && ideation.allowAnonymous && idea.status !== 'draft'))) {
                 delete idea.author;
-            } else if (idea.author && !isModerator) {
-                delete idea.author.email;
             }
             if (ideation && ideation.allowAnonymous && idea.status !== 'draft') {
                 // Keep sessionId for single read

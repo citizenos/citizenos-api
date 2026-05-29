@@ -204,6 +204,11 @@ module.exports = function (app) {
 
                     await joinModel.create(joinCreateData, { transaction: t });
 
+                    await Topic.increment('commentCount', {
+                        where: { id: topicId },
+                        transaction: t
+                    });
+
                     const c = await db.query(
                         `
                                 UPDATE "Comments"
@@ -314,13 +319,13 @@ module.exports = function (app) {
                         LEFT JOIN "UserConnections" uc ON (u.id = uc."userId" AND uc."connectionId" = 'esteid')
                         LEFT JOIN "Users" dbu ON (dbu.id = c."deletedById")
                         LEFT JOIN (
-                            SELECT SUM(value) AS sum, "commentId" FROM "CommentVotes" WHERE value > 0 GROUP BY "commentId"
+                            SELECT SUM(value), "commentId" FROM "CommentVotes" WHERE value > 0 GROUP BY "commentId"
                         ) cvu ON (cvu."commentId" = c.id)
                         LEFT JOIN (
                             SELECT "commentId", value, true AS selected FROM "CommentVotes" WHERE value > 0 AND "creatorId"=:userId
                         ) cvus ON (c.id = cvus."commentId")
                         LEFT JOIN (
-                            SELECT SUM(ABS(value)) AS sum, "commentId" FROM "CommentVotes" WHERE value < 0 GROUP BY "commentId"
+                            SELECT SUM(ABS(value)), "commentId" FROM "CommentVotes" WHERE value < 0 GROUP BY "commentId"
                         ) cvd ON (cvd."commentId" = c.id)
                         LEFT JOIN (
                             SELECT "commentId", true AS selected FROM "CommentVotes" WHERE value < 0 AND "creatorId"=:userId
@@ -353,13 +358,13 @@ module.exports = function (app) {
                         LEFT JOIN "UserConnections" uc ON (u.id = uc."userId" AND uc."connectionId" = 'esteid')
                         LEFT JOIN "Users" dbu ON (dbu.id = c."deletedById")
                         LEFT JOIN (
-                            SELECT SUM(value) AS sum, "commentId" FROM "CommentVotes" WHERE value > 0 GROUP BY "commentId"
+                            SELECT SUM(value), "commentId" FROM "CommentVotes" WHERE value > 0 GROUP BY "commentId"
                         ) cvu ON (cvu."commentId" = c.id)
                         LEFT JOIN (
                             SELECT "commentId", value, true AS selected FROM "CommentVotes" WHERE value > 0 AND "creatorId" = :userId
                         ) cvus ON (cvus."commentId" = c.id)
                         LEFT JOIN (
-                            SELECT SUM(ABS(value)) AS sum, "commentId" FROM "CommentVotes" WHERE value < 0 GROUP BY "commentId"
+                            SELECT SUM(ABS(value)), "commentId" FROM "CommentVotes" WHERE value < 0 GROUP BY "commentId"
                         ) cvd ON (cvd."commentId" = c.id)
                         LEFT JOIN (
                             SELECT "commentId", true AS selected FROM "CommentVotes" WHERE value < 0 AND "creatorId" = :userId
