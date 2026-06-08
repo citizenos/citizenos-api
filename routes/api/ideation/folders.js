@@ -69,7 +69,7 @@ module.exports = function (app) {
             if (!folder) return res.notFound();
 
             const userId = req.user?.userId || req.user?.id;
-            const ideas = await ideationService.listIdeas(req.params.ideationId, { folderId: req.params.folderId, limit: req.query.limit, offset: req.query.offset, enrich: false, keepSessionId: true }, userId);
+            const ideas = await ideationService.listIdeas(req.params.ideationId, { folderId: req.params.folderId, limit: req.query.limit, offset: req.query.offset, enrich: false, keepSessionId: true, order: req.query.order || 'ASC' }, userId);
             const resFolder = folder.toJSON();
             resFolder.ideas = ideas;
 
@@ -90,7 +90,7 @@ module.exports = function (app) {
             const folder = await ideationService.getFolderById(req.params.folderId, req.params.ideationId, req.params.topicId);
             if (!folder) return res.notFound();
 
-            const ideas = await ideationService.listIdeas(req.params.ideationId, { folderId: req.params.folderId, limit: req.query.limit, offset: req.query.offset, enrich: false, keepSessionId: true });
+            const ideas = await ideationService.listIdeas(req.params.ideationId, { folderId: req.params.folderId, limit: req.query.limit, offset: req.query.offset, enrich: false, keepSessionId: true, order: req.query.order || 'ASC' });
             const resFolder = folder.toJSON();
             resFolder.ideas = ideas;
 
@@ -103,7 +103,7 @@ module.exports = function (app) {
     app.get('/api/users/:userId/topics/:topicId/ideations/:ideationId/folders/:folderId/ideas', loginCheck(['partner']), topicService.hasPermission(TopicMemberUser.LEVELS.read, true), async (req, res, next) => {
         try {
             const userId = req.user?.userId || req.user?.id;
-            const result = await ideationService.listIdeas(req.params.ideationId, { folderId: req.params.folderId, limit: req.query.limit, offset: req.query.offset, enrich: false, keepSessionId: true }, userId);
+            const result = await ideationService.listIdeas(req.params.ideationId, { folderId: req.params.folderId, limit: req.query.limit, offset: req.query.offset, enrich: false, keepSessionId: true, order: req.query.order || 'ASC' }, userId);
             return res.ok(result);
         } catch (err) {
             next(err);
@@ -115,7 +115,7 @@ module.exports = function (app) {
             const topic = await topicService.getById(req.params.topicId, null, { where: { visibility: Topic.VISIBILITY.public } });
             if (!topic) return res.notFound();
 
-            const result = await ideationService.listIdeas(req.params.ideationId, { folderId: req.params.folderId, limit: req.query.limit, offset: req.query.offset, enrich: false, keepSessionId: true });
+            const result = await ideationService.listIdeas(req.params.ideationId, { folderId: req.params.folderId, limit: req.query.limit, offset: req.query.offset, enrich: false, keepSessionId: true, order: req.query.order || 'ASC' });
             return res.ok(result);
         } catch (err) {
             next(err);
