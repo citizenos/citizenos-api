@@ -209,6 +209,7 @@ module.exports = function (app) {
                         transaction: t
                     });
 
+                    // Raw SQL: Complex query with aggregations/subqueries requiring raw SQL
                     const c = await db.query(
                         `
                                 UPDATE "Comments"
@@ -466,8 +467,10 @@ module.exports = function (app) {
             }
 
             try {
+                // Raw SQL: Complex query with aggregations/subqueries requiring raw SQL
                 const commentsQuery = db.query(`${queryTemplate} ${selectSql}`, { type: db.QueryTypes.SELECT, raw: true, nest: true });
                 const countReplacements = listByTopic ? { topicId: req.params.topicId } : { parentId: req.params[parentIdParam] };
+                // Raw SQL: Complex query with aggregations/subqueries requiring raw SQL
                 const commentCountQuery = db.query(countSql, { replacements: countReplacements });
 
                 const [comments, commentsCount] = await Promise.all([commentsQuery, commentCountQuery]);
@@ -596,6 +599,7 @@ module.exports = function (app) {
 
                     await comment.save({ transaction: t });
 
+                    // Raw SQL: Complex query with aggregations/subqueries requiring raw SQL
                     await db.query(`UPDATE "Comments" SET edits = jsonb_set(edits, '{${comment.edits.length - 1}, createdAt }', to_jsonb("updatedAt")) WHERE id = :commentId RETURNING *;`,
                         {
                             replacements: { commentId },
@@ -654,6 +658,7 @@ module.exports = function (app) {
 
         const readReport = async function (req, res, next) {
             try {
+                // Raw SQL: Complex query with aggregations/subqueries requiring raw SQL
                 const results = await db.query(
                     `
                             SELECT r."id", r."type", r."text", r."createdAt", c."id" as "comment.id", c.subject as "comment.subject", c."text" as "comment.text"
@@ -681,6 +686,7 @@ module.exports = function (app) {
             if (!type) return res.badRequest({ type: 'Property type is required' });
 
             try {
+                // Raw SQL: Complex query with aggregations/subqueries requiring raw SQL
                 const commentReport = (await db.query(
                     `
                             SELECT c."id" as "comment.id", c."updatedAt" as "comment.updatedAt", r."id" as "report.id", r."createdAt" as "report.createdAt"
@@ -812,6 +818,7 @@ module.exports = function (app) {
                         `;
                     }
 
+                    // Raw SQL: Complex query with aggregations/subqueries requiring raw SQL
                     const results = await db.query(
                         `
                         SELECT tc."up.count", tc."down.count", COALESCE(cvus.selected, false) as "up.selected", COALESCE(cvds.selected, false) as "down.selected"
@@ -839,6 +846,7 @@ module.exports = function (app) {
 
         const listVotes = async function (req, res, next) {
             try {
+                // Raw SQL: Complex query with aggregations/subqueries requiring raw SQL
                 const results = await db.query(`
                     SELECT u.name, u."imageUrl", CAST(CASE WHEN cv.value=1 Then 'up' ELSE 'down' END AS VARCHAR(5)) AS vote, cv."createdAt", cv."updatedAt"
                     FROM "CommentVotes" cv
@@ -951,6 +959,7 @@ module.exports = function (app) {
         };
 
         const getCommentAttachments = async (commentId, type) => {
+            // Raw SQL: Complex query with aggregations/subqueries requiring raw SQL
             return await db.query(`
                 SELECT a.id, a.name, a.size, a.source, a.type, a.link, a."createdAt", c.id as "creator.id", c.name as "creator.name"
                 FROM "CommentAttachments" ca

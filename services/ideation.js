@@ -26,6 +26,7 @@ module.exports = function (app) {
      * Get a single Ideation by ID with metadata
      */
     const getById = async (ideationId, transaction = null) => {
+        // Raw SQL: Complex query with aggregations/subqueries requiring raw SQL
         const results = await db.query(`
             SELECT
                 i.id,
@@ -81,6 +82,7 @@ module.exports = function (app) {
      * Get Ideation Participants
      */
     const getParticipants = async (ideationId) => {
+        // Raw SQL: Complex query with aggregations/subqueries requiring raw SQL
         return await db.query(`
             SELECT
                 u.id,
@@ -261,6 +263,7 @@ module.exports = function (app) {
             joinSql += ` JOIN "FolderIdeas" fi ON fi."ideaId" = "Idea".id AND fi."folderId" = :folderId `
         }
 
+        // Raw SQL: Complex query with aggregations/subqueries requiring raw SQL
         const ideas = await db.query(`
             SELECT
                 "Idea"."id" AS "id",
@@ -408,6 +411,7 @@ module.exports = function (app) {
             joinSql += ` JOIN "FolderIdeas" fi ON fi."ideaId" = "Idea".id AND fi."folderId" = :folderId `
         }
 
+        // Raw SQL: Complex query with aggregations/subqueries requiring raw SQL
         const ideas = await db.query(`
             SELECT
                 "Idea"."id" AS "id",
@@ -852,6 +856,7 @@ module.exports = function (app) {
             where += ` AND fis."ideaId" = :ideaId `;
         }
 
+        // Raw SQL: Complex query with aggregations/subqueries requiring raw SQL
         const folders = await db.query(`
             SELECT
                 f.id,
@@ -1047,6 +1052,7 @@ module.exports = function (app) {
      * Get Attachments
      */
     const getAttachments = async (ideaId, type) => {
+        // Raw SQL: Complex query with aggregations/subqueries requiring raw SQL
         return await db.query(`
             SELECT
                 a.id,
@@ -1079,6 +1085,7 @@ module.exports = function (app) {
      * Get Report by ID
      */
     const getReportById = async (reportId, ideaId) => {
+        // Raw SQL: Complex query with aggregations/subqueries requiring raw SQL
         const results = await db.query(`
             SELECT
                 r."id",
@@ -1199,6 +1206,7 @@ module.exports = function (app) {
      * Get Idea Vote Results
      */
     const getIdeaVoteResults = async (ideationId, ideaId, userId, transaction = null) => {
+        // Raw SQL: Complex query with aggregations/subqueries requiring raw SQL
         const results = await db.query(`
             SELECT
                 ii."up.count",
@@ -1233,6 +1241,7 @@ module.exports = function (app) {
      * List Idea Votes
      */
     const listIdeaVotes = async (ideaId) => {
+        // Raw SQL: Complex query with aggregations/subqueries requiring raw SQL
         return await db.query(`
             SELECT
                 u.name,
@@ -1258,6 +1267,7 @@ module.exports = function (app) {
     const moderateIdeaReport = async (reportId, ideaId, topicId, data, moderatorId, activityContext, transaction = null) => {
         const activityLogService = app.get('activityLogService');
         const work = async (t) => {
+            // Raw SQL: Complex query with aggregations/subqueries requiring raw SQL
             const results = await db.query(`
                 SELECT
                     i."id" as "idea.id",
@@ -1299,6 +1309,7 @@ module.exports = function (app) {
             ideaOld.topicId = topicId;
 
             // Use raw query for moderation to ensure all fields are set and saved correctly
+            // Raw SQL: Complex query with aggregations/subqueries requiring raw SQL
             await db.query(`
                 UPDATE "Ideas"
                 SET

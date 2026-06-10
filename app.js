@@ -1,6 +1,9 @@
 'use strict';
 
 const config = require('config');
+
+// Increase MaxListeners to prevent warnings during large test suites where Supertest attaches many listeners
+require('events').EventEmitter.defaultMaxListeners = 100;
 const express = require('express');
 const session = require('express-session');
 const path = require('path');

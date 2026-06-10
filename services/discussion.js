@@ -14,6 +14,7 @@ module.exports = function (app) {
      * Used for both GET and post-update responses.
      */
     const getById = async function (discussionId) {
+        // Raw SQL: Complex query with aggregations/subqueries requiring raw SQL
         const rows = await db.query(
             `SELECT
                 d.id,
@@ -46,6 +47,7 @@ module.exports = function (app) {
      * Fetch participant users for a discussion (users who have commented).
      */
     const getParticipants = async function (discussionId) {
+        // Raw SQL: Complex query with aggregations/subqueries requiring raw SQL
         const users = await db.query(
             `SELECT
                 u.id,

@@ -32,6 +32,7 @@ module.exports = function (app) {
             userLevelJoin = ` LEFT JOIN "GroupMemberUsers" gmu ON gmu."userId"=:userId AND gmu."groupId" = g.id `;
         }
 
+        // Raw SQL: Complex query with aggregations/subqueries requiring raw SQL
         const [group] = await db.query(
             `SELECT
                  g.id,
@@ -119,6 +120,7 @@ module.exports = function (app) {
      * Fetch a group for an authenticated member request.
      */
     const getById = async function (groupId, userId) {
+        // Raw SQL: Complex query with aggregations/subqueries requiring raw SQL
         const [group] = await db.query(
             `SELECT
                  g.id,
@@ -289,6 +291,7 @@ module.exports = function (app) {
             returnFields += ` members."memberId" as "member.memberId", members."memberName" as "member.memberName", members."type" as "member.memberType", members."memberLevel" as "member.level", `;
         }
 
+        // Raw SQL: Complex query with aggregations/subqueries requiring raw SQL
         const rows = await db.query(`
             SELECT
                 g.id, g."parentId" AS "parent.id", g.name, g.description, g."imageUrl",
@@ -547,6 +550,7 @@ module.exports = function (app) {
         );
 
         // Raw SQL required: Postgres does not support LIMIT for DELETE; use hidden ctid column
+        // Raw SQL: Complex query with aggregations/subqueries requiring raw SQL
         await db.query(
             `DELETE FROM "GroupMemberUsers" WHERE ctid IN (
                 SELECT ctid FROM "GroupMemberUsers"

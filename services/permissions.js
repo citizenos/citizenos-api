@@ -21,6 +21,7 @@ module.exports = function (app) {
     const _topicPermission = async function (topicId, userId, level, allowPublic, topicStatusesAllowed, allowSelf, partnerId) {
         const minRequiredLevel = level;
 
+        // Raw SQL: Complex query with aggregations/subqueries requiring raw SQL
         const result = await db.query(
             `SELECT
                 t.visibility = 'public' AS "isPublic",
@@ -134,6 +135,7 @@ module.exports = function (app) {
     };
 
     const _isModerator = async function (topicId, userId) {
+        // Raw SQL: Complex query with aggregations/subqueries requiring raw SQL
         const result = await db.query(
             `SELECT t."id" as "topicId", m."userId", m."partnerId"
             FROM "Topics" t
@@ -190,6 +192,7 @@ module.exports = function (app) {
     // ─── Group permissions ────────────────────────────────────────────────────────
 
     const _groupPermission = async function (groupId, userId, level, allowPublic, allowSelf) {
+        // Raw SQL: Complex query with aggregations/subqueries requiring raw SQL
         const result = await db.query(
             `SELECT
                 g.visibility = 'public' AS "isPublic",
