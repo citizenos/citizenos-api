@@ -269,8 +269,8 @@ app.use(bodyParser.json({ type: 'application/csp-report' }));
 app.use(bodyParser.urlencoded({ extended: false }));
 
 // CORS
-const corsOptions = config.api.cors;
-const corsPaths = JSON.parse(JSON.stringify(config.api.cors.paths));
+const corsOptions = JSON.parse(JSON.stringify(config.api.cors));
+const corsPaths = corsOptions.paths;
 delete corsOptions.paths; // Remove the paths just in case it will conflict with CORS MW options now or in the future
 corsOptions.origin.forEach(function (pattern, i) {
     corsOptions.origin[i] = new RegExp(pattern, 'i');
