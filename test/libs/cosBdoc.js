@@ -57,7 +57,7 @@ suite('cosBdoc', function () {
 
         test('Success - Hex encoded DER(default)', async function () {
             const certificate = await fs .readFileAsync('./test/resources/certificates/good-jaak-kristjan_jõeorg_esteid_sign_hex_encoded_der.crt');
-            const personalInfo= await smartId.getCertUserData(certificate.toString(), 'hex');
+            const personalInfo= await require('smart-id-rest/dist/validator').getCertUserData(certificate.toString(), 'hex');
                //     assert.equal(status, 'GOOD');
             const expectedPersonalInfo = {
                 lastName: 'JÕEORG',
@@ -76,7 +76,7 @@ suite('cosBdoc', function () {
        //     const returnCertData = 'sign';
 
             const certInfo = await mobileId.getUserCertificate(pid, phoneNumber);
-            const personalInfo = await mobileId.getCertUserData(certInfo, 'base64');
+            const personalInfo = await require('mobiil-id-rest/dist/validator').getCertUserData(certInfo, 'base64');
     //     assert.equal(status, 'GOOD');
             assert.deepEqual(personalInfo, {
                 pid: '60001019906',
@@ -110,7 +110,7 @@ suite('cosBdoc', function () {
 
         // NB! Disable query logging when generating data, otherwise it will fill HDD with logs
         suite.skip('Performance', function () {
-            this.timeout(0);
+            this.timeout(120000);
 
             // Run GC in a loop. Due to GC logic, first call to gc() will not free as much memory as possible. Every gc() call will a bit more if possible
             const runGC = function () {

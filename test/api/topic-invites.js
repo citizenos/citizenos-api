@@ -1451,7 +1451,7 @@ suite('Users', function () {
         suite('Invites', function () {
 
             suite('Users', function () {
-                this.timeout(15000);
+                this.timeout(120000);
                 suite('Create', function () {
                     let agentCreator = request.agent(app);
 

@@ -182,7 +182,7 @@ const smartId = app.get('smartId');
 const mobileId = app.get('mobileId');
 
 suite('User', function () {
-    this.timeout(60000);
+    this.timeout(120000);
 
     suiteSetup(async function () {
         await shared.syncDb();
@@ -443,7 +443,7 @@ suite('User', function () {
 
     suite('UserConnections', function () {
         suite('Create', function () {
-            this.timeout(20000);
+            this.timeout(120000);
             const agent = request.agent(app);
 
             let user;

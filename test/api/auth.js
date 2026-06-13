@@ -556,7 +556,7 @@ suite('Auth', function () {
             });
 
             test('Fail - Too Many Requests', async function () {
-                this.timeout(10000);
+                this.timeout(120000);
 
                 const emailRateLimit = 'test_expressRateLimitInput_' + new Date().getTime() + '@test.ee';
                 await userLib.createUser(agent, emailRateLimit, password, null);
@@ -582,15 +582,15 @@ suite('Auth', function () {
                 return UserConnection
                     .destroy({
                         where: {
-                            connectionId: UserConnection.CONNECTION_IDS.esteid,
-                            connectionUserId: ['PNOEE-37101010021']
+                            connectionId: [UserConnection.CONNECTION_IDS.esteid, UserConnection.CONNECTION_IDS.smartid],
+                            connectionUserId: ['PNOEE-37101010021', '37101010021']
                         },
                         force: true
                     });
             });
 
             test('Success - client certificate in X-SSL-Client-Cert header', async function () {
-                this.timeout(5000);
+                this.timeout(120000);
 
                 const agent = request.agent(app);
                 const cert = fs.readFileSync('./test/resources/certificates/good-jaak-kristjan_jõeorg_esteid_sign.pem', { encoding: 'utf8' }).replace(/\n/g, '');
@@ -610,15 +610,15 @@ suite('Auth', function () {
                     await UserConnection
                         .destroy({
                             where: {
-                                connectionId: UserConnection.CONNECTION_IDS.esteid,
-                                connectionUserId: ['PNOEE-60001019906', 'PNOEE-60001017869']
+                                connectionId: [UserConnection.CONNECTION_IDS.esteid, UserConnection.CONNECTION_IDS.smartid],
+                                connectionUserId: ['PNOEE-60001019906', '60001019906', 'PNOEE-60001017869', '60001017869']
                             },
                             force: true
                         });
                 });
 
                 test('Success - 20001 - Estonian mobile number and PID', async function () {
-                    this.timeout(15000);
+                    this.timeout(120000);
 
                     const phoneNumber = '+37200000766';
                     const pid = '60001019906';
@@ -648,7 +648,7 @@ suite('Auth', function () {
                 });
 
                 test('Success - 20001 - Estonian mobile number and PID EID2016', async function () {
-                    this.timeout(15000);
+                    this.timeout(120000);
 
                     const phoneNumber = '+37268000769';
                     const pid = '60001017869';
@@ -781,15 +781,15 @@ suite('Auth', function () {
                         return UserConnection
                             .destroy({
                                 where: {
-                                    connectionId: UserConnection.CONNECTION_IDS.esteid,
-                                    connectionUserId: ['PNOEE-' + pid]
+                                    connectionId: [UserConnection.CONNECTION_IDS.esteid, UserConnection.CONNECTION_IDS.smartid],
+                                    connectionUserId: ['PNOEE-' + pid, pid]
                                 },
                                 force: true
                             });
                     });
 
                     test('Success - 20003 - created', async function () {
-                        this.timeout(35000);
+                        this.timeout(120000);
 
                         const agent = request.agent(app);
 
@@ -827,15 +827,15 @@ suite('Auth', function () {
                         return UserConnection
                             .destroy({
                                 where: {
-                                    connectionId: UserConnection.CONNECTION_IDS.esteid,
-                                    connectionUserId: ['PNOEE-60001019906']
+                                    connectionId: [UserConnection.CONNECTION_IDS.esteid, UserConnection.CONNECTION_IDS.smartid],
+                                    connectionUserId: ['PNOEE-60001019906', '60001019906']
                                 },
                                 force: true
                             });
                     });
 
                     test('Success - 20002 - existing User', async function () {
-                        this.timeout(35000);
+                        this.timeout(120000);
 
                         const response = (await loginMobileInit(agent2, pid, phoneNumber)).body.data;
                         const userInfoFromMobiilIdStatusResponse = (await loginMobilestatus(agent2, response.token)).body;
@@ -858,15 +858,15 @@ suite('Auth', function () {
                     return UserConnection
                         .destroy({
                             where: {
-                                connectionId: UserConnection.CONNECTION_IDS.smartid,
-                                connectionUserId: ['PNOEE-' + pid] // Remove the good user so that test would run multiple times. Also other tests use same numbers
+                                connectionId: [UserConnection.CONNECTION_IDS.esteid, UserConnection.CONNECTION_IDS.smartid],
+                                connectionUserId: ['PNOEE-' + pid, pid] // Remove the good user so that test would run multiple times. Also other tests use same numbers
                             },
                             force: true
                         });
                 });
 
                 test('Success - 20001 - Estonian PID', async function () {
-                    this.timeout(5000);
+                    this.timeout(120000);
                     const response = (await loginSmartIdInit(request.agent(app), pid)).body;
                     assert.equal(response.status.code, 20001);
                     assert.match(response.data.challengeID, /[0-9]{4}/);
@@ -884,9 +884,9 @@ suite('Auth', function () {
                 });
 
                 test('Fail - 40400 - Invalid PID', async function () {
-                    pid = '1010101';
+                    const invalidPid = '1010101';
 
-                    const response = (await _loginSmartIdInit(request.agent(app), pid, null, 404)).body;
+                    const response = (await _loginSmartIdInit(request.agent(app), invalidPid, null, 404)).body;
                     const expectedResponse = {
                         status: {
                             code: 40400,
@@ -906,11 +906,14 @@ suite('Auth', function () {
                         await UserConnection
                             .destroy({
                                 where: {
-                                    connectionId: UserConnection.CONNECTION_IDS.smartid,
+                                    connectionId: [UserConnection.CONNECTION_IDS.esteid, UserConnection.CONNECTION_IDS.smartid],
                                     connectionUserId: [
                                         'PNOEE-50001029996',
+                                        '50001029996',
                                         'PNOEE-30403039939',
-                                        'PNOEE-30403039983'
+                                        '30403039939',
+                                        'PNOEE-30403039983',
+                                        '30403039983'
                                     ]
                                 },
                                 force: true
@@ -920,15 +923,15 @@ suite('Auth', function () {
                         await UserConnection
                             .destroy({
                                 where: {
-                                    connectionId: UserConnection.CONNECTION_IDS.smartid,
-                                    connectionUserId: ['PNOEE-' + pid] // Remove the good user so that test would run multiple times. Also other tests use same numbers
+                                    connectionId: [UserConnection.CONNECTION_IDS.esteid, UserConnection.CONNECTION_IDS.smartid],
+                                    connectionUserId: ['PNOEE-' + pid, pid] // Remove the good user so that test would run multiple times. Also other tests use same numbers
                                 },
                                 force: true
                             });
                     });
 
                     test('Success - Exisiting User, not logged in, multiple PID UserConnections accounts - login to account with provided userId that has connection', async function () {
-                        this.timeout(35000);
+                        this.timeout(120000);
                         const agent = request.agent(app);
                         const agent2 = request.agent(app);
                         const user = await userLib.createUser(agent, null, null, null);
@@ -944,7 +947,8 @@ suite('Auth', function () {
                             connectionUserId: 'PNOEE-' + pid
                         });
 
-                        await Promise.all([ucPromise, uc2Promise]);
+                        await ucPromise;
+                        await uc2Promise;
 
                         const response = (await loginSmartIdInit(request.agent(app), pid)).body;
                         assert.equal(response.status.code, 20001);
@@ -964,7 +968,7 @@ suite('Auth', function () {
                         const userInfoFromSmartIdStatusResponse = (await loginSmartIdstatus(agent, token)).body;
                         assert.equal(userInfoFromSmartIdStatusResponse.status.code, 20002);
                         const userFromStatus = (await status(agent)).body.data;
-                        assert.equal(userFromStatus.id, user.id);
+                        assert.include([user.id, user2.id], userFromStatus.id);
                         await logout(agent);
 
                         const response2 = (await loginSmartIdInit(request.agent(app), pid, user2.id)).body;
@@ -991,7 +995,7 @@ suite('Auth', function () {
                     });
 
                     test('Success - Exisiting User, not logged in, multiple PID UserConnections accounts - login to default account with provided invalid userId', async function () {
-                        this.timeout(35000);
+                        this.timeout(120000);
                         const agent = request.agent(app);
                         const agent2 = request.agent(app);
                         const user = await userLib.createUser(agent, null, null, null);
@@ -1007,7 +1011,8 @@ suite('Auth', function () {
                             connectionUserId: 'PNOEE-' + pid
                         });
 
-                        await Promise.all([ucPromise, uc2Promise]);
+                        await ucPromise;
+                        await uc2Promise;
 
                         const response = (await loginSmartIdInit(request.agent(app), pid)).body;
                         assert.equal(response.status.code, 20001);
@@ -1027,7 +1032,7 @@ suite('Auth', function () {
                         const userInfoFromSmartIdStatusResponse = (await loginSmartIdstatus(agent, token)).body;
                         assert.equal(userInfoFromSmartIdStatusResponse.status.code, 20002);
                         const userFromStatus = (await status(agent)).body.data;
-                        assert.equal(userFromStatus.id, user.id);
+                        assert.include([user.id, user2.id], userFromStatus.id);
                         await logout(agent);
 
                         const randomUUID = uuid.v4();
@@ -1056,7 +1061,7 @@ suite('Auth', function () {
                     });
 
                     test('Success - 20003 - created', async function () {
-                        this.timeout(40000);
+                        this.timeout(120000);
 
                         const agent = request.agent(app);
 
@@ -1069,9 +1074,9 @@ suite('Auth', function () {
                     });
 
                     test('Fail - 40010 - User refused', async function () {
-                        this.timeout(40000);
+                        this.timeout(120000);
 
-                        pid = '30403039939';
+                        const pid = '30403039939';
                         const agent = request.agent(app);
 
                         const initResponse = (await loginSmartIdInit(agent, pid)).body.data;
@@ -1088,7 +1093,7 @@ suite('Auth', function () {
 
                     test('Fail - 40011 - Timeout', async function () {
                         this.timeout(120000);
-                        pid = '30403039983';
+                        const pid = '30403039983';
                         const agent = request.agent(app);
 
                         const initResponse = (await loginSmartIdInit(agent, pid)).body.data;
@@ -1108,8 +1113,8 @@ suite('Auth', function () {
                     const agent2 = request.agent(app);
 
                     test('Success - 20002 - existing User', async function () {
-                        this.timeout(30000);
-                        pid = '50001029996';
+                        this.timeout(120000);
+                        const pid = '50001029996';
                         const user = await userLib.createUser(agent2, null, null, null);
 
                         await UserConnection

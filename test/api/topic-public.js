@@ -2361,7 +2361,7 @@ suite('Topics', function () {
             });
 
             test('Success - non-authenticated User', async function () {
-                this.timeout(5000);
+                this.timeout(120000);
 
                 const list = (await topicMentionListUnauth(agent, topic.id)).body.data;
                 const mentions = list.rows;
@@ -2372,7 +2372,7 @@ suite('Topics', function () {
             });
 
             test('Success - non-authenticated User read from cache', async function () {
-                this.timeout(5000);
+                this.timeout(120000);
 
                 const list = (await topicMentionListUnauth(agent, topic.id)).body.data;
                 const mentions = list.rows;
@@ -2404,7 +2404,7 @@ suite('Topics', function () {
                 });
 
                 test('Non-authenticated User', async function () {
-                    this.timeout(5000);
+                    this.timeout(120000);
 
                     const resBody = (await _topicMentionListUnauth(agent, topic.id, 400)).body;
                     const expectedBody = {

@@ -322,7 +322,7 @@ module.exports = function (app) {
      * Login
      */
     app.post('/api/auth/login', rateLimiter(50), speedLimiter(15), expressRateLimitInput(['body.email'], 15 * 60 * 1000, 10), function (req, res) {
-        passport.authenticate('local', {
+        console.log("authenticate local"); passport.authenticate('local', {
             keepSessionInfo: true
         }, function (err, user) {
             if (err || !user) {
@@ -776,7 +776,7 @@ module.exports = function (app) {
                 clientCert = cert.replace('-----BEGIN CERTIFICATE-----', '').replace('-----END CERTIFICATE-----', '')
             }
             await mobileId.validateCert(clientCert, 'base64');
-            const personalInfo = await mobileId.getCertUserData(clientCert, 'base64');
+            const personalInfo = await require('mobiil-id-rest/dist/validator').getCertUserData(clientCert, 'base64');
             personalInfo.countryCode = personalInfo.country;
             delete personalInfo.country;
             return personalInfo;

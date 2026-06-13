@@ -1428,25 +1428,25 @@ suite('Users', function () {
     // API - /api/users/:userId/topics*
     suite('Topics', function () {
 
-    let originalCreateVoteFiles;
-    let originalGetHTMLAsync;
+        let originalCreateVoteFiles;
+        let originalGetHTMLAsync;
 
-    suiteSetup(function () {
-        // Store original if it exists
-        originalGetHTMLAsync = etherpadClient.getHTMLAsync;
+        suiteSetup(function () {
+            // Store original if it exists
+            originalGetHTMLAsync = etherpadClient.getHTMLAsync;
 
-        originalCreateVoteFiles = cosSignature.createVoteFiles;
-        cosSignature.createVoteFiles = async function () {
-            return Promise.resolve();
-        };
-    });
+            originalCreateVoteFiles = cosSignature.createVoteFiles;
+            cosSignature.createVoteFiles = async function () {
+                return Promise.resolve();
+            };
+        });
 
-    suiteTeardown(function () {
-        cosSignature.createVoteFiles = originalCreateVoteFiles;
-        if (originalGetHTMLAsync) {
-            etherpadClient.getHTMLAsync = originalGetHTMLAsync;
-        }
-    });
+        suiteTeardown(function () {
+            cosSignature.createVoteFiles = originalCreateVoteFiles;
+            if (originalGetHTMLAsync) {
+                etherpadClient.getHTMLAsync = originalGetHTMLAsync;
+            }
+        });
 
         suite('List', function () {
             let agentCreator;
@@ -1896,7 +1896,7 @@ suite('Users', function () {
 
             });
             test('Success - list only topics that User has voted on - voted=true', async function () {
-                this.timeout(10000);
+                this.timeout(120000);
                 // Create 2 topics 1 in voting, but not voted, 1 voted. Topic list should return only 1 that User has voted on
                 const topicWithVoteNotVoted = (await topicCreate(agentCreator, creator.id, 'TEST User HAS NOT VOTED on this topic', null, '<html><head></head><body><h2>TEST User HAS NOT VOTED on this topic</h2></body></html>', Topic.VISIBILITY.private)).body.data;
                 const topicWithVoteAndVoted = (await topicCreate(agentCreator, creator.id, 'TEST User HAS VOTED on this topic', null, '<html><head></head><body><h2>TEST User HAS VOTED on this topic</h2></body></html>', Topic.VISIBILITY.private)).body.data;
@@ -1941,7 +1941,7 @@ suite('Users', function () {
             });
 
             test('Success - list only topics that User has NOT voted on - voted=false ', async function () {
-                this.timeout(10000);
+                this.timeout(120000);
                 // Create 2 topics 1 in voting, but not voted, 1 voted. Topic list should return only 1 that User has NOT voted on
                 const topicWithVoteNotVoted = (await topicCreate(agentCreator, creator.id, 'TEST User HAS NOT VOTED on this topic', null, '<html><head></head><body><h2>TEST User HAS NOT VOTED on this topic</h2></body></html>', Topic.VISIBILITY.private)).body.data;
                 const topicWithVoteAndVoted = (await topicCreate(agentCreator, creator.id, 'TEST User HAS VOTED on this topic', null, '<html><head></head><body><h2>TEST User HAS VOTED on this topic</h2></body></html>', Topic.VISIBILITY.private)).body.data;

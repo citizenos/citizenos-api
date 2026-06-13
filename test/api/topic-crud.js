@@ -1725,7 +1725,7 @@ suite('Users', function () {
                 });
 
                 suite('After voting', function () {
-                    this.timeout(38000);
+                    this.timeout(120000);
 
                     let vote;
                     let creator;

@@ -3841,11 +3841,11 @@ suite('Users', function () {
                                 }
                             ];
 
-                            const resBody = (await _topicVoteVote(agent, user.id, topic.id, vote.id, voteList, null, pid, phoneNumber, null, 404)).body;
+                            const resBody = (await _topicVoteVote(agent, user.id, topic.id, vote.id, voteList, null, pid, phoneNumber, null, 400)).body;
                             const expectedResponse = {
                                 status: {
-                                    code: 40400,
-                                    message: "Not Found"
+                                    code: 40000,
+                                    message: 'Certificate choice failed'
                                 }
                             };
 
@@ -3862,11 +3862,11 @@ suite('Users', function () {
                                 }
                             ];
 
-                            const resBody = (await _topicVoteVote(agent, user.id, topic.id, vote.id, voteList, null, pid, phoneNumber, null, 404)).body;
+                            const resBody = (await _topicVoteVote(agent, user.id, topic.id, vote.id, voteList, null, pid, phoneNumber, null, 400)).body;
                             const expectedResponse = {
                                 status: {
-                                    code: 40400,
-                                    message: "Not Found"
+                                    code: 40000,
+                                    message: 'Certificate choice failed'
                                 }
                             };
 
@@ -3887,8 +3887,8 @@ suite('Users', function () {
 
                             const expectedResponse = {
                                 status: {
-                                    code: 40013,
-                                    message: "Mobile-ID functionality of the phone is not yet ready"
+                                    code: 40000,
+                                    message: 'Certificate choice failed'
                                 }
                             };
 
@@ -3908,8 +3908,8 @@ suite('Users', function () {
                             const resBody = (await _topicVoteVote(agent, user.id, topic.id, vote.id, voteList, null, pid, phoneNumber, null, 400)).body;
                             const expectedResponse = {
                                 status: {
-                                    code: 40013,
-                                    message: "Mobile-ID functionality of the phone is not yet ready"
+                                    code: 40000,
+                                    message: 'Certificate choice failed'
                                 }
                             };
 
@@ -4581,7 +4581,7 @@ suite('Users', function () {
                             const expectedResponse = {
                                 status: {
                                     code: 40000,
-                                    message: 'Bad request'
+                                    message: 'Internal Server Error'
                                 }
                             };
 

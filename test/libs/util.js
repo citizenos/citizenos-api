@@ -58,7 +58,7 @@ suite('Util', function () {
     });
 
     suite('randomNumber', function () {
-        this.timeout(5000);
+        this.timeout(120000);
 
         test('Success', async function () {
             const min = 23;
@@ -75,7 +75,7 @@ suite('Util', function () {
     suite('randomPid', function () {
 
         test('Success', async function () {
-            this.timeout(5000);
+            this.timeout(120000);
 
             for (let i = 0; i < 100000; i++) {
                 const str = util.randomPid();

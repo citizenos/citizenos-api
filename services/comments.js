@@ -10,6 +10,7 @@ module.exports = function (app) {
     const cosUpload = app.get('cosUpload');
     const https = require('https');
     const path = require('path');
+    const logger = app.get('logger');
 
     const Topic = models.Topic;
     const Comment = models.Comment;
@@ -43,7 +44,7 @@ module.exports = function (app) {
                     return res.forbidden('Insufficient permissions');
                 }
             } catch (err) {
-                console.error("COMMENTS ERROR:", err);
+                logger.error("COMMENTS ERROR:", err);
                 return next(err);
             }
         };
@@ -246,7 +247,7 @@ module.exports = function (app) {
                     });
                 });
             } catch (err) {
-                console.error("COMMENTS ERROR:", err);
+                logger.error("COMMENTS ERROR:", err);
                 if (err.message === 'NotFound') return res.notFound();
                 throw err;
             }
@@ -497,8 +498,8 @@ module.exports = function (app) {
                 countRes.total = countRes.pro + countRes.con + countRes.poi + countRes.reply;
                 return res.ok({ count: countRes, rows: comments });
             } catch (err) {
-                console.error("COMMENTS ERROR:", err);
-                console.error("ListComments Error:", err);
+                logger.error("COMMENTS ERROR:", err);
+                logger.error("ListComments Error:", err);
                 return next(err);
             }
         };
@@ -542,7 +543,7 @@ module.exports = function (app) {
                     t.afterCommit(() => res.ok());
                 });
             } catch (err) {
-                console.error("COMMENTS ERROR:", err);
+                logger.error("COMMENTS ERROR:", err);
                 return next(err);
             }
         };
@@ -613,7 +614,7 @@ module.exports = function (app) {
                     t.afterCommit(() => res.ok());
                 });
             } catch (err) {
-                console.error("COMMENTS ERROR:", err);
+                logger.error("COMMENTS ERROR:", err);
                 return next(err);
             }
         };
@@ -651,7 +652,7 @@ module.exports = function (app) {
                     t.afterCommit(() => res.ok(report));
                 });
             } catch (err) {
-                console.error("COMMENTS ERROR:", err);
+                logger.error("COMMENTS ERROR:", err);
                 return next(err);
             }
         };
@@ -675,7 +676,7 @@ module.exports = function (app) {
                 if (!results || !results.length) return res.notFound();
                 return res.ok(results[0]);
             } catch (err) {
-                console.error("COMMENTS ERROR:", err);
+                logger.error("COMMENTS ERROR:", err);
                 return next(err);
             }
         };
@@ -755,7 +756,7 @@ module.exports = function (app) {
                     t.afterCommit(() => res.ok());
                 });
             } catch (err) {
-                console.error("COMMENTS ERROR:", err);
+                logger.error("COMMENTS ERROR:", err);
                 return next(err);
             }
         };
@@ -838,8 +839,8 @@ module.exports = function (app) {
                     });
                 });
             } catch (err) {
-                console.error("COMMENTS ERROR:", err);
-                console.error("CreateVote Error:", err);
+                logger.error("COMMENTS ERROR:", err);
+                logger.error("CreateVote Error:", err);
                 return next(err);
             }
         };
@@ -858,8 +859,8 @@ module.exports = function (app) {
                 });
                 return res.ok({ rows: results, count: results.length });
             } catch (err) {
-                console.error("COMMENTS ERROR:", err);
-                console.error("ListVotes Error:", err);
+                logger.error("COMMENTS ERROR:", err);
+                logger.error("ListVotes Error:", err);
                 return next(err);
             }
         };
@@ -887,7 +888,7 @@ module.exports = function (app) {
                     t.afterCommit(() => res.created(attachment.toJSON()));
                 });
             } catch (err) {
-                console.error("COMMENTS ERROR:", err);
+                logger.error("COMMENTS ERROR:", err);
                 if (err.type && (err.type === 'fileSize' || err.type === 'fileType')) return res.forbidden(err.message);
                 return next(err);
             }
@@ -925,7 +926,7 @@ module.exports = function (app) {
                     await cosActivities.addActivity(attachment, { type: 'User', id: req.user.userId, ip: req.ip }, null, comment, req.method + ' ' + req.path, t);
                     t.afterCommit(() => res.ok(attachment.toJSON()));
                 });
-            } catch (err) { console.error("COMMENTS ERROR:", err); return next(err); }
+            } catch (err) { logger.error("COMMENTS ERROR:", err); return next(err); }
         };
 
         const updateCommentAttachment = async function (req, res, next) {
@@ -940,7 +941,7 @@ module.exports = function (app) {
                     await attachment.save({ transaction: t });
                     t.afterCommit(() => res.ok(attachment.toJSON()));
                 });
-            } catch (err) { console.error("COMMENTS ERROR:", err); return next(err); }
+            } catch (err) { logger.error("COMMENTS ERROR:", err); return next(err); }
         };
 
         const deleteCommentAttachment = async function (req, res, next) {
@@ -955,7 +956,7 @@ module.exports = function (app) {
                     await attachment.destroy({ transaction: t });
                     t.afterCommit(() => res.ok());
                 });
-            } catch (err) { console.error("COMMENTS ERROR:", err); return next(err); }
+            } catch (err) { logger.error("COMMENTS ERROR:", err); return next(err); }
         };
 
         const getCommentAttachments = async (commentId, type) => {
@@ -974,7 +975,7 @@ module.exports = function (app) {
             try {
                 const attachments = await getCommentAttachments(req.params.commentId, req.query?.type);
                 return res.ok({ count: attachments.length, rows: attachments });
-            } catch (err) { console.error("COMMENTS ERROR:", err); return next(err); }
+            } catch (err) { logger.error("COMMENTS ERROR:", err); return next(err); }
         };
 
         const readAttachment = async function (req, res, next) {
@@ -993,7 +994,7 @@ module.exports = function (app) {
                         externalRes.pipe(res);
                     }).on('error', function (err) { return next(err); }).end();
                 } else return res.ok(attachment.toJSON());
-            } catch (err) { console.error("COMMENTS ERROR:", err); return next(err); }
+            } catch (err) { logger.error("COMMENTS ERROR:", err); return next(err); }
         };
 
         return {

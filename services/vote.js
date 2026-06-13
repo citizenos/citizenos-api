@@ -23,10 +23,14 @@ module.exports = function (app) {
     const UserConnection = models.UserConnection;
     const VoteList = models.VoteList;
     const VoteDelegation = models.VoteDelegation;
+    const TopicMemberUser = models.TopicMemberUser;
     const { injectReplacements } = require('sequelize/lib/utils/sql');
     const Op = db.Sequelize.Op;
     const User = models.User;
     const topicService = () => app.get('topicService');
+    const TopicVote = models.TopicVote;
+    const cosEtherpad = app.get('cosEtherpad');
+    const sanitizeFilename = app.get('sanitizeFilename');
 
     const createDataHash = (dataToHash) => {
         const hmac = crypto.createHmac('sha256', config.encryption.salt);
@@ -125,12 +129,12 @@ module.exports = function (app) {
                 };
             }
             if (signingMethod === Vote.SIGNING_METHODS.smartId) {
-                personalInfo = await smartId.getCertUserData(certificateInfo.certificate);
+                personalInfo = await require('smart-id-rest/dist/validator').getCertUserData(certificateInfo.certificate);
                 if (personalInfo.pid.indexOf(pid) - 1) {
                     personalInfo.pid = pid;
                 }
             } else {
-                personalInfo = await mobileId.getCertUserData(certificateInfo.certificate, certFormat);
+                personalInfo = await require('mobiil-id-rest/dist/validator').getCertUserData(certificateInfo.certificate, certFormat);
                 if (signingMethod === Vote.SIGNING_METHODS.mid) {
                     personalInfo.phoneNumber = phoneNumber;
                 }
@@ -1337,8 +1341,370 @@ module.exports = function (app) {
             );
     };
 
+    const createTopicVote = async function (topicId, userId, voteData, voteOptions, activityContext) {
+        if (!voteOptions || !Array.isArray(voteOptions) || voteOptions.length < 2) {
+            const err = new Error('At least 2 vote options are required');
+            err.code = 1;
+            err.validationError = true;
+            throw err;
+        }
+
+        const authType = voteData.authType || Vote.AUTH_TYPES.soft;
+        const delegationIsAllowed = voteData.delegationIsAllowed || false;
+
+        // We cannot allow too similar options, otherwise the options are not distinguishable in the signed file
+        if (authType === Vote.AUTH_TYPES.hard) {
+            const voteOptionValues = voteOptions.map(o => sanitizeFilename(o.value).toLowerCase());
+
+            const uniqueValues = voteOptionValues.filter((value, index, array) => {
+                return array.indexOf(value) === index;
+            });
+            if (uniqueValues.length !== voteOptions.length) {
+                const err = new Error('Vote options are too similar');
+                err.code = 2;
+                err.validationError = true;
+                throw err;
+            }
+
+            const reservedPrefix = VoteOption.RESERVED_PREFIX;
+            uniqueValues.forEach(function (value) {
+                if (value.substr(0, 2) === reservedPrefix) {
+                    const err = new Error('Vote option not allowed due to usage of reserved prefix "' + reservedPrefix + '"');
+                    err.code = 4;
+                    err.validationError = true;
+                    throw err;
+                }
+            });
+        }
+
+        if (authType === Vote.AUTH_TYPES.hard && delegationIsAllowed) {
+            const err = new Error('Delegation is not allowed for authType "' + authType + '"');
+            err.code = 3;
+            err.validationError = true;
+            throw err;
+        }
+
+        const vote = Vote.build({
+            minChoices: voteData.minChoices || 1,
+            maxChoices: voteData.maxChoices || 1,
+            delegationIsAllowed: voteData.delegationIsAllowed || false,
+            endsAt: voteData.endsAt,
+            description: voteData.description,
+            type: voteData.type || Vote.TYPES.regular,
+            authType: authType,
+            autoClose: voteData.autoClose,
+            reminderTime: voteData.reminderTime
+        });
+
+        const topic = await Topic.findOne({
+            where: {
+                id: topicId
+            }
+        });
+
+        if (!topic) {
+            const err = new Error('Topic not found');
+            err.status = 404;
+            throw err;
+        }
+
+        await db.transaction(async function (t) {
+            let voteOptionsCreated;
+
+            await cosActivities.createActivity(
+                vote,
+                null,
+                {
+                    type: 'User',
+                    id: userId,
+                    ip: activityContext.ip
+                },
+                activityContext.method + ' ' + activityContext.path,
+                t
+            );
+
+            await vote.save({ transaction: t });
+
+            const voteOptionPromises = [];
+            voteOptions.forEach((o) => {
+                o.voteId = vote.id;
+                const vopt = VoteOption.build(o);
+                voteOptionPromises.push(vopt.validate());
+            });
+
+            await Promise.all(voteOptionPromises);
+
+            voteOptionsCreated = await VoteOption.bulkCreate(
+                voteOptions,
+                {
+                    fields: ['id', 'voteId', 'value', 'ideaId'], // Deny updating other fields like "updatedAt", "createdAt"...
+                    returning: true,
+                    transaction: t
+                }
+            );
+
+            await cosActivities.createActivity(
+                voteOptionsCreated,
+                null,
+                {
+                    type: 'User',
+                    id: userId,
+                    ip: activityContext.ip
+                },
+                activityContext.method + ' ' + activityContext.path,
+                t
+            );
+
+            await TopicVote.create(
+                {
+                    topicId: topicId,
+                    voteId: vote.id
+                },
+                { transaction: t }
+            );
+
+            await cosActivities.createActivity(
+                vote,
+                topic,
+                {
+                    type: 'User',
+                    id: userId,
+                    ip: activityContext.ip
+                },
+                activityContext.method + ' ' + activityContext.path,
+                t
+            );
+
+            if (topic.status !== Topic.STATUSES.draft) {
+                topic.status = Topic.STATUSES.voting;
+            }
+
+            await cosActivities.updateActivity(
+                topic,
+                null,
+                {
+                    type: 'User',
+                    id: userId,
+                    ip: activityContext.ip
+                },
+                activityContext.method + ' ' + activityContext.path,
+                t
+            );
+
+            const resTopic = await topic.save({
+                returning: true,
+                transaction: t
+            });
+
+            vote.dataValues.VoteOptions = [];
+            voteOptionsCreated.forEach(function (option) {
+                vote.dataValues.VoteOptions.push(option.dataValues);
+            });
+
+            const rtopic = await cosEtherpad.syncTopicWithPad(resTopic.id);
+            await cosSignature.createVoteFiles(rtopic, vote, voteOptionsCreated, t);
+        });
+
+        return vote;
+    };
+
+    const createDelegation = async function (topicId, voteId, byUserId, toUserId, partnerId, activityContext) {
+        if (byUserId === toUserId) {
+            const err = new Error('Cannot delegate to self.');
+            err.code = 1;
+            err.validationError = true;
+            throw err;
+        }
+
+        const hasAccess = await topicService()._hasPermission(topicId, toUserId, TopicMemberUser.LEVELS.read, false, null, null, partnerId);
+
+        if (!hasAccess) {
+            const err = new Error('Cannot delegate Vote to User who does not have access to this Topic.');
+            err.code = 2;
+            err.validationError = true;
+            throw err;
+        }
+
+        const vote = await Vote.findOne({
+            where: {
+                id: voteId
+            },
+            include: [
+                {
+                    model: Topic,
+                    where: { id: topicId }
+                }
+            ]
+        });
+        if (!vote) {
+            const err = new Error('Vote not found');
+            err.status = 404;
+            throw err;
+        }
+        if (!vote.delegationIsAllowed) {
+            const err = new Error();
+            err.validationError = true;
+            throw err;
+        }
+        if (vote.endsAt && new Date() > vote.endsAt) {
+            const err = new Error('The Vote has ended.');
+            err.validationError = true;
+            throw err;
+        }
+
+        await db.transaction(async function (t) {
+            try {
+                let result = await db.query(`
+                    WITH
+                        RECURSIVE delegation_chains("voteId", "toUserId", "byUserId", depth) AS (
+                            SELECT
+                                "voteId",
+                                "toUserId",
+                                "byUserId",
+                                1
+                            FROM "VoteDelegations" vd
+                            WHERE vd."voteId" = :voteId
+                                AND vd."byUserId" = :toUserId
+                                AND vd."deletedAt" IS NULL
+                            UNION ALL
+                            SELECT
+                                vd."voteId",
+                                vd."toUserId",
+                                dc."byUserId",
+                                dc.depth + 1
+                            FROM delegation_chains dc, "VoteDelegations" vd
+                            WHERE vd."voteId" = dc."voteId"
+                                AND vd."byUserId" = dc."toUserId"
+                                AND vd."deletedAt" IS NULL
+                        ),
+                        cyclicDelegation AS (
+                            SELECT
+                                0
+                            FROM delegation_chains
+                            WHERE "byUserId" = :toUserId
+                                AND "toUserId" = :byUserId
+                            LIMIT 1
+                        ),
+                        upsert AS (
+                            UPDATE "VoteDelegations"
+                            SET "toUserId" = :toUserId,
+                                "updatedAt" = CURRENT_TIMESTAMP
+                            WHERE "voteId" = :voteId
+                            AND "byUserId" = :byUserId
+                            AND 1 = 1 / COALESCE((SELECT * FROM cyclicDelegation), 1)
+                            AND "deletedAt" IS NULL
+                            RETURNING *
+                        )
+                    INSERT INTO "VoteDelegations" ("voteId", "toUserId", "byUserId", "createdAt", "updatedAt")
+                        SELECT :voteId, :toUserId, :byUserId, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+                        WHERE NOT EXISTS (SELECT * FROM upsert)
+                            AND 1 = 1 / COALESCE((SELECT * FROM cyclicDelegation), 1)
+                    RETURNING *
+                    ;`,
+                    {
+                        replacements: {
+                            voteId: voteId,
+                            toUserId: toUserId,
+                            byUserId: byUserId
+                        },
+                        raw: true,
+                        transaction: t
+                    }
+                );
+                const delegation = VoteDelegation.build(result[0][0]);
+                await cosActivities
+                    .createActivity(
+                        delegation,
+                        vote,
+                        {
+                            type: 'User',
+                            id: byUserId,
+                            ip: activityContext.ip
+                        },
+                        activityContext.method + ' ' + activityContext.path,
+                        t
+                    );
+            } catch (err) {
+                // HACK: Forcing division by zero when cyclic delegation is detected. Cannot use result check as both update and cyclic return [].
+                if (err.parent && err.parent.code === '22012') {
+                    // Cyclic delegation detected.
+                    const newErr = new Error('Sorry, you cannot delegate your vote to this person.');
+                    newErr.validationError = true;
+                    throw newErr;
+                }
+
+                // Don't hide other errors
+                throw err;
+            }
+        });
+    };
+
+    const deleteDelegation = async function (topicId, voteId, userId, activityContext) {
+        const vote = await Vote
+            .findOne({
+                where: { id: voteId },
+                include: [
+                    {
+                        model: Topic,
+                        where: { id: topicId }
+                    }
+                ]
+            });
+
+        if (!vote) {
+            const err = new Error('Vote was not found for given topic');
+            err.status = 404;
+            err.code = 1;
+            throw err;
+        }
+
+        if (vote.endsAt && new Date() > vote.endsAt) {
+            const err = new Error('The Vote has ended.');
+            err.code = 1;
+            err.validationError = true;
+            throw err;
+        }
+
+        const voteDelegation = await VoteDelegation
+            .findOne({
+                where: {
+                    voteId: voteId,
+                    byUserId: userId
+                }
+            });
+
+        if (!voteDelegation) {
+            const err = new Error('Delegation was not found');
+            err.status = 404;
+            err.code = 2;
+            throw err;
+        }
+
+        await db
+            .transaction(async function (t) {
+                await cosActivities
+                    .deleteActivity(
+                        voteDelegation,
+                        vote,
+                        {
+                            type: 'User',
+                            id: userId,
+                            ip: activityContext.ip
+                        },
+                        activityContext.method + ' ' + activityContext.path,
+                        t
+                    );
+
+                await voteDelegation
+                    .destroy({
+                        force: true,
+                        transaction: t
+                    });
+            });
+    };
 
     return {
+        createTopicVote,
         handleTopicVotePreconditions,
         handleTopicVoteHard,
         handleTopicVoteSoft,
@@ -1349,7 +1715,9 @@ module.exports = function (app) {
         getVoteResults,
         getBdocURL,
         getZipURL,
-        getAllVotesResults
+        getAllVotesResults,
+        createDelegation,
+        deleteDelegation
     };
 };
 
