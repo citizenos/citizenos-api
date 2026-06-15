@@ -322,7 +322,7 @@ module.exports = function (app) {
      * Login
      */
     app.post('/api/auth/login', rateLimiter(50), speedLimiter(15), expressRateLimitInput(['body.email'], 15 * 60 * 1000, 10), function (req, res) {
-        console.log("authenticate local"); passport.authenticate('local', {
+        logger.debug("authenticate local" + JSON.stringify(req.body)); passport.authenticate('local', {
             keepSessionInfo: true
         }, function (err, user) {
             if (err || !user) {
@@ -604,8 +604,9 @@ module.exports = function (app) {
             let userConnectionInfo;
             if (userId) {
                 userConnectionInfo = userConnections.find((uc) => uc.userId === userId);
-            } else if (userConnections.length > 0) {
-                userConnectionInfo = userConnections[0];
+            }
+            if (!userConnectionInfo && userConnections.length > 0) {
+                userConnectionInfo = userConnections.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt))[0];
             }
 
             let response;
@@ -655,7 +656,8 @@ module.exports = function (app) {
 
                     response = [userData, 2]; // Existing User found and logged in
                 } else {
-                    const user = userConnections[0].User;
+                    const fallbackConnection = userConnections.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt))[0];
+                    const user = fallbackConnection.User;
                     const userData = user.toJSON();
                     userData.termsVersion = user.dataValues.termsVersion;
                     userData.termsAcceptedAt = user.dataValues.termsAcceptedAt;
@@ -775,8 +777,9 @@ module.exports = function (app) {
             if (cert.indexOf('-----BEGIN') > -1) {
                 clientCert = cert.replace('-----BEGIN CERTIFICATE-----', '').replace('-----END CERTIFICATE-----', '')
             }
-            await mobileId.validateCert(clientCert, 'base64');
-            const personalInfo = await require('mobiil-id-rest/dist/validator').getCertUserData(clientCert, 'base64');
+            const validator = require('mobiil-id-rest/dist/validator');
+            await validator.validateCert(clientCert, config.services.smartId.issuers, 'base64');
+            const personalInfo = await validator.getCertUserData(clientCert, 'base64');
             personalInfo.countryCode = personalInfo.country;
             delete personalInfo.country;
             return personalInfo;

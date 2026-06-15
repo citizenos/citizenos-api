@@ -1435,14 +1435,10 @@ suite('Users', function () {
         // Store original if it exists
         originalGetHTMLAsync = etherpadClient.getHTMLAsync;
 
-        originalCreateVoteFiles = cosSignature.createVoteFiles;
-        cosSignature.createVoteFiles = async function () {
-            return Promise.resolve();
-        };
+        return shared.syncDb();
     });
 
     suiteTeardown(function () {
-        cosSignature.createVoteFiles = originalCreateVoteFiles;
         if (originalGetHTMLAsync) {
             etherpadClient.getHTMLAsync = originalGetHTMLAsync;
         }

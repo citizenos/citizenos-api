@@ -137,11 +137,12 @@ const _loginMobilestatus = async function (agent, token, expectedHttpCode) {
 
     return agent
         .get(path)
+        .set("X-Forwarded-For", `${Math.floor(Math.random() * 255)}.${Math.floor(Math.random() * 255)}.${Math.floor(Math.random() * 255)}.${Math.floor(Math.random() * 255)}`)
         .query({
             token: token
         })
         .expect(expectedHttpCode)
-        .expect('Content-Type', /json/)
+        .expect('Content-Type', /json/);
 };
 
 const loginMobilestatus = async function (agent, token) {
@@ -193,6 +194,7 @@ const _loginSmartIdstatus = async function (agent, token) {
 
     return agent
         .get(path)
+        .set("X-Forwarded-For", `${Math.floor(Math.random() * 255)}.${Math.floor(Math.random() * 255)}.${Math.floor(Math.random() * 255)}.${Math.floor(Math.random() * 255)}`)
         .query({
             token: token
         })
@@ -487,7 +489,7 @@ suite('Auth', function () {
         suite('Username & password', function () {
 
             const agent = request.agent(app);
-            const email = 'test_' + new Date().getTime() + '@test.ee';
+            const email = 'test_' + uuid.v4() + '@test.ee';
             const password = 'Test123';
 
             suiteSetup(async function () {
@@ -513,7 +515,7 @@ suite('Auth', function () {
                     .post('/api/auth/login')
                     .set('Content-Type', 'application/json')
                     .send({
-                        email: 'test_nonexistent_' + new Date().getTime() + '@test.ee',
+                        email: 'test_nonexistent_' + uuid.v4() + '@test.ee',
                         password: password
                     })
                     .expect(400)
@@ -526,7 +528,7 @@ suite('Auth', function () {
             test('Fail - 40001 - account has not been verified', async function () {
                 const agent = request.agent(app);
 
-                const email = 'test_notverif_' + new Date().getTime() + '@test.ee';
+                const email = 'test_notverif_' + uuid.v4() + '@test.ee';
                 const password = 'Test123';
 
 
@@ -558,7 +560,7 @@ suite('Auth', function () {
             test('Fail - Too Many Requests', async function () {
                 this.timeout(120000);
 
-                const emailRateLimit = 'test_expressRateLimitInput_' + new Date().getTime() + '@test.ee';
+                const emailRateLimit = 'test_expressRateLimitInput_' + uuid.v4() + '@test.ee';
                 await userLib.createUser(agent, emailRateLimit, password, null);
 
                 const maxRequests = 10;
@@ -578,7 +580,19 @@ suite('Auth', function () {
         });
 
         suite('ID-card', function () {
+            let originalValidateCert;
+            let validator;
+
+            setup(function () {
+                validator = require('mobiil-id-rest/dist/validator');
+                originalValidateCert = validator.validateCert;
+                validator.validateCert = async () => true;
+            });
+
             teardown(async function () {
+                if (validator && originalValidateCert) {
+                    validator.validateCert = originalValidateCert;
+                }
                 return UserConnection
                     .destroy({
                         where: {
@@ -924,7 +938,7 @@ suite('Auth', function () {
                             .destroy({
                                 where: {
                                     connectionId: [UserConnection.CONNECTION_IDS.esteid, UserConnection.CONNECTION_IDS.smartid],
-                                    connectionUserId: ['PNOEE-' + pid, pid] // Remove the good user so that test would run multiple times. Also other tests use same numbers
+                                    connectionUserId: ['PNOEE-' + pid, pid, 'PNOEE-30303039914', '30303039914', 'PNOEE-30403039917', '30403039917', 'PNOEE-30403039928', '30403039928']
                                 },
                                 force: true
                             });
@@ -932,23 +946,22 @@ suite('Auth', function () {
 
                     test('Success - Exisiting User, not logged in, multiple PID UserConnections accounts - login to account with provided userId that has connection', async function () {
                         this.timeout(120000);
+                        const pid = '30303039914';
                         const agent = request.agent(app);
                         const agent2 = request.agent(app);
                         const user = await userLib.createUser(agent, null, null, null);
                         const user2 = await userLib.createUser(agent2, null, null, null);
-                        const ucPromise = UserConnection.create({
+                        await UserConnection.create({
                             userId: user.id,
                             connectionId: UserConnection.CONNECTION_IDS.smartid,
                             connectionUserId: 'PNOEE-' + pid
                         });
-                        const uc2Promise = UserConnection.create({
+                        await new Promise(resolve => setTimeout(resolve, 100));
+                        await UserConnection.create({
                             userId: user2.id,
                             connectionId: UserConnection.CONNECTION_IDS.smartid,
                             connectionUserId: 'PNOEE-' + pid
                         });
-
-                        await ucPromise;
-                        await uc2Promise;
 
                         const response = (await loginSmartIdInit(request.agent(app), pid)).body;
                         assert.equal(response.status.code, 20001);
@@ -996,23 +1009,22 @@ suite('Auth', function () {
 
                     test('Success - Exisiting User, not logged in, multiple PID UserConnections accounts - login to default account with provided invalid userId', async function () {
                         this.timeout(120000);
+                        const pid = '30403039917';
                         const agent = request.agent(app);
                         const agent2 = request.agent(app);
                         const user = await userLib.createUser(agent, null, null, null);
                         const user2 = await userLib.createUser(agent2, null, null, null);
-                        const ucPromise = UserConnection.create({
+                        await UserConnection.create({
                             userId: user.id,
                             connectionId: UserConnection.CONNECTION_IDS.smartid,
                             connectionUserId: 'PNOEE-' + pid
                         });
-                        const uc2Promise = UserConnection.create({
+                        await new Promise(resolve => setTimeout(resolve, 100));
+                        await UserConnection.create({
                             userId: user2.id,
                             connectionId: UserConnection.CONNECTION_IDS.smartid,
                             connectionUserId: 'PNOEE-' + pid
                         });
-
-                        await ucPromise;
-                        await uc2Promise;
 
                         const response = (await loginSmartIdInit(request.agent(app), pid)).body;
                         assert.equal(response.status.code, 20001);
@@ -1062,6 +1074,7 @@ suite('Auth', function () {
 
                     test('Success - 20003 - created', async function () {
                         this.timeout(120000);
+                        const pid = '30403039928';
 
                         const agent = request.agent(app);
 
@@ -1146,7 +1159,7 @@ suite('Auth', function () {
 
         test('Success', async function () {
             const agent = request.agent(app);
-            const email = 'test_' + new Date().getTime() + '@test.ee';
+            const email = 'test_' + uuid.v4() + '@test.ee';
             const password = 'Test123';
 
             const user = await userLib.createUserAndLogin(agent, email, password, null);
@@ -1174,7 +1187,7 @@ suite('Auth', function () {
         const agent = request.agent(app);
 
         test('Success', async function () {
-            const email = 'test_' + new Date().getTime() + '@test.ee';
+            const email = 'test_' + uuid.v4() + '@test.ee';
             const password = 'Test123';
 
             const user = (await signup(agent, email, password, null)).body.data;
@@ -1193,7 +1206,7 @@ suite('Auth', function () {
             // Users with NULL password are created on User invite
             const agent = request.agent(app);
 
-            const email = 'test_' + new Date().getTime() + '_invited@test.ee';
+            const email = 'test_' + uuid.v4() + '_invited@test.ee';
             const password = 'Test123';
             const name = 'Test name';
             const company = 'Test company';
@@ -1217,7 +1230,7 @@ suite('Auth', function () {
             // Users with NULL password are created on User invite
             const agent = request.agent(app);
 
-            const email = 'test_' + new Date().getTime() + '_invited@test.ee';
+            const email = 'test_' + uuid.v4() + '_invited@test.ee';
             const password = 'Test123';
             const language = 'et';
 
@@ -1284,7 +1297,7 @@ suite('Auth', function () {
         });
 
         test('Fail - 40000 - missing password', async function () {
-            const email = 'test_' + new Date().getTime() + '@test.ee';
+            const email = 'test_' + uuid.v4() + '@test.ee';
             const password = null;
 
             const signupResult = (await _signup(agent, email, password, null, null, null, null, 400)).body;
@@ -1301,7 +1314,7 @@ suite('Auth', function () {
         });
 
         test('Fail - 40000 - invalid password', async function () {
-            const email = 'test_' + new Date().getTime() + '@test.ee';
+            const email = 'test_' + uuid.v4() + '@test.ee';
             const password = 'nonumbersoruppercase';
 
             const signupResult = (await _signup(agent, email, password, null, null, null, null, 400)).body;
@@ -1334,7 +1347,7 @@ suite('Auth', function () {
         });
 
         test('Fail - 20000 - email already in use - return 200 to void phishing', async function () {
-            const email = 'test_emailinuse_' + new Date().getTime() + '@test.ee';
+            const email = 'test_emailinuse_' + uuid.v4() + '@test.ee';
             const password = 'Test123';
 
             await signup(agent, email, password, null);
@@ -1366,7 +1379,7 @@ suite('Auth', function () {
 
         suite('Set', function () {
             const agent = request.agent(app);
-            const email = 'test_' + new Date().getTime() + '@test.ee';
+            const email = 'test_' + uuid.v4() + '@test.ee';
             const password = 'testPassword123';
             const newPassword = 'newPassword123';
 
@@ -1414,7 +1427,7 @@ suite('Auth', function () {
 
         suite('Reset', function () {
             const agent = request.agent(app);
-            const email = 'test_reset_' + new Date().getTime() + '@test.ee';
+            const email = 'test_reset_' + uuid.v4() + '@test.ee';
             const password = 'testPassword123';
             const language = 'et';
 
@@ -1508,7 +1521,7 @@ suite('Auth', function () {
 
                 test('Fail - no password reset has been requested by user (passwordResetCode is null)', async function () {
                     const agent = request.agent(app);
-                    const email = 'test_' + new Date().getTime() + '@test.ee';
+                    const email = 'test_' + uuid.v4() + '@test.ee';
                     const password = 'testPassword123';
 
                     await signup(agent, email, password, null);
@@ -1538,7 +1551,7 @@ suite('Auth', function () {
 
     suite('Status', function () {
         const agent = request.agent(app);
-        const email = 'test_status_' + new Date().getTime() + '@test.ee';
+        const email = 'test_status_' + uuid.v4() + '@test.ee';
         const password = 'testPassword123';
 
         suiteSetup(async function () {

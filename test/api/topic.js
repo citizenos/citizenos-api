@@ -1428,15 +1428,9 @@ suite('Users', function () {
         suiteSetup(function () {
             // Store original if it exists
             originalGetHTMLAsync = etherpadClient.getHTMLAsync;
-
-            originalCreateVoteFiles = cosSignature.createVoteFiles;
-            cosSignature.createVoteFiles = async function () {
-                return Promise.resolve();
-            };
         });
 
         suiteTeardown(function () {
-            cosSignature.createVoteFiles = originalCreateVoteFiles;
             if (originalGetHTMLAsync) {
                 etherpadClient.getHTMLAsync = originalGetHTMLAsync;
             }
@@ -9034,11 +9028,6 @@ suite('Topics', function () {
             return Promise.resolve();
         };
 
-        originalCreateVoteFiles = cosSignature.createVoteFiles;
-        cosSignature.createVoteFiles = async function () {
-            return Promise.resolve();
-        };
-
         return shared.syncDb();
     });
 
@@ -9046,7 +9035,6 @@ suite('Topics', function () {
         cosEtherpad.syncTopicWithPad = originalSyncTopicWithPad;
         cosEtherpad.createTopic = originalCreateTopic;
         cosEtherpad.deleteTopic = originalDeleteTopic;
-        cosSignature.createVoteFiles = originalCreateVoteFiles;
     });
 
     suite('Read', function () {
