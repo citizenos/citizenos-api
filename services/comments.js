@@ -10,6 +10,7 @@ module.exports = function (app) {
     const cosUpload = app.get('cosUpload');
     const https = require('https');
     const path = require('path');
+    const logger = app.get('logger');
 
     const Topic = models.Topic;
     const Comment = models.Comment;
@@ -20,7 +21,8 @@ module.exports = function (app) {
     const CommentAttachment = models.CommentAttachment;
     const User = models.User;
 
-    const topicService = require('./topic')(app);
+    // commentsService is registered before topicService alphabetically, so app.get('topicService') is not yet available at factory time
+    const topicService = () => app.get('topicService');
 
     const isCommentCreator = function () {
         return async function (req, res, next) {
@@ -42,7 +44,7 @@ module.exports = function (app) {
                     return res.forbidden('Insufficient permissions');
                 }
             } catch (err) {
-                console.error("COMMENTS ERROR:", err);
+                logger.error("COMMENTS ERROR:", err);
                 return next(err);
             }
         };
@@ -194,7 +196,7 @@ module.exports = function (app) {
                         );
                     }
 
-                    await topicService.addUserAsMember(req.user.userId || req.user.id, topic.id, t);
+                    await topicService().addUserAsMember(req.user.userId || req.user.id, topic.id, t);
 
                     const joinCreateData = {
                         commentId: comment.id
@@ -203,6 +205,12 @@ module.exports = function (app) {
 
                     await joinModel.create(joinCreateData, { transaction: t });
 
+                    await Topic.increment('commentCount', {
+                        where: { id: topicId },
+                        transaction: t
+                    });
+
+                    // Raw SQL: Complex query with aggregations/subqueries requiring raw SQL
                     const c = await db.query(
                         `
                                 UPDATE "Comments"
@@ -239,7 +247,7 @@ module.exports = function (app) {
                     });
                 });
             } catch (err) {
-                console.error("COMMENTS ERROR:", err);
+                logger.error("COMMENTS ERROR:", err);
                 if (err.message === 'NotFound') return res.notFound();
                 throw err;
             }
@@ -362,7 +370,7 @@ module.exports = function (app) {
                         ) cvd ON (cvd."commentId" = c.id)
                         LEFT JOIN (
                             SELECT "commentId", true AS selected FROM "CommentVotes" WHERE value < 0 AND "creatorId" = :userId
-                        ) cvds ON (cvds."commentId"= c.id)
+                        ) cvds ON (cvds."commentId" = c.id)
                 ),`, db.dialect, {
                 userId: userId,
                 dateFormat: 'YYYY-MM-DDThh24:mi:ss.msZ',
@@ -439,7 +447,7 @@ module.exports = function (app) {
             } else {
                 // Specific for Ideas
                 selectSql = injectReplacements(`
-                    SELECT ct.id, ct.type, ct.parent, ct.subject, ct.text, ct.edits, ct.creator, ct."deletedBy", ct."deletedReasonType", ct."deletedReasonText", ct.report, ct.votes, ct."createdAt", ct."updatedAt", ct."deletedAt", ct.replies::jsonb
+                    SELECT ct.id, ct.type, ct.parent, ct.subject, ct.text, jm."${joinParentIdField}" AS "${joinParentIdField}", ct.edits, ct.creator, ct."deletedBy", ct."deletedReasonType", ct."deletedReasonText", ct.report, ct.votes, ct."createdAt", ct."updatedAt", ct."deletedAt", ct.replies::jsonb
                     FROM "${tableName}" jm
                     JOIN "Comments" c ON c.id = jm."commentId" AND c.id = c."parentId"
                     JOIN pg_temp.getCommentTree(jm."commentId") ct ON ct.id = ct.id
@@ -460,13 +468,15 @@ module.exports = function (app) {
             }
 
             try {
+                // Raw SQL: Complex query with aggregations/subqueries requiring raw SQL
                 const commentsQuery = db.query(`${queryTemplate} ${selectSql}`, { type: db.QueryTypes.SELECT, raw: true, nest: true });
                 const countReplacements = listByTopic ? { topicId: req.params.topicId } : { parentId: req.params[parentIdParam] };
+                // Raw SQL: Complex query with aggregations/subqueries requiring raw SQL
                 const commentCountQuery = db.query(countSql, { replacements: countReplacements });
 
                 const [comments, commentsCount] = await Promise.all([commentsQuery, commentCountQuery]);
 
-                if (listByTopic) {
+                if (joinParentIdField) {
                     const setJoinId = (jId, reply) => {
                         reply[joinParentIdField] = jId;
                         if (reply.replies.rows.length) {
@@ -488,8 +498,8 @@ module.exports = function (app) {
                 countRes.total = countRes.pro + countRes.con + countRes.poi + countRes.reply;
                 return res.ok({ count: countRes, rows: comments });
             } catch (err) {
-                console.error("COMMENTS ERROR:", err);
-                console.error("ListComments Error:", err);
+                logger.error("COMMENTS ERROR:", err);
+                logger.error("ListComments Error:", err);
                 return next(err);
             }
         };
@@ -533,7 +543,7 @@ module.exports = function (app) {
                     t.afterCommit(() => res.ok());
                 });
             } catch (err) {
-                console.error("COMMENTS ERROR:", err);
+                logger.error("COMMENTS ERROR:", err);
                 return next(err);
             }
         };
@@ -590,6 +600,7 @@ module.exports = function (app) {
 
                     await comment.save({ transaction: t });
 
+                    // Raw SQL: Complex query with aggregations/subqueries requiring raw SQL
                     await db.query(`UPDATE "Comments" SET edits = jsonb_set(edits, '{${comment.edits.length - 1}, createdAt }', to_jsonb("updatedAt")) WHERE id = :commentId RETURNING *;`,
                         {
                             replacements: { commentId },
@@ -603,7 +614,7 @@ module.exports = function (app) {
                     t.afterCommit(() => res.ok());
                 });
             } catch (err) {
-                console.error("COMMENTS ERROR:", err);
+                logger.error("COMMENTS ERROR:", err);
                 return next(err);
             }
         };
@@ -641,13 +652,14 @@ module.exports = function (app) {
                     t.afterCommit(() => res.ok(report));
                 });
             } catch (err) {
-                console.error("COMMENTS ERROR:", err);
+                logger.error("COMMENTS ERROR:", err);
                 return next(err);
             }
         };
 
         const readReport = async function (req, res, next) {
             try {
+                // Raw SQL: Complex query with aggregations/subqueries requiring raw SQL
                 const results = await db.query(
                     `
                             SELECT r."id", r."type", r."text", r."createdAt", c."id" as "comment.id", c.subject as "comment.subject", c."text" as "comment.text"
@@ -664,7 +676,7 @@ module.exports = function (app) {
                 if (!results || !results.length) return res.notFound();
                 return res.ok(results[0]);
             } catch (err) {
-                console.error("COMMENTS ERROR:", err);
+                logger.error("COMMENTS ERROR:", err);
                 return next(err);
             }
         };
@@ -675,6 +687,7 @@ module.exports = function (app) {
             if (!type) return res.badRequest({ type: 'Property type is required' });
 
             try {
+                // Raw SQL: Complex query with aggregations/subqueries requiring raw SQL
                 const commentReport = (await db.query(
                     `
                             SELECT c."id" as "comment.id", c."updatedAt" as "comment.updatedAt", r."id" as "report.id", r."createdAt" as "report.createdAt"
@@ -743,7 +756,7 @@ module.exports = function (app) {
                     t.afterCommit(() => res.ok());
                 });
             } catch (err) {
-                console.error("COMMENTS ERROR:", err);
+                logger.error("COMMENTS ERROR:", err);
                 return next(err);
             }
         };
@@ -760,7 +773,7 @@ module.exports = function (app) {
                         transaction: t
                     });
 
-                    await topicService.addUserAsMember(req.user.userId, req.params.topicId, t);
+                    await topicService().addUserAsMember(req.user.userId, req.params.topicId, t);
 
                     if (vote) {
                         vote.value = (vote.value === value) ? 0 : value;
@@ -806,6 +819,7 @@ module.exports = function (app) {
                         `;
                     }
 
+                    // Raw SQL: Complex query with aggregations/subqueries requiring raw SQL
                     const results = await db.query(
                         `
                         SELECT tc."up.count", tc."down.count", COALESCE(cvus.selected, false) as "up.selected", COALESCE(cvds.selected, false) as "down.selected"
@@ -825,14 +839,15 @@ module.exports = function (app) {
                     });
                 });
             } catch (err) {
-                console.error("COMMENTS ERROR:", err);
-                console.error("CreateVote Error:", err);
+                logger.error("COMMENTS ERROR:", err);
+                logger.error("CreateVote Error:", err);
                 return next(err);
             }
         };
 
         const listVotes = async function (req, res, next) {
             try {
+                // Raw SQL: Complex query with aggregations/subqueries requiring raw SQL
                 const results = await db.query(`
                     SELECT u.name, u."imageUrl", CAST(CASE WHEN cv.value=1 Then 'up' ELSE 'down' END AS VARCHAR(5)) AS vote, cv."createdAt", cv."updatedAt"
                     FROM "CommentVotes" cv
@@ -844,8 +859,8 @@ module.exports = function (app) {
                 });
                 return res.ok({ rows: results, count: results.length });
             } catch (err) {
-                console.error("COMMENTS ERROR:", err);
-                console.error("ListVotes Error:", err);
+                logger.error("COMMENTS ERROR:", err);
+                logger.error("ListVotes Error:", err);
                 return next(err);
             }
         };
@@ -873,7 +888,7 @@ module.exports = function (app) {
                     t.afterCommit(() => res.created(attachment.toJSON()));
                 });
             } catch (err) {
-                console.error("COMMENTS ERROR:", err);
+                logger.error("COMMENTS ERROR:", err);
                 if (err.type && (err.type === 'fileSize' || err.type === 'fileType')) return res.forbidden(err.message);
                 return next(err);
             }
@@ -911,7 +926,7 @@ module.exports = function (app) {
                     await cosActivities.addActivity(attachment, { type: 'User', id: req.user.userId, ip: req.ip }, null, comment, req.method + ' ' + req.path, t);
                     t.afterCommit(() => res.ok(attachment.toJSON()));
                 });
-            } catch (err) { console.error("COMMENTS ERROR:", err); return next(err); }
+            } catch (err) { logger.error("COMMENTS ERROR:", err); return next(err); }
         };
 
         const updateCommentAttachment = async function (req, res, next) {
@@ -926,7 +941,7 @@ module.exports = function (app) {
                     await attachment.save({ transaction: t });
                     t.afterCommit(() => res.ok(attachment.toJSON()));
                 });
-            } catch (err) { console.error("COMMENTS ERROR:", err); return next(err); }
+            } catch (err) { logger.error("COMMENTS ERROR:", err); return next(err); }
         };
 
         const deleteCommentAttachment = async function (req, res, next) {
@@ -941,10 +956,11 @@ module.exports = function (app) {
                     await attachment.destroy({ transaction: t });
                     t.afterCommit(() => res.ok());
                 });
-            } catch (err) { console.error("COMMENTS ERROR:", err); return next(err); }
+            } catch (err) { logger.error("COMMENTS ERROR:", err); return next(err); }
         };
 
         const getCommentAttachments = async (commentId, type) => {
+            // Raw SQL: Complex query with aggregations/subqueries requiring raw SQL
             return await db.query(`
                 SELECT a.id, a.name, a.size, a.source, a.type, a.link, a."createdAt", c.id as "creator.id", c.name as "creator.name"
                 FROM "CommentAttachments" ca
@@ -959,7 +975,7 @@ module.exports = function (app) {
             try {
                 const attachments = await getCommentAttachments(req.params.commentId, req.query?.type);
                 return res.ok({ count: attachments.length, rows: attachments });
-            } catch (err) { console.error("COMMENTS ERROR:", err); return next(err); }
+            } catch (err) { logger.error("COMMENTS ERROR:", err); return next(err); }
         };
 
         const readAttachment = async function (req, res, next) {
@@ -978,7 +994,7 @@ module.exports = function (app) {
                         externalRes.pipe(res);
                     }).on('error', function (err) { return next(err); }).end();
                 } else return res.ok(attachment.toJSON());
-            } catch (err) { console.error("COMMENTS ERROR:", err); return next(err); }
+            } catch (err) { logger.error("COMMENTS ERROR:", err); return next(err); }
         };
 
         return {

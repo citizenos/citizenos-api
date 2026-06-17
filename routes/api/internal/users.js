@@ -8,8 +8,7 @@ module.exports = function (app) {
     const models = app.get('models');
 
     const authApiKey = app.get('middleware.authApiKey');
-
-    const User = models.User;
+    const userLib = require('../../../services/user')(app);
 
     /**
      * Get update user etherpad authorID
@@ -19,17 +18,7 @@ module.exports = function (app) {
         const authorData = req.body;
         if (authorData.userId && authorData.authorID) {
             try {
-                await User
-                    .update(
-                        { authorId: authorData.authorID },
-                        {
-                            where: {
-                                id: authorData.userId
-                            },
-                            limit: 1,
-                            returning: true
-                        }
-                    );
+                await userLib.updateUserAuthorId(authorData.userId, authorData.authorID);
             } catch (err) {
                 console.log('ERROR /api/internal/users', err);
             }

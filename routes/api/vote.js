@@ -11,176 +11,49 @@ module.exports = function (app) {
     const VoteDelegation = models.VoteDelegation;
     const VoteUserContainer = models.VoteUserContainer;
     const VoteOption = models.VoteOption;
-    const TopicVote = models.TopicVote;
     const User = models.User;
 
     const cosActivities = app.get('cosActivities');
-    const cosSignature = app.get('cosSignature');
     const logger = app.get('logger');
     const loginCheck = app.get('middleware.loginCheck');
     const authTokenRestrictedUse = app.get('middleware.authTokenRestrictedUse');
-    const voteService = require('../../services/vote')(app);
-    const topicService = require('../../services/topic')(app);
-    const cosEtherpad = app.get('cosEtherpad');
+    const voteService = app.get('voteService');
+    const topicService = app.get('topicService');
 
     /**
      * Create a Vote
      */
     app.post('/api/users/:userId/topics/:topicId/votes', loginCheck(['partner']), topicService.hasPermission(TopicMemberUser.LEVELS.admin, null, [Topic.STATUSES.draft, Topic.STATUSES.ideation, Topic.STATUSES.inProgress]), async function (req, res, next) {
         try {
-            const voteOptions = req.body.options;
-
-            if (!voteOptions || !Array.isArray(voteOptions) || voteOptions.length < 2) {
-                return res.badRequest('At least 2 vote options are required', 1);
-            }
-
-            const authType = req.body.authType || Vote.AUTH_TYPES.soft;
-            const delegationIsAllowed = req.body.delegationIsAllowed || false;
-
-            // We cannot allow too similar options, otherwise the options are not distinguishable in the signed file
-            if (authType === Vote.AUTH_TYPES.hard) {
-                const voteOptionValues = voteOptions.map(o => sanitizeFilename(o.value).toLowerCase());
-
-                const uniqueValues = voteOptionValues.filter((value, index, array) => {
-                    return array.indexOf(value) === index;
-                });
-                if (uniqueValues.length !== voteOptions.length) {
-                    return res.badRequest('Vote options are too similar', 2);
-                }
-
-                const reservedPrefix = VoteOption.RESERVED_PREFIX;
-                uniqueValues.forEach(function (value) {
-                    if (value.substr(0, 2) === reservedPrefix) {
-                        return res.badRequest('Vote option not allowed due to usage of reserved prefix "' + reservedPrefix + '"', 4);
-                    }
-                });
-            }
-
-
-            if (authType === Vote.AUTH_TYPES.hard && delegationIsAllowed) {
-                return res.badRequest('Delegation is not allowed for authType "' + authType + '"', 3);
-            }
-
-            const vote = Vote.build({
-                minChoices: req.body.minChoices || 1,
-                maxChoices: req.body.maxChoices || 1,
-                delegationIsAllowed: req.body.delegationIsAllowed || false,
+            const topicId = req.params.topicId;
+            const userId = req.user.userId;
+            const voteData = {
+                minChoices: req.body.minChoices,
+                maxChoices: req.body.maxChoices,
+                delegationIsAllowed: req.body.delegationIsAllowed,
                 endsAt: req.body.endsAt,
                 description: req.body.description,
-                type: req.body.type || Vote.TYPES.regular,
-                authType: authType,
+                type: req.body.type,
+                authType: req.body.authType,
                 autoClose: req.body.autoClose,
                 reminderTime: req.body.reminderTime
-            });
+            };
+            const voteOptions = req.body.options;
+            const activityContext = {
+                ip: req.ip,
+                method: req.method,
+                path: req.path
+            };
 
-
-            // TODO: Some of these queries can be done in parallel
-            const topic = await Topic.findOne({
-                where: {
-                    id: req.params.topicId
-                }
-            });
-
-            await db
-                .transaction(async function (t) {
-                    let voteOptionsCreated;
-
-                    await cosActivities
-                        .createActivity(
-                            vote,
-                            null,
-                            {
-                                type: 'User',
-                                id: req.user.userId,
-                                ip: req.ip
-                            },
-                            req.method + ' ' + req.path,
-                            t
-                        );
-                    await vote.save({ transaction: t });
-                    const voteOptionPromises = [];
-                    voteOptions.forEach((o) => {
-                        o.voteId = vote.id;
-                        const vopt = VoteOption.build(o);
-                        voteOptionPromises.push(vopt.validate());
-                    });
-
-                    await Promise.all(voteOptionPromises);
-                    voteOptionsCreated = await VoteOption
-                        .bulkCreate(
-                            voteOptions,
-                            {
-                                fields: ['id', 'voteId', 'value', 'ideaId'], // Deny updating other fields like "updatedAt", "createdAt"...
-                                returning: true,
-                                transaction: t
-                            }
-                        );
-
-                    await cosActivities
-                        .createActivity(
-                            voteOptionsCreated,
-                            null,
-                            {
-                                type: 'User',
-                                id: req.user.userId,
-                                ip: req.ip
-                            },
-                            req.method + ' ' + req.path,
-                            t
-                        );
-                    await TopicVote
-                        .create(
-                            {
-                                topicId: req.params.topicId,
-                                voteId: vote.id
-                            },
-                            { transaction: t }
-                        );
-                    await cosActivities
-                        .createActivity(
-                            vote,
-                            topic,
-                            {
-                                type: 'User',
-                                id: req.user.userId,
-                                ip: req.ip
-                            },
-                            req.method + ' ' + req.path,
-                            t
-                        );
-                    if (topic.status !== Topic.STATUSES.draft)
-                        topic.status = Topic.STATUSES.voting;
-
-                    await cosActivities
-                        .updateActivity(
-                            topic,
-                            null,
-                            {
-                                type: 'User',
-                                id: req.user.userId,
-                                ip: req.ip
-                            },
-                            req.method + ' ' + req.path,
-                            t
-                        );
-
-                    const resTopic = await topic
-                        .save({
-                            returning: true,
-                            transaction: t
-                        });
-
-                    vote.dataValues.VoteOptions = [];
-                    voteOptionsCreated.forEach(function (option) {
-                        vote.dataValues.VoteOptions.push(option.dataValues);
-                    });
-                    const rtopic = await cosEtherpad.syncTopicWithPad(resTopic.id);
-                    await cosSignature.createVoteFiles(rtopic, vote, voteOptionsCreated, t);
-                    t.afterCommit(() => {
-                        return res.created(vote.toJSON());
-                    });
-                });
+            const vote = await voteService.createTopicVote(topicId, userId, voteData, voteOptions, activityContext);
+            return res.created(vote.toJSON());
         } catch (e) {
+            if (e.validationError) {
+                return res.badRequest(e.message, e.code);
+            }
+            if (e.status === 404) {
+                return res.notFound();
+            }
             next(e);
         }
     });
@@ -566,132 +439,28 @@ module.exports = function (app) {
      * Delegate a Vote
      */
     app.post('/api/users/:userId/topics/:topicId/votes/:voteId/delegations', loginCheck(['partner']), topicService.hasPermission(TopicMemberUser.LEVELS.read, null, [Topic.STATUSES.voting]), async function (req, res, next) {
-        const topicId = req.params.topicId;
-        const voteId = req.params.voteId;
-
-        const toUserId = req.body.userId;
-
-        if (req.user.userId === toUserId) {
-            return res.badRequest('Cannot delegate to self.', 1);
-        }
-
-        const hasAccess = await topicService._hasPermission(topicId, toUserId, TopicMemberUser.LEVELS.read, false, null, null, req.user.partnerId);
-
-        if (!hasAccess) {
-            return res.badRequest('Cannot delegate Vote to User who does not have access to this Topic.', 2);
-        }
-
-        const vote = await Vote.findOne({
-            where: {
-                id: voteId
-            },
-            include: [
-                {
-                    model: Topic,
-                    where: { id: topicId }
-                }
-            ]
-        });
-        if (!vote) {
-            return res.notFound();
-        }
-        if (!vote.delegationIsAllowed) {
-            return res.badRequest();
-        }
-        if (vote.endsAt && new Date() > vote.endsAt) {
-            return res.badRequest('The Vote has ended.');
-        }
-
         try {
-            await db.transaction(async function (t) {
-                try {
-                    let result = await db.query(`
-                        WITH
-                            RECURSIVE delegation_chains("voteId", "toUserId", "byUserId", depth) AS (
-                                SELECT
-                                    "voteId",
-                                    "toUserId",
-                                    "byUserId",
-                                    1
-                                FROM "VoteDelegations" vd
-                                WHERE vd."voteId" = :voteId
-                                    AND vd."byUserId" = :toUserId
-                                    AND vd."deletedAt" IS NULL
-                                UNION ALL
-                                SELECT
-                                    vd."voteId",
-                                    vd."toUserId",
-                                    dc."byUserId",
-                                    dc.depth + 1
-                                FROM delegation_chains dc, "VoteDelegations" vd
-                                WHERE vd."voteId" = dc."voteId"
-                                    AND vd."byUserId" = dc."toUserId"
-                                    AND vd."deletedAt" IS NULL
-                            ),
-                            cyclicDelegation AS (
-                                SELECT
-                                    0
-                                FROM delegation_chains
-                                WHERE "byUserId" = :toUserId
-                                    AND "toUserId" = :byUserId
-                                LIMIT 1
-                            ),
-                            upsert AS (
-                                UPDATE "VoteDelegations"
-                                SET "toUserId" = :toUserId,
-                                    "updatedAt" = CURRENT_TIMESTAMP
-                                WHERE "voteId" = :voteId
-                                AND "byUserId" = :byUserId
-                                AND 1 = 1 / COALESCE((SELECT * FROM cyclicDelegation), 1)
-                                AND "deletedAt" IS NULL
-                                RETURNING *
-                            )
-                        INSERT INTO "VoteDelegations" ("voteId", "toUserId", "byUserId", "createdAt", "updatedAt")
-                            SELECT :voteId, :toUserId, :byUserId, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
-                            WHERE NOT EXISTS (SELECT * FROM upsert)
-                                AND 1 = 1 / COALESCE((SELECT * FROM cyclicDelegation), 1)
-                        RETURNING *
-                        ;`,
-                        {
-                            replacements: {
-                                voteId: voteId,
-                                toUserId: toUserId,
-                                byUserId: req.user.userId
-                            },
-                            raw: true,
-                            transaction: t
-                        }
-                    );
-                    const delegation = VoteDelegation.build(result[0][0]);
-                    await cosActivities
-                        .createActivity(
-                            delegation,
-                            vote,
-                            {
-                                type: 'User',
-                                id: req.user.userId,
-                                ip: req.ip
-                            },
-                            req.method + ' ' + req.path,
-                            t
-                        );
+            const topicId = req.params.topicId;
+            const voteId = req.params.voteId;
+            const toUserId = req.body.userId;
+            const byUserId = req.user.userId;
+            const partnerId = req.user.partnerId;
+            const activityContext = {
+                ip: req.ip,
+                method: req.method,
+                path: req.path
+            };
 
-                    t.afterCommit(() => {
-                        return res.ok();
-                    });
-                } catch (err) {
-                    // HACK: Forcing division by zero when cyclic delegation is detected. Cannot use result check as both update and cyclic return [].
-                    if (err.parent.code === '22012') {
-                        // Cyclic delegation detected.
-                        return res.badRequest('Sorry, you cannot delegate your vote to this person.');
-                    }
-
-                    // Don't hide other errors
-                    throw err
-                }
-            });
-        } catch (err) {
-            return next(err);
+            await voteService.createDelegation(topicId, voteId, byUserId, toUserId, partnerId, activityContext);
+            return res.ok();
+        } catch (e) {
+            if (e.validationError) {
+                return res.badRequest(e.message, e.code);
+            }
+            if (e.status === 404) {
+                return res.notFound();
+            }
+            next(e);
         }
     });
 
@@ -703,65 +472,22 @@ module.exports = function (app) {
             const topicId = req.params.topicId;
             const voteId = req.params.voteId;
             const userId = req.user.userId;
+            const activityContext = {
+                ip: req.ip,
+                method: req.method,
+                path: req.path
+            };
 
-            const vote = await Vote
-                .findOne({
-                    where: { id: voteId },
-                    include: [
-                        {
-                            model: Topic,
-                            where: { id: topicId }
-                        }
-                    ]
-                });
-
-            if (!vote) {
-                return res.notFound('Vote was not found for given topic', 1);
+            await voteService.deleteDelegation(topicId, voteId, userId, activityContext);
+            return res.ok();
+        } catch (e) {
+            if (e.validationError) {
+                return res.badRequest(e.message, e.code);
             }
-
-            if (vote.endsAt && new Date() > vote.endsAt) {
-                return res.badRequest('The Vote has ended.', 1);
+            if (e.status === 404) {
+                return res.notFound(e.message, e.code);
             }
-
-            const voteDelegation = await VoteDelegation
-                .findOne({
-                    where: {
-                        voteId: voteId,
-                        byUserId: userId
-                    }
-                });
-
-            if (!voteDelegation) {
-                return res.notFound('Delegation was not found', 2);
-            }
-
-            await db
-                .transaction(async function (t) {
-                    await cosActivities
-                        .deleteActivity(
-                            voteDelegation,
-                            vote,
-                            {
-                                type: 'User',
-                                id: req.user.userId,
-                                ip: req.ip
-                            },
-                            req.method + ' ' + req.path,
-                            t
-                        );
-
-                    await voteDelegation
-                        .destroy({
-                            force: true,
-                            transaction: t
-                        });
-
-                    t.afterCommit(() => {
-                        return res.ok();
-                    });
-                });
-        } catch (err) {
-            return next(err);
+            next(e);
         }
     });
 

@@ -12,6 +12,7 @@ module.exports = function (app) {
     const { injectReplacements } = require('sequelize/lib/utils/sql');
 
     const Activity = models.Activity;
+    const Topic = models.Topic;
 
     const _setExtraProperties = function (inputObject, targetObject) {
         if (!targetObject.topicId && inputObject.topicId) {
@@ -132,6 +133,20 @@ module.exports = function (app) {
                     transaction: transaction
                 }
             );
+
+        if (activityObject.topicIds && activityObject.topicIds.length) {
+            await Topic.update(
+                {
+                    lastActivityAt: activitySaved.createdAt
+                },
+                {
+                    where: {
+                        id: activityObject.topicIds
+                    },
+                    transaction: transaction
+                }
+            );
+        }
 
         return notifications.sendActivityNotifications(activitySaved);
     };

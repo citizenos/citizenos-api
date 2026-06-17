@@ -1,6 +1,9 @@
 'use strict';
 
 const config = require('config');
+
+// Increase MaxListeners to prevent warnings during large test suites where Supertest attaches many listeners
+require('events').EventEmitter.defaultMaxListeners = 100;
 const express = require('express');
 const session = require('express-session');
 const path = require('path');
@@ -266,8 +269,8 @@ app.use(bodyParser.json({ type: 'application/csp-report' }));
 app.use(bodyParser.urlencoded({ extended: false }));
 
 // CORS
-const corsOptions = config.api.cors;
-const corsPaths = JSON.parse(JSON.stringify(config.api.cors.paths));
+const corsOptions = JSON.parse(JSON.stringify(config.api.cors));
+const corsPaths = corsOptions.paths;
 delete corsOptions.paths; // Remove the paths just in case it will conflict with CORS MW options now or in the future
 corsOptions.origin.forEach(function (pattern, i) {
     corsOptions.origin[i] = new RegExp(pattern, 'i');
@@ -329,13 +332,14 @@ app.set('middleware.asyncMiddleware', require('./libs/middleware/asyncMiddleware
 // Bot header logger
 app.use(require('./libs/middleware/botHeaderLogger'));
 
-// Load all services
+// Load all services and register each on app by derived name (e.g. topic.js → topicService)
 const routesServices = './services/';
 fs.readdirSync(routesServices).forEach(function (file) {
     if (!file.match(/\.js$/)) { // Exclude folders
         return;
     }
-    require(routesServices + file)(app);
+    const serviceName = path.basename(file, '.js') + 'Service';
+    app.set(serviceName, require(routesServices + file)(app));
 });
 
 // Load all API routes

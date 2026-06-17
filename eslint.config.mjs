@@ -33,12 +33,24 @@ export default [
             "mocha/no-setup-in-describe": "off",
             "mocha/no-mocha-arrows": "off",
             "mocha/consistent-spacing-between-blocks": "off",
-            "no-unused-vars": "warn",
+            "no-unused-vars": ["warn", { "args": "after-used", "argsIgnorePattern": "^_", "varsIgnorePattern": "^_" }],
             "no-undef": "warn",
             "mocha/no-pending-tests": "off",
             "no-redeclare": "off",
             "no-var": "off",
             "no-useless-assignment": "off"
+        }
+    },
+    {
+        files: ["test/**/*.js"],
+        rules: {
+            "no-unused-vars": ["warn", { "vars": "local", "args": "none", "varsIgnorePattern": "^_" }]
+        }
+    },
+    {
+        files: ["**/*.mjs"],
+        languageOptions: {
+            sourceType: "module"
         }
     }
 ];

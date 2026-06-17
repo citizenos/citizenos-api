@@ -540,7 +540,7 @@ module.exports = function (app) {
         const { xades, hash } = await _createUserBdoc(voteId, userId, voteOptions, signingTime, certificate, 'hex', transaction);
         const signableData = xades.signableHash;
 
-        const personalInfo = await mobileId.getCertUserData(certificate, 'hex');
+        const personalInfo = await require('mobiil-id-rest/dist/validator').getCertUserData(certificate, 'hex');
 
         const xadesString = xades.toString();
 
@@ -575,7 +575,7 @@ module.exports = function (app) {
         const { xades, hash } = await _createUserBdoc(voteId, userId, voteOptions, signingTime, certificate, 'base64', transaction);
         const signableData = xades.signableHash;
 
-        const personalInfo = await mobileId.getCertUserData(certificate, 'base64');
+        const personalInfo = await require('mobiil-id-rest/dist/validator').getCertUserData(certificate, 'base64');
         const response = await mobileId.signature(pid, phoneNumber, signableData.toString('base64'));
         const signatureData = await Signature.create({ data: xades.toString() });
         response.signatureId = signatureData.id
@@ -604,7 +604,7 @@ module.exports = function (app) {
     const _signInitSmartId = async function (voteId, userId, voteOptions, signingTime, pid, countryCode, certificate, transaction) {
         const { xades, hash } = await _createUserBdoc(voteId, userId, voteOptions, signingTime, certificate, 'base64', transaction);
         const signableData = xades.signableHash;
-        const personalInfo = await smartId.getCertUserData(certificate);
+        const personalInfo = await require('smart-id-rest/dist/validator').getCertUserData(certificate);
         const response = await smartId.signature(pid, countryCode, signableData.toString('base64'))
         const signatureData = await Signature.create({ data: xades.toString() });
         response.signatureId = signatureData.id

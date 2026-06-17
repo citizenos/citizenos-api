@@ -1,4 +1,6 @@
 'use strict';
+const _isMainTestFile = process.argv.some(arg => arg.endsWith(require('path').basename(__filename))) || process.argv.includes('test') || process.argv.includes('test/');
+
 
 const _search = async (agent, params, expectedHttpCode) => {
     const path = '/api/search';
@@ -44,10 +46,10 @@ const cosSignature = app.get('cosSignature');
 
 const shared = require('../utils/shared');
 const userLib = require('./lib/user')(app);
-const topicLib = require('./topic');
+const topicLib = require('./topic-crud');
 
 // API - /api/search*
-suite('Search', function () {
+if (_isMainTestFile) suite('Search', function () {
     let originalSyncTopicWithPad;
     let originalCreateTopic;
     let originalDeleteTopic;

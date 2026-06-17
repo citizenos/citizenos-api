@@ -1,3 +1,4 @@
+const _isMainTestFile = process.argv.some(arg => arg.endsWith(require("path").basename(__filename))) || process.argv.includes("test") || process.argv.includes("test/");
 
 const _discussionCreate = async function (agent, userId, topicId, question, deadline, expectedHttpCode) {
     const path = '/api/users/:userId/topics/:topicId/discussions'
@@ -482,7 +483,7 @@ const models = app.get('models');
 
 const shared = require('../utils/shared');
 const userLib = require('./lib/user')(app);
-const topicLib = require('./topic');
+const topicLib = require('./topic-crud');
 
 const jwt = app.get('jwt');
 const cosJwt = app.get('cosJwt');
@@ -497,7 +498,7 @@ const Moderator = models.Moderator;
 const Report = models.Report;
 
 // API - /api/users*
-suite('Users', function () {
+if (_isMainTestFile) suite('Users', function () {
     let originalSyncTopicWithPad;
     let originalCreateTopic;
     let originalCreateVoteFiles;

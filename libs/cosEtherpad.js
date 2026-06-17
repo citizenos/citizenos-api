@@ -208,8 +208,8 @@ module.exports = function (app) {
         return html.replace(/style=/gi, 'class=').replace(/text-align:/gi, '');
     };
 
-    const _syncTopicWithPad = async function (topicId, context, actor, rev, addActivity) {
-        logger.info('Sync topic with Pad', topicId, rev);
+    const _syncTopicWithPad = async function (topicId, context, actor, rev, addActivity, externalTransaction) {
+        logger.info('1. Sync topic with Pad', topicId, rev);
         const params = { padID: topicId };
         if (rev) {
             params.rev = rev;
@@ -230,7 +230,7 @@ module.exports = function (app) {
         html = await _inlineToClasses(html);
         // const title = _getTopicTitleFromPadContent(html);
 
-        return db.transaction(async function (t) {
+        const updateFn = async function (t) {
             const topic = await Topic.findOne(
                 {
                     where: {
@@ -256,24 +256,20 @@ module.exports = function (app) {
                 );
             }
 
-            return topic.update(
-                {
-                    description: html
-                },
-                {
-                    where: {
-                        id: topicId,
-                        status: {
-                            [models.Sequelize.Op.in]: [Topic.STATUSES.inProgress, Topic.STATUSES.draft, Topic.STATUSES.ideation]
-                        } // Only in progress Topics can be updated
-                    },
-                    limit: 1
-                },
-                {
-                    transaction: t
-                }
-            );
-        });
+            if ([Topic.STATUSES.inProgress, Topic.STATUSES.draft, Topic.STATUSES.ideation].includes(topic.status)) {
+                await topic.update(
+                    { description: html },
+                    { transaction: t }
+                );
+            }
+            return topic;
+        };
+
+        if (externalTransaction) {
+            return updateFn(externalTransaction);
+        }
+
+        return db.transaction(updateFn);
     };
 
     const _getTopicInlineCommentReplies = async (topicId, userId, name) => {

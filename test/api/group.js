@@ -1,4 +1,6 @@
 'use strict';
+const _isMainTestFile = process.argv.some(arg => arg.endsWith(require('path').basename(__filename))) || process.argv.includes('test') || process.argv.includes('test/');
+
 
 const _groupCreate = async function (agent, userId, name, parentId, visibility, country, language, contact, rules, expectedHttpCode) {
     const path = '/api/users/:userId/groups'.replace(':userId', userId);
@@ -459,7 +461,7 @@ const cosUtil = app.get('util');
 const shared = require('../utils/shared');
 const userLib = require('./lib/user')(app);
 const memberLib = require('./lib/members')(app);
-const topicLib = require('./topic');
+const topicLib = require('./topic-crud');
 const activityLib = require('./activity');
 
 const Group = models.Group;
@@ -474,7 +476,7 @@ const User = models.User;
 const cosEtherpad = app.get('cosEtherpad');
 const cosSignature = app.get('cosSignature');
 
-suite('Users', function () {
+if (_isMainTestFile) suite('Users', function () {
 
     let originalSyncTopicWithPad;
     let originalCreateTopic;

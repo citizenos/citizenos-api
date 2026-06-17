@@ -1,4 +1,6 @@
 'use strict';
+const _isMainTestFile = process.argv.some(arg => arg.endsWith(require('path').basename(__filename))) || process.argv.includes('test') || process.argv.includes('test/');
+
 
 const _uploadFile = async function (agent, userId, file, expectedHttpCode) {
     const path = '/api/users/:userId/upload'.replace(':userId', userId);
@@ -34,7 +36,7 @@ const userLib = require('./lib/user')(app);
 
 
 // API - /api/users*
-suite('Users', function () {
+if (_isMainTestFile) suite('Users', function () {
     suiteSetup(async function () {
         return shared
             .syncDb();

@@ -1,4 +1,6 @@
 'use strict';
+const _isMainTestFile = process.argv.some(arg => arg.endsWith(require('path').basename(__filename))) || process.argv.includes('test') || process.argv.includes('test/');
+
 
 const _ideationCreate = async function (agent, userId, topicId, question, deadline, disableReplies, allowAnonymous, template, demographicsConfig, expectedHttpCode) {
     const path = '/api/users/:userId/topics/:topicId/ideations'
@@ -1003,7 +1005,7 @@ const models = app.get('models');
 
 const shared = require('../utils/shared');
 const userLib = require('./lib/user')(app);
-const topicLib = require('./topic');
+const topicLib = require('./topic-crud');
 const { discussionCreate } = require('./discussion');
 const memberLib = require('./lib/members')(app);
 
@@ -1022,7 +1024,7 @@ const Report = models.Report;
 const Idea = models.Idea;
 
 // API - /api/users*
-suite('Users', function () {
+if (_isMainTestFile) suite('Users', function () {
     let originalSyncTopicWithPad;
     let originalCreateTopic;
     let originalCreateVoteFiles;

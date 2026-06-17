@@ -223,6 +223,20 @@ module.exports = function (sequelize, DataTypes) {
                 defaultValue: [],
                 allowNull: true
             },
+            memberCount: {
+                type: DataTypes.INTEGER,
+                defaultValue: 0,
+                allowNull: false
+            },
+            commentCount: {
+                type: DataTypes.INTEGER,
+                defaultValue: 0,
+                allowNull: false
+            },
+            lastActivityAt: {
+                type: DataTypes.DATE,
+                allowNull: true
+            }
         },
         {
             indexes: [
@@ -240,6 +254,12 @@ module.exports = function (sequelize, DataTypes) {
                 {
                     unique: true,
                     fields: ['sourcePartnerId', 'sourcePartnerObjectId']
+                },
+                {
+                    fields: ['lastActivityAt']
+                },
+                {
+                    fields: ['status', 'visibility', 'deletedAt']
                 }
             ]
         }
@@ -341,7 +361,10 @@ module.exports = function (sequelize, DataTypes) {
             endsAt: this.dataValues.endsAt,
             hashtag: this.dataValues.hashtag,
             createdAt: this.dataValues.createdAt,
-            updatedAt: this.dataValues.updatedAt
+            updatedAt: this.dataValues.updatedAt,
+            memberCount: this.dataValues.memberCount,
+            commentCount: this.dataValues.commentCount,
+            lastActivityAt: this.dataValues.lastActivityAt
         };
 
         if (this.dataValues.creator) {
