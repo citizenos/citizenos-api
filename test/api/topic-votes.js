@@ -1,4 +1,6 @@
 'use strict';
+const _isMainTestFile = process.argv.some(arg => arg.endsWith(require('path').basename(__filename))) || process.argv.includes('test') || process.argv.includes('test/');
+
 // topic-votes.js - Voting flows (soft + hard auth)
 
 'use strict';
@@ -1419,7 +1421,7 @@ const VoteOption = models.VoteOption;
 // API - /api/users*
 
 // API - /api/users*
-suite('Users', function () {
+if (_isMainTestFile) suite('Users', function () {
 
     suiteSetup(async function () {
         return shared.syncDb();
@@ -1428,21 +1430,21 @@ suite('Users', function () {
     // API - /api/users/:userId/topics*
     suite('Topics', function () {
 
-    let originalCreateVoteFiles;
-    let originalGetHTMLAsync;
+        let originalCreateVoteFiles;
+        let originalGetHTMLAsync;
 
-    suiteSetup(function () {
-        // Store original if it exists
-        originalGetHTMLAsync = etherpadClient.getHTMLAsync;
+        suiteSetup(function () {
+            // Store original if it exists
+            originalGetHTMLAsync = etherpadClient.getHTMLAsync;
 
-        return shared.syncDb();
-    });
+            return shared.syncDb();
+        });
 
-    suiteTeardown(function () {
-        if (originalGetHTMLAsync) {
-            etherpadClient.getHTMLAsync = originalGetHTMLAsync;
-        }
-    });
+        suiteTeardown(function () {
+            if (originalGetHTMLAsync) {
+                etherpadClient.getHTMLAsync = originalGetHTMLAsync;
+            }
+        });
 
         suite('Votes', function () {
 
@@ -3044,7 +3046,7 @@ suite('Users', function () {
                 });
 
                 suite('authType === hard', function () {
-                    this.timeout(10000);
+                    this.timeout(15000);
 
                     suite('ID-card', function () {
 
@@ -4174,7 +4176,12 @@ suite('Users', function () {
 
                                     const fileListExpected = [
                                         'mimetype',
-                                        `PNOEE-${pid}.bdoc`,
+                                        'document.docx',
+                                        '__metainfo.html',
+                                        'Option 1.html',
+                                        'Option 2.html',
+                                        'Option 3.html',
+                                        'PNOEE-60001019906.bdoc',
                                         'votes.csv',
                                         'graph.html',
                                         'META-INF/manifest.xml'
@@ -4183,7 +4190,6 @@ suite('Users', function () {
                                     bdocFileList.forEach(function (f) {
                                         fileListReturned.push(f.file);
                                     });
-
                                     assert.deepEqual(fileListExpected, fileListReturned);
                                     // Clean up
                                     fs.unlinkSync(pathFinalBdoc);

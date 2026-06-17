@@ -1,4 +1,6 @@
 'use strict';
+const _isMainTestFile = process.argv.some(arg => arg.endsWith(require('path').basename(__filename))) || process.argv.includes('test') || process.argv.includes('test/');
+
 // topic-list.js - Topic list endpoints
 
 'use strict';
@@ -1419,7 +1421,7 @@ const VoteOption = models.VoteOption;
 // API - /api/users*
 
 // API - /api/users*
-suite('Users', function () {
+if (_isMainTestFile) suite('Users', function () {
 
     suiteSetup(async function () {
         return shared.syncDb();
@@ -1434,6 +1436,9 @@ suite('Users', function () {
         suiteSetup(function () {
             // Store original if it exists
             originalGetHTMLAsync = etherpadClient.getHTMLAsync;
+            etherpadClient.getHTMLAsync = async function () {
+                return Promise.resolve({ html: '<!DOCTYPE HTML><html><body></body></html>' });
+            };
 
             originalCreateVoteFiles = cosSignature.createVoteFiles;
             cosSignature.createVoteFiles = async function () {

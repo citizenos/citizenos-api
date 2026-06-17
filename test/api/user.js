@@ -1,4 +1,6 @@
 'use strict';
+const _isMainTestFile = process.argv.some(arg => arg.endsWith(require('path').basename(__filename))) || process.argv.includes('test') || process.argv.includes('test/');
+
 
 const _userUpdate = async function (agent, userId, name, email, password, newPassword, language, expectedHttpCode) {
     const path = '/api/users/:userId'
@@ -185,7 +187,7 @@ const Partner = models.Partner;
 const smartId = app.get('smartId');
 const mobileId = app.get('mobileId');
 
-suite('User', function () {
+if (_isMainTestFile) suite('User', function () {
     this.timeout(120000);
 
     suiteSetup(async function () {

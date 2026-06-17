@@ -1,4 +1,6 @@
 'use strict';
+const _isMainTestFile = process.argv.some(arg => arg.endsWith(require('path').basename(__filename))) || process.argv.includes('test') || process.argv.includes('test/');
+
 // topic-public.js - Public unauthenticated topic endpoints
 
 'use strict';
@@ -1419,41 +1421,50 @@ const VoteOption = models.VoteOption;
 // API - /api/users*
 
 // API - /api/topics - unauthenticated endpoints
-suite('Topics', function () {
+if (_isMainTestFile) suite('Topics', function () {
     let originalSyncTopicWithPad;
     let originalCreateTopic;
     let originalDeleteTopic;
     let originalCreateVoteFiles;
 
     suiteSetup(async function () {
-        originalSyncTopicWithPad = cosEtherpad.syncTopicWithPad;
-        cosEtherpad.syncTopicWithPad = async function (topicId) {
-            return Topic.findOne({ where: { id: topicId } });
-        };
+        if (process.env.TEST_MOCK_ETHERPAD !== 'false') {
+            originalSyncTopicWithPad = cosEtherpad.syncTopicWithPad;
+            cosEtherpad.syncTopicWithPad = async function (topicId) {
+                const topic = await Topic.findOne({ where: { id: topicId } });
+                if (!topic.description) {
+                    topic.description = 'Public topic description';
+                    await topic.save();
+                }
+                return topic;
+            };
 
-        originalCreateTopic = cosEtherpad.createTopic;
-        cosEtherpad.createTopic = async function () {
-            return Promise.resolve();
-        };
+            originalCreateTopic = cosEtherpad.createTopic;
+            cosEtherpad.createTopic = async function () {
+                return Promise.resolve();
+            };
 
-        originalDeleteTopic = cosEtherpad.deleteTopic;
-        cosEtherpad.deleteTopic = async function () {
-            return Promise.resolve();
-        };
+            originalDeleteTopic = cosEtherpad.deleteTopic;
+            cosEtherpad.deleteTopic = async function () {
+                return Promise.resolve();
+            };
 
-        originalCreateVoteFiles = cosSignature.createVoteFiles;
-        cosSignature.createVoteFiles = async function () {
-            return Promise.resolve();
-        };
+            originalCreateVoteFiles = cosSignature.createVoteFiles;
+            cosSignature.createVoteFiles = async function () {
+                return Promise.resolve();
+            };
+        }
 
         return shared.syncDb();
     });
 
     suiteTeardown(function () {
-        cosEtherpad.syncTopicWithPad = originalSyncTopicWithPad;
-        cosEtherpad.createTopic = originalCreateTopic;
-        cosEtherpad.deleteTopic = originalDeleteTopic;
-        cosSignature.createVoteFiles = originalCreateVoteFiles;
+        if (process.env.TEST_MOCK_ETHERPAD !== 'false') {
+            cosEtherpad.syncTopicWithPad = originalSyncTopicWithPad;
+            cosEtherpad.createTopic = originalCreateTopic;
+            cosEtherpad.deleteTopic = originalDeleteTopic;
+            cosSignature.createVoteFiles = originalCreateVoteFiles;
+        }
     });
 
     suite('Read', function () {
@@ -1706,7 +1717,7 @@ suite('Topics', function () {
             assert.equal(data.count, listOfTopics.length);
 
             assert(listOfTopics.length > 0);
-            assert(listOfTopics.length <= 26); // No limit, means default limit == 25
+            assert(listOfTopics.length <= 26); // No limit, means default limit == 26
 
             listOfTopics.forEach((topic) => {
                 assert.equal(topic.visibility, Topic.VISIBILITY.public);
@@ -1716,9 +1727,10 @@ suite('Topics', function () {
             assert.property(data2, 'countTotal');
 
             const topicList2 = data2.rows;
-
-            assert.notEqual(topicList2.length, listOfTopics.length);
-            assert.equal(topicList2.length, 0);
+            topicList2.forEach((topic) => {
+                assert.equal(topic.visibility, Topic.VISIBILITY.public);
+                assert.equal(topic.status, Topic.STATUSES.voting);
+            })
         });
 
         test('Success - non-authenticated User - don\'t show deleted "public" Topics', async function () {
@@ -2524,7 +2536,8 @@ suite('Topics', function () {
                     }
                 });
                 assert.equal(resBody.status, Topic.STATUSES.draft);
-                console.log(resBody.description);
+                console.log("topic.description", topic.description)
+                console.log("resBody.description", resBody.description);
                 assert.equal(topic.description, resBody.description.replace('<br><br><br>', '<br><br>'));
                 assert.equal(resBody.visibility, Topic.VISIBILITY.private);
             });

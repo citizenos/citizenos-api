@@ -1,4 +1,6 @@
 'use strict';
+const _isMainTestFile = process.argv.some(arg => arg.endsWith(require('path').basename(__filename))) || process.argv.includes('test') || process.argv.includes('test/');
+
 
 const _activitiesRead = async function (agent, userId, filters, expectedHttpCode) {
     const path = '/api/users/:userId/activities'.replace(':userId', userId);
@@ -52,7 +54,7 @@ const models = app.get('models');
 const shared = require('../utils/shared');
 const userLib = require('./lib/user')(app);
 const memberLib = require('./lib/members')(app);
-const topicLib = require('./topic');
+const topicLib = require('./topic-crud');
 
 const Partner = models.Partner;
 const Topic = models.Topic;
@@ -64,7 +66,7 @@ const cosSignature = app.get('cosSignature');
 module.exports.activitiesRead = activitiesRead;
 
 // API - /api/users*
-suite('Users', function () {
+if (_isMainTestFile) suite('Users', function () {
     let originalSyncTopicWithPad;
     let originalCreateTopic;
     let originalDeleteTopic;
@@ -140,7 +142,7 @@ suite('Users', function () {
 });
 
 //API: Activities
-suite('Activities', function () {
+if (_isMainTestFile) suite('Activities', function () {
     suiteSetup(async function () {
         process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
         await shared.syncDb();

@@ -1,4 +1,6 @@
 'use strict';
+const _isMainTestFile = process.argv.some(arg => arg.endsWith(require('path').basename(__filename))) || process.argv.includes('test') || process.argv.includes('test/');
+
 
 const assert = require('chai').assert;
 const request = require('supertest');
@@ -7,7 +9,7 @@ const models = app.get('models');
 
 const shared = require('../utils/shared');
 const userLib = require('./lib/user')(app);
-const topicLib = require('./topic');
+const topicLib = require('./topic-crud');
 
 const Topic = models.Topic;
 const Partner = models.Partner;
@@ -47,7 +49,7 @@ const partnerTopicRead = async function (agent, partnerId, sourcePartnerObjectId
     return _partnerTopicRead(agent, partnerId, sourcePartnerObjectId, 200);
 };
 
-suite('Partners', function () {
+if (_isMainTestFile) suite('Partners', function () {
     let originalSyncTopicWithPad;
     let originalCreateTopic;
     let originalDeleteTopic;

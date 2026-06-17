@@ -8,7 +8,7 @@ const config = require('config');
 
 const shared = require('../utils/shared');
 const userLib = require('../api/lib/user')(app);
-const topicLib = require('../api/topic');
+const topicLib = require('../api/topic-crud');
 const discussionLib = require('../api/discussion');
 const groupLib = require('../api/group');
 

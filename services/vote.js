@@ -1501,7 +1501,7 @@ module.exports = function (app) {
                 vote.dataValues.VoteOptions.push(option.dataValues);
             });
 
-            const rtopic = await cosEtherpad.syncTopicWithPad(resTopic.id);
+            const rtopic = await cosEtherpad.syncTopicWithPad(resTopic.id, null, null, null, null, t);
             await cosSignature.createVoteFiles(rtopic, vote, voteOptionsCreated, t);
         });
 

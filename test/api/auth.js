@@ -1,4 +1,6 @@
 'use strict';
+const _isMainTestFile = process.argv.some(arg => arg.endsWith(require('path').basename(__filename))) || process.argv.includes('test') || process.argv.includes('test/');
+
 process.env.ENABLE_RATE_LIMIT = 'true';
 
 
@@ -477,7 +479,7 @@ const UserConsent = models.UserConsent;
 const Partner = models.Partner;
 const db = models.sequelize;
 
-suite('Auth', function () {
+if (_isMainTestFile) suite('Auth', function () {
 
     suiteSetup(async function () {
         return shared

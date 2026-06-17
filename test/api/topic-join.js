@@ -1,4 +1,6 @@
 'use strict';
+const _isMainTestFile = process.argv.some(arg => arg.endsWith(require('path').basename(__filename))) || process.argv.includes('test') || process.argv.includes('test/');
+
 // topic-join.js - Topic join-via-token
 
 'use strict';
@@ -1419,7 +1421,7 @@ const VoteOption = models.VoteOption;
 // API - /api/users*
 
 // API - /api/users*
-suite('Users', function () {
+if (_isMainTestFile) suite('Users', function () {
 
     suiteSetup(async function () {
         return shared.syncDb();

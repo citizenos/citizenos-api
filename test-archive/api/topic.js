@@ -1428,6 +1428,9 @@ suite('Users', function () {
         suiteSetup(function () {
             // Store original if it exists
             originalGetHTMLAsync = etherpadClient.getHTMLAsync;
+            etherpadClient.getHTMLAsync = async function () {
+                return Promise.resolve({ html: '<!DOCTYPE HTML><html><body></body></html>' });
+            };
         });
 
         suiteTeardown(function () {
