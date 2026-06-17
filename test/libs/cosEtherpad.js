@@ -12,7 +12,7 @@ suite('cosEtherpad', function () {
     const app = require('../../app');
     const models = app.get('models');
     const config = app.get('config');
-    const cosEtherpad = app.get('cosEtherpad');
+    let cosEtherpad = app.get('cosEtherpad');
     const jwt = app.get('jwt');
 
     const Topic = models.Topic;

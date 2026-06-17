@@ -8,7 +8,7 @@ const config = require('config');
 
 const shared = require('../utils/shared');
 const userLib = require('../api/lib/user')(app);
-const topicLib = require('../api/topic');
+const topicLib = require('../api/topic-crud');
 const discussionLib = require('../api/discussion');
 const groupLib = require('../api/group');
 
@@ -22,11 +22,44 @@ const Comment = models.Comment;
 const Report = models.Report;
 const Topic = models.Topic;
 
+const cosEtherpad = app.get('cosEtherpad');
+const cosSignature = app.get('cosSignature');
 
 suite('Email', function () {
+    let originalSyncTopicWithPad;
+    let originalCreateTopic;
+    let originalDeleteTopic;
+    let originalCreateVoteFiles;
 
     suiteSetup(async function () {
+        originalSyncTopicWithPad = cosEtherpad.syncTopicWithPad;
+        cosEtherpad.syncTopicWithPad = async function (topicId) {
+            return Topic.findOne({where: {id: topicId}});
+        };
+
+        originalCreateTopic = cosEtherpad.createTopic;
+        cosEtherpad.createTopic = async function () {
+            return Promise.resolve();
+        };
+
+        originalDeleteTopic = cosEtherpad.deleteTopic;
+        cosEtherpad.deleteTopic = async function () {
+            return Promise.resolve();
+        };
+
+        originalCreateVoteFiles = cosSignature.createVoteFiles;
+        cosSignature.createVoteFiles = async function () {
+            return Promise.resolve();
+        };
+
         return shared.syncDb();
+    });
+
+    suiteTeardown(function() {
+        cosEtherpad.syncTopicWithPad = originalSyncTopicWithPad;
+        cosEtherpad.createTopic = originalCreateTopic;
+        cosEtherpad.deleteTopic = originalDeleteTopic;
+        cosSignature.createVoteFiles = originalCreateVoteFiles;
     });
 
     suite('User', function () {

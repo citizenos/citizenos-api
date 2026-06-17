@@ -259,7 +259,17 @@
             "C":"EE"
           },
           {
-            "C": "EE", "O": "SK ID Solutions AS", "OU": "TSA", "OID": "NTREE-10747013", "CN": "SK TIMESTAMPING AUTHORITY 2022"
+            "C": "EE",
+            "O": "SK ID Solutions AS",
+            "OU": "TSA",
+            "OID": "NTREE-10747013",
+            "CN": "SK TIMESTAMPING AUTHORITY 2022"
+          },
+          {
+            "CN": "ESTEID2025",
+            "OID": "NTREE-17066049",
+            "O": "Zetes Estonia OÜ",
+            "C":"EE"
           }
         ]
       },

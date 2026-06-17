@@ -1,4 +1,6 @@
 'use strict';
+const _isMainTestFile = process.argv.some(arg => arg.endsWith(require('path').basename(__filename))) || process.argv.includes('test') || process.argv.includes('test/');
+
 
 const _groupCreate = async function (agent, userId, name, parentId, visibility, country, language, contact, rules, expectedHttpCode) {
     const path = '/api/users/:userId/groups'.replace(':userId', userId);
@@ -459,7 +461,7 @@ const cosUtil = app.get('util');
 const shared = require('../utils/shared');
 const userLib = require('./lib/user')(app);
 const memberLib = require('./lib/members')(app);
-const topicLib = require('./topic');
+const topicLib = require('./topic-crud');
 const activityLib = require('./activity');
 
 const Group = models.Group;
@@ -471,12 +473,45 @@ const GroupInviteUser = models.GroupInviteUser;
 const Moderator = models.Moderator;
 const User = models.User;
 
-suite('Users', function () {
+const cosEtherpad = app.get('cosEtherpad');
+const cosSignature = app.get('cosSignature');
+
+if (_isMainTestFile) suite('Users', function () {
+
+    let originalSyncTopicWithPad;
+    let originalCreateTopic;
+    let originalCreateVoteFiles;
+    let originalDeleteTopic;
 
     suiteSetup(async function () {
-        await shared
-            .syncDb();
-        return Promise.resolve();
+        originalSyncTopicWithPad = cosEtherpad.syncTopicWithPad;
+        cosEtherpad.syncTopicWithPad = async function (topicId) {
+            return Topic.findOne({where: {id: topicId}});
+        };
+
+        originalCreateTopic = cosEtherpad.createTopic;
+        cosEtherpad.createTopic = async function () {
+            return Promise.resolve();
+        };
+
+        originalDeleteTopic = cosEtherpad.deleteTopic;
+        cosEtherpad.deleteTopic = async function () {
+            return Promise.resolve();
+        };
+
+        originalCreateVoteFiles = cosSignature.createVoteFiles;
+        cosSignature.createVoteFiles = async function () {
+            return Promise.resolve();
+        };
+
+        return shared.syncDb();
+    });
+
+    suiteTeardown(function() {
+        cosEtherpad.syncTopicWithPad = originalSyncTopicWithPad;
+        cosEtherpad.createTopic = originalCreateTopic;
+        cosEtherpad.deleteTopic = originalDeleteTopic;
+        cosSignature.createVoteFiles = originalCreateVoteFiles;
     });
 
     suite('Groups', function () {
@@ -1261,7 +1296,10 @@ suite('Users', function () {
                             name: group.name,
                             creator: {
                                 id: userCreator.id
-                            }
+                            },
+                            description: null,
+                            imageUrl: null,
+                            visibility: 'private'
                         };
 
                         expectedInvite.creator = {
@@ -1303,7 +1341,10 @@ suite('Users', function () {
                             name: group.name,
                             creator: {
                                 id: userCreator.id
-                            }
+                            },
+                            description: null,
+                            imageUrl: null,
+                            visibility: 'private'
                         };
 
                         expectedInvite.creator = {
@@ -1353,7 +1394,8 @@ suite('Users', function () {
                             name: group.name,
                             creator: {
                                 id: userCreator.id
-                            }
+                            },
+                            visibility: 'private'
                         };
 
                         expectedInvite.creator = {
@@ -1399,7 +1441,10 @@ suite('Users', function () {
                             name: group.name,
                             creator: {
                                 id: userCreator.id
-                            }
+                            },
+                            description: null,
+                            imageUrl: null,
+                            visibility: 'private'
                         };
 
                         expectedInvite.creator = {
@@ -1934,8 +1979,7 @@ suite('Users', function () {
                             invite: "{}",
                             imageUrl: userMember.imageUrl,
                             level: GroupMemberUser.LEVELS.read,
-                            email: userMember.email,
-                            phoneNumber: null
+                            email: userMember.email
                         };
                         assert.property(userMemberMember, 'latestActivity');
                         delete userMemberMember.latestActivity;

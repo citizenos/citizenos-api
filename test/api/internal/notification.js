@@ -35,7 +35,7 @@ const request = require('supertest');
 const app = require('../../../app');
 const notifications = app.get('notifications');
 const userLib = require('../lib/user')(app);
-const topicLib = require('../topic');
+const topicLib = require('../topic-crud');
 const discussionLib = require('../discussion');
 const memberLib = require('../lib/members')(app);
 const assert = require('chai').assert;
@@ -46,10 +46,38 @@ const Topic = models.Topic;
 const db = models.sequelize;
 const TopicMemberUser = models.TopicMemberUser;
 const Vote = models.Vote;
+const cosEtherpad = app.get('cosEtherpad');
+const cosSignature = app.get('cosSignature');
 
 suite('Internal', function () {
 
     suite('Notifications', function () {
+        let originalSyncTopicWithPad;
+        let originalCreateTopic;
+        let originalCreateVoteFiles;
+
+        suiteSetup(function() {
+            originalSyncTopicWithPad = cosEtherpad.syncTopicWithPad;
+            cosEtherpad.syncTopicWithPad = async function (topicId) {
+                return Topic.findOne({where: {id: topicId}});
+            };
+
+            originalCreateTopic = cosEtherpad.createTopic;
+            cosEtherpad.createTopic = async function () {
+                return Promise.resolve();
+            };
+
+            originalCreateVoteFiles = cosSignature.createVoteFiles;
+            cosSignature.createVoteFiles = async function () {
+                return Promise.resolve();
+            };
+        });
+
+        suiteTeardown(function() {
+            cosEtherpad.syncTopicWithPad = originalSyncTopicWithPad;
+            cosEtherpad.createTopic = originalCreateTopic;
+            cosSignature.createVoteFiles = originalCreateVoteFiles;
+        });
 
         suite('Users', function () {
             suite('Settings', function() {

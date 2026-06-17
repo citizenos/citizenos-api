@@ -62,8 +62,8 @@ module.exports = function (app) {
 
             const params = Object.fromEntries(filtered);
             if (Object.keys(params).length) {
-                const stateCookieData = jwt.sign(params, config.session.privateKey, {algorithm: config.session.algorithm});
-                res.cookie(cookieName, stateCookieData, Object.assign({secure: req.secure}, config.session.cookie));
+                const stateCookieData = jwt.sign(params, config.session.privateKey, { algorithm: config.session.algorithm });
+                res.cookie(cookieName, stateCookieData, Object.assign({ secure: req.secure }, config.session.cookie));
             }
         }
     };
@@ -81,7 +81,7 @@ module.exports = function (app) {
         if (stateCookie) { // Don't use the state cookie when req.query parameters are there. For the case a new authorization is started.
             let stateCookieData;
             try {
-                stateCookieData = jwt.verify(stateCookie, config.session.publicKey, {algorithms: [config.session.algorithm]});
+                stateCookieData = jwt.verify(stateCookie, config.session.publicKey, { algorithms: [config.session.algorithm] });
             } catch (e) {
                 // Whatever happens, just ignore the cookie
                 logger.warn('Invalid state cookie', req.path, e);
@@ -147,7 +147,7 @@ module.exports = function (app) {
         let termsAcceptedAt = null;
         let created = false;
 
-        if (termsVersion ) {
+        if (termsVersion) {
             termsAcceptedAt = new Date();
         }
 
@@ -171,7 +171,7 @@ module.exports = function (app) {
                 user.name = name || user.name;
                 user.company = company || user.company;
                 user.language = language || user.language;
-                await user.save({fields});
+                await user.save({ fields });
             } else {
                 // Email address is already in use.
                 return res.ok(`Check your email ${email} to verify your account.`);
@@ -243,14 +243,14 @@ module.exports = function (app) {
                 userData.termsAcceptedAt = user.dataValues.termsAcceptedAt;
                 userData.preferences = user.dataValues.preferences;
 
-                return res.ok({user: userData , redirectSuccess});
+                return res.ok({ user: userData, redirectSuccess });
             } else {
                 // Store redirect url in the token so that /api/auth/verify/:code could redirect to the url late
                 const tokenData = {
                     redirectSuccess // TODO: Misleading naming, would like to use "redirectUri" (OpenID convention) instead, but needs RAA.ee to update codebase.
                 };
 
-                const token = jwt.sign(tokenData, config.session.privateKey, {algorithm: config.session.algorithm});
+                const token = jwt.sign(tokenData, config.session.privateKey, { algorithm: config.session.algorithm });
                 await emailLib.sendAccountVerification(user.email, user.emailVerificationCode, token);
                 const userData = user.toJSON();
                 userData.termsVersion = user.dataValues.termsVersion;
@@ -283,7 +283,7 @@ module.exports = function (app) {
             expiresIn: config.session.cookie.maxAge,
             algorithm: config.session.algorithm
         });
-        res.cookie(config.session.name, authToken, Object.assign({secure: req.secure}, config.session.cookie));
+        res.cookie(config.session.name, authToken, Object.assign({ secure: req.secure }, config.session.cookie));
     };
 
     const clearSessionCookies = async function (req, res) {
@@ -305,7 +305,7 @@ module.exports = function (app) {
                 token = headerInfoArr[1];
             }
         }
-        const tokenData = jwt.verify(token, config.session.publicKey, {algorithms: [config.session.algorithm]});
+        const tokenData = jwt.verify(token, config.session.publicKey, { algorithms: [config.session.algorithm] });
 
         await TokenRevocation.create({
             tokenId: req.user.tokenId,
@@ -322,7 +322,7 @@ module.exports = function (app) {
      * Login
      */
     app.post('/api/auth/login', rateLimiter(50), speedLimiter(15), expressRateLimitInput(['body.email'], 15 * 60 * 1000, 10), function (req, res) {
-        passport.authenticate('local', {
+        logger.debug("authenticate local" + JSON.stringify(req.body)); passport.authenticate('local', {
             keepSessionInfo: true
         }, function (err, user) {
             if (err || !user) {
@@ -352,7 +352,7 @@ module.exports = function (app) {
         let redirectSuccess = urlLib.getFe('/');
 
         if (token) {
-            const tokenData = jwt.verify(token, config.session.publicKey, {algorithms: [config.session.algorithm]});
+            const tokenData = jwt.verify(token, config.session.publicKey, { algorithms: [config.session.algorithm] });
             if (tokenData.redirectSuccess) {
                 redirectSuccess = tokenData.redirectSuccess;
             }
@@ -373,7 +373,7 @@ module.exports = function (app) {
                         emailIsVerified: true
                     },
                     {
-                        where: {emailVerificationCode: code},
+                        where: { emailVerificationCode: code },
                         limit: 1,
                         validate: false,
                         returning: true
@@ -425,7 +425,7 @@ module.exports = function (app) {
 
         user.password = newPassword;
 
-        await user.save({fields: ['password']});
+        await user.save({ fields: ['password'] });
 
         return res.ok();
     }));
@@ -433,7 +433,7 @@ module.exports = function (app) {
     app.post('/api/auth/password/reset/send', asyncMiddleware(async function (req, res) {
         const email = req.body.email;
         if (!email || !validator.isEmail(email)) {
-            return res.badRequest({email: 'Invalid email'});
+            return res.badRequest({ email: 'Invalid email' });
         }
 
         const user = await User.findOne({
@@ -485,19 +485,19 @@ module.exports = function (app) {
 
         // !user.passwordResetCode avoids the situation where passwordResetCode has not been sent (null), but user posts null to API
         if (
-              !user ||
-              !user.passwordResetCode ||
-              !cachedResetCode ||
-              user.passwordResetCode !== cachedResetCode
+            !user ||
+            !user.passwordResetCode ||
+            !cachedResetCode ||
+            user.passwordResetCode !== cachedResetCode
         ) {
             return res.badRequest(
-              "Invalid email, password or password reset code."
+                "Invalid email, password or password reset code."
             );
         }
 
         user.password = password; // Hash is created by the model hooks
 
-        await user.save({fields: ['password']});
+        await user.save({ fields: ['password'] });
         await deleteResetPasswordToken(cachedResetCodeKey(user.id));
 
         //TODO: Logout all existing sessions for the User!
@@ -541,7 +541,7 @@ module.exports = function (app) {
         try {
             const sessionData = await smartId.authenticate(pid, countryCode);
             sessionData.userId = userId;
-            const sessionDataEncrypted = {sessionDataEncrypted: cryptoLib.encrypt(config.session.secret, sessionData)};
+            const sessionDataEncrypted = { sessionDataEncrypted: cryptoLib.encrypt(config.session.secret, sessionData) };
             const token = jwt.sign(sessionDataEncrypted, config.session.privateKey, {
                 expiresIn: '5m',
                 algorithm: config.session.algorithm
@@ -557,6 +557,9 @@ module.exports = function (app) {
             }
             if (e.code === 400) {
                 return res.badRequest();
+            } else if (e.code > 400 && e.code < 500) {
+                logger.error('Smart-ID authentication failed', e.code, e.message);
+                return res.badRequest(e.message);
             }
 
             return next(e);
@@ -580,6 +583,9 @@ module.exports = function (app) {
             t = transaction;
         }
         try {
+            const externalUserId = {
+                [Op.like]: '%' + personId + '%',
+            };
             const userConnections = await UserConnection.findAll({
                 where: {
                     connectionId: {
@@ -588,25 +594,22 @@ module.exports = function (app) {
                             UserConnection.CONNECTION_IDS.smartid
                         ]
                     },
-                    connectionUserId: {
-                        [Op.like]: '%' + personId + '%',
-                    }
+                    connectionUserId: externalUserId
                 },
                 order: [['createdAt', 'ASC']],
                 include: [User],
                 transaction: t
             });
 
-            let userConnectionInfo = userConnections[0];
-            if (userId && userConnections.length > 1) {
-                userConnectionInfo = userConnections.find((user) => {
-                    return user.userId === userId;
-                });
-                if (!userConnectionInfo) {
-                    userConnectionInfo = userConnections[0];
-                }
+            let userConnectionInfo;
+            if (userId) {
+                userConnectionInfo = userConnections.find((uc) => uc.userId === userId);
+            }
+            if (!userConnectionInfo && userConnections.length > 0) {
+                userConnectionInfo = userConnections.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt))[0];
             }
 
+            let response;
             if (!userConnectionInfo) {
                 const user = await User.create(
                     {
@@ -633,36 +636,49 @@ module.exports = function (app) {
                         transaction: t
                     }
                 );
-                if (toCommit) t.commit();
                 let userData = user.toJSON();
                 userData.termsVersion = user.dataValues.termsVersion;
                 userData.termsAcceptedAt = user.dataValues.termsAcceptedAt;
                 userData.preferences = user.dataValues.preferences;
 
-                return [userData, 3]; // New user was created
+                response = [userData, 3]; // New user was created
             } else {
-                if (toCommit) t.commit();
                 const idPattern = new RegExp(`^(PNO${countryCode}-)?${personId}$`);
                 if (userConnectionInfo && idPattern.test(userConnectionInfo.connectionUserId)) {
                     const user = userConnectionInfo.User;
+                    if (!user) {
+                        throw new Error('User NOT found for connection ' + userConnectionInfo.id);
+                    }
                     const userData = user.toJSON();
                     userData.termsVersion = user.dataValues.termsVersion;
                     userData.termsAcceptedAt = user.dataValues.termsAcceptedAt;
                     userData.preferences = user.dataValues.preferences;
 
-                    return [userData, 2]; // Existing User found and logged in
+                    response = [userData, 2]; // Existing User found and logged in
+                } else {
+                    const fallbackConnection = userConnections.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt))[0];
+                    const user = fallbackConnection.User;
+                    const userData = user.toJSON();
+                    userData.termsVersion = user.dataValues.termsVersion;
+                    userData.termsAcceptedAt = user.dataValues.termsAcceptedAt;
+                    userData.preferences = user.dataValues.preferences;
+
+                    response = [userData, 2];
                 }
             }
+            if (toCommit) await t.commit();
+
+            return response;
         } catch (error) {
-            if (toCommit) t.rollback();
-            logger.error(error);
+            if (toCommit) await t.rollback();
+            throw error;
         }
     };
 
     // Handle Smart-ID and Mobiil-ID auth status, return personalInfo on success
 
     const _getAuthReqStatus = async (authType, token, timeoutMs) => {
-        const tokenData = jwt.verify(token, config.session.publicKey, {algorithms: [config.session.algorithm]});
+        const tokenData = jwt.verify(token, config.session.publicKey, { algorithms: [config.session.algorithm] });
         const loginFlowData = cryptoLib.decrypt(config.session.secret, tokenData.sessionDataEncrypted);
         let authLib, defaultErrorMessage;
         switch (authType) {
@@ -682,11 +698,20 @@ module.exports = function (app) {
             return response.state;
         } else if (response.state === 'COMPLETE') {
             switch (response.result.endResult || response.result) {
-                case 'OK':
-                    if (loginFlowData.userId) {
-                        response.personalInfo.userId = loginFlowData.userId;
+                case 'OK': {
+                    let personalInfo = response.personalInfo || (response.result && response.result.documentNumber ? response.result : response.attributes);
+                    if (response.attributes) {
+                        personalInfo = Object.assign({}, personalInfo, response.attributes);
                     }
-                    return response.personalInfo;
+                    if (!personalInfo.pid && personalInfo.documentNumber) {
+                        personalInfo.pid = personalInfo.documentNumber;
+                    }
+
+                    if (loginFlowData.userId) {
+                        personalInfo.userId = loginFlowData.userId;
+                    }
+                    return personalInfo;
+                }
                 default:
                     throw new Error(response.result?.endResult || response.result || defaultErrorMessage);
             }
@@ -696,7 +721,6 @@ module.exports = function (app) {
     app.get('/api/auth/smartid/status', async function (req, res, next) {
         const token = req.query.token;
         const timeoutMs = req.query.timeoutMs || 5000;
-
         if (!token) {
             return res.badRequest('Smart-ID login has not been started. "token" is required.', 2);
         }
@@ -734,7 +758,7 @@ module.exports = function (app) {
 
     const getIdCardCert = async (res, token) => {
         const idReq = await superagent.get(config.services.idCard.serviceUrl)
-            .query({token})
+            .query({ token })
             .set('X-API-KEY', config.services.idCard.apiKey)
             .catch(function (error) {
                 if (error && error.response && error.response.body) {
@@ -753,8 +777,9 @@ module.exports = function (app) {
             if (cert.indexOf('-----BEGIN') > -1) {
                 clientCert = cert.replace('-----BEGIN CERTIFICATE-----', '').replace('-----END CERTIFICATE-----', '')
             }
-            await mobileId.validateCert(clientCert, 'base64');
-            const personalInfo = await mobileId.getCertUserData(clientCert, 'base64');
+            const validator = require('mobiil-id-rest/dist/validator');
+            await validator.validateCert(clientCert, config.services.smartId.issuers, 'base64');
+            const personalInfo = await validator.getCertUserData(clientCert, 'base64');
             personalInfo.countryCode = personalInfo.country;
             delete personalInfo.country;
             return personalInfo;
@@ -840,7 +865,7 @@ module.exports = function (app) {
         try {
             const sessionData = await mobileId.authenticate(pid, phoneNumber, null);
             sessionData.userId = userId;
-            const sessionDataEncrypted = {sessionDataEncrypted: cryptoLib.encrypt(config.session.secret, sessionData)};
+            const sessionDataEncrypted = { sessionDataEncrypted: cryptoLib.encrypt(config.session.secret, sessionData) };
             const token = jwt.sign(sessionDataEncrypted, config.session.privateKey, {
                 expiresIn: '5m',
                 algorithm: config.session.algorithm
@@ -851,7 +876,7 @@ module.exports = function (app) {
                 token: token
             }, 1);
         } catch (e) {
-            console.log(e);
+            logger.error(e);
             if (e.code === 400) {
                 return res.badRequest(e.message);
             }
@@ -1147,7 +1172,7 @@ module.exports = function (app) {
                                         at_hash: accessTokenHash
                                     },
                                     config.session.privateKey,
-                                    {algorithm: config.session.algorithm}
+                                    { algorithm: config.session.algorithm }
                                 );
 
                                 const params = {

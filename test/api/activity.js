@@ -1,4 +1,6 @@
 'use strict';
+const _isMainTestFile = process.argv.some(arg => arg.endsWith(require('path').basename(__filename))) || process.argv.includes('test') || process.argv.includes('test/');
+
 
 const _activitiesRead = async function (agent, userId, filters, expectedHttpCode) {
     const path = '/api/users/:userId/activities'.replace(':userId', userId);
@@ -52,19 +54,53 @@ const models = app.get('models');
 const shared = require('../utils/shared');
 const userLib = require('./lib/user')(app);
 const memberLib = require('./lib/members')(app);
-const topicLib = require('./topic');
+const topicLib = require('./topic-crud');
 
 const Partner = models.Partner;
 const Topic = models.Topic;
 const TopicMemberUser = models.TopicMemberUser;
 
+const cosEtherpad = app.get('cosEtherpad');
+const cosSignature = app.get('cosSignature');
+
 module.exports.activitiesRead = activitiesRead;
 
 // API - /api/users*
-suite('Users', function () {
+if (_isMainTestFile) suite('Users', function () {
+    let originalSyncTopicWithPad;
+    let originalCreateTopic;
+    let originalDeleteTopic;
+    let originalCreateVoteFiles;
 
     suiteSetup(async function () {
+        originalSyncTopicWithPad = cosEtherpad.syncTopicWithPad;
+        cosEtherpad.syncTopicWithPad = async function (topicId) {
+            return Topic.findOne({where: {id: topicId}});
+        };
+
+        originalCreateTopic = cosEtherpad.createTopic;
+        cosEtherpad.createTopic = async function () {
+            return Promise.resolve();
+        };
+
+        originalDeleteTopic = cosEtherpad.deleteTopic;
+        cosEtherpad.deleteTopic = async function () {
+            return Promise.resolve();
+        };
+
+        originalCreateVoteFiles = cosSignature.createVoteFiles;
+        cosSignature.createVoteFiles = async function () {
+            return Promise.resolve();
+        };
+
         await shared.syncDb();
+    });
+
+    suiteTeardown(function() {
+        cosEtherpad.syncTopicWithPad = originalSyncTopicWithPad;
+        cosEtherpad.createTopic = originalCreateTopic;
+        cosEtherpad.deleteTopic = originalDeleteTopic;
+        cosSignature.createVoteFiles = originalCreateVoteFiles;
     });
 
     // API - /api/users/:userId/activities*
@@ -106,7 +142,7 @@ suite('Users', function () {
 });
 
 //API: Activities
-suite('Activities', function () {
+if (_isMainTestFile) suite('Activities', function () {
     suiteSetup(async function () {
         process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
         await shared.syncDb();

@@ -246,20 +246,23 @@ const findItemByClass = function (item, className) {
 function CosHtmlToDocx(html, title, intro, resPath) {
     this.html = html;
     this.path = resPath;
-    const finalParagraphs = [
-        new Paragraph({
+    const finalParagraphs = [];
+    if (title) {
+        finalParagraphs.push(new Paragraph({
             text: title,
             heading: HeadingLevel.HEADING_1
-        }),
-        new Paragraph({
+        }));
+    }
+    if (intro) {
+        finalParagraphs.push(new Paragraph({
             children: [
                 new TextRun({
                     text: intro,
                     bold: true
                 })
             ]
-        })
-    ];
+        }));
+    }
     let params = {
         creator: 'citizenos.com',
         sections: []

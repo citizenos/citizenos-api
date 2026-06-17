@@ -1,4 +1,6 @@
 'use strict';
+const _isMainTestFile = process.argv.some(arg => arg.endsWith(require('path').basename(__filename))) || process.argv.includes('test') || process.argv.includes('test/');
+
 
 const _search = async (agent, params, expectedHttpCode) => {
     const path = '/api/search';
@@ -39,12 +41,50 @@ const models = app.get('models');
 const User = models.User;
 const Topic = models.Topic;
 
+const cosEtherpad = app.get('cosEtherpad');
+const cosSignature = app.get('cosSignature');
+
 const shared = require('../utils/shared');
 const userLib = require('./lib/user')(app);
-const topicLib = require('./topic');
+const topicLib = require('./topic-crud');
 
 // API - /api/search*
-suite('Search', function () {
+if (_isMainTestFile) suite('Search', function () {
+    let originalSyncTopicWithPad;
+    let originalCreateTopic;
+    let originalDeleteTopic;
+    let originalCreateVoteFiles;
+
+    suiteSetup(async function () {
+        originalSyncTopicWithPad = cosEtherpad.syncTopicWithPad;
+        cosEtherpad.syncTopicWithPad = async function (topicId) {
+            return Topic.findOne({where: {id: topicId}});
+        };
+
+        originalCreateTopic = cosEtherpad.createTopic;
+        cosEtherpad.createTopic = async function () {
+            return Promise.resolve();
+        };
+
+        originalDeleteTopic = cosEtherpad.deleteTopic;
+        cosEtherpad.deleteTopic = async function () {
+            return Promise.resolve();
+        };
+
+        originalCreateVoteFiles = cosSignature.createVoteFiles;
+        cosSignature.createVoteFiles = async function () {
+            return Promise.resolve();
+        };
+
+        return shared.syncDb();
+    });
+
+    suiteTeardown(function() {
+        cosEtherpad.syncTopicWithPad = originalSyncTopicWithPad;
+        cosEtherpad.createTopic = originalCreateTopic;
+        cosEtherpad.deleteTopic = originalDeleteTopic;
+        cosSignature.createVoteFiles = originalCreateVoteFiles;
+    });
 
     suite('Public', function () {
         // GET /api/search?include=my.topic&include=my.group&include=public.topic&limit=5&str=test
