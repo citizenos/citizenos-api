@@ -25,12 +25,9 @@ function getRedisClientConfig(config) {
 
   // If using rediss:// protocol, ensure TLS is correctly configured for node-redis v4+
   if (redisUrl && redisUrl.startsWith("rediss://")) {
-    if (!socketOptions.tls || typeof socketOptions.tls === "boolean") {
-      socketOptions.tls = {
-        rejectUnauthorized: false, // Essential for Heroku Redis self-signed certs
-      };
-    } else if (typeof socketOptions.tls === "object" && socketOptions.tls.rejectUnauthorized === undefined) {
-      socketOptions.tls.rejectUnauthorized = false;
+    socketOptions.tls = true;
+    if (socketOptions.rejectUnauthorized === undefined) {
+      socketOptions.rejectUnauthorized = false; // Essential for Heroku Redis self-signed certs
     }
   }
 
