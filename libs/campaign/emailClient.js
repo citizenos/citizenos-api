@@ -27,7 +27,7 @@ const emailClient = function (config) {
 
     switch (config.provider.name) {
         case 'mailgun':
-            provider = require('campaign-mailgun')(config.provider.options);
+            provider = require('./mailgun')(config.provider.options);
             break;
         case 'mailgun-smtp':
             smtp = nodemailer.createTransport(config.provider.options);
