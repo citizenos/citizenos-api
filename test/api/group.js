@@ -1934,8 +1934,7 @@ suite('Users', function () {
                             invite: "{}",
                             imageUrl: userMember.imageUrl,
                             level: GroupMemberUser.LEVELS.read,
-                            email: userMember.email,
-                            phoneNumber: null
+                            email: userMember.email
                         };
                         assert.property(userMemberMember, 'latestActivity');
                         delete userMemberMember.latestActivity;
