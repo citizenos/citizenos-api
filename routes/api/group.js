@@ -1219,10 +1219,12 @@ module.exports = function (app) {
         if (members?.length) {
             countTotal = members[0].countTotal;
             members.forEach(function (member) {
-                if (!member.invite?.id) {
-                    delete member.email;
+                if (!member.invite) {
                     delete member.invite;
-                } else if (member.email) {
+                }
+                if (req.locals?.group?.level !== GroupMemberUser.LEVELS.admin) {
+                    delete member.email;
+                } else if (member.invite?.id && member.email) {
                     member.email = member.email.replace(/^(.).*(?=@)/, '$1*****');
                 }
 
