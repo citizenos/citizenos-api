@@ -54,6 +54,28 @@ module.exports = function (app) {
         });
     };
 
+    const _ensureTopicPad = async function (topicId) {
+        try {
+            await etherpadClient.getRevisionsCountAsync({ padID: topicId });
+            return true;
+        } catch (err) {
+            if (err && err.message && err.message.indexOf('padID does not exist') > -1) {
+                const topic = await Topic.findOne({
+                    where: { id: topicId },
+                    attributes: ['id', 'language', 'description']
+                });
+                if (topic) {
+                    logger.info('Recreating missing Etherpad pad from stored topic description for topicId', topicId);
+                    await _createTopic(topic.id, topic.language, topic.description);
+                    return true;
+                }
+            } else {
+                logger.warn('ensureTopicPad check failed for topicId', topicId, err && err.message);
+            }
+            return false;
+        }
+    };
+
 
     const _updateTopic = async function (topicId, html) {
         return etherpadClient.setHTMLAsync({
@@ -114,7 +136,8 @@ module.exports = function (app) {
          */
 
         const token = _createToken(userId, name);
-        let url = topic.padUrl + '?jwt=' + token + '&lang=' + language;
+        const basePadUrl = topic.id ? _getTopicPadUrl(topic.id) : topic.padUrl;
+        let url = basePadUrl + '?jwt=' + token + '&lang=' + language;
 
         if (partner) {
             url += '&theme=' + partner.id;
@@ -224,8 +247,17 @@ module.exports = function (app) {
                 html = '<!DOCTYPE HTML><html><body></body></html>';
             }
         } catch (err) {
-            logger.error('Error getting HTML from Etherpad', err);
-            return Promise.reject(new Error(err.message));
+            if (err && err.message && err.message.indexOf('padID does not exist') > -1) {
+                const recreated = await _ensureTopicPad(topicId);
+                if (recreated) {
+                    const retryResult = await etherpadClient.getHTMLAsync({ padID: topicId });
+                    html = retryResult ? retryResult.html : null;
+                }
+            }
+            if (!html) {
+                logger.error('Error getting HTML from Etherpad', err);
+                return Promise.reject(new Error(err.message));
+            }
         }
         html = await _inlineToClasses(html);
         // const title = _getTopicTitleFromPadContent(html);
@@ -332,7 +364,20 @@ module.exports = function (app) {
             params.rev = rev;
         }
 
-        let html = (await etherpadClient.getHTMLAsync(params)).html;
+        let html;
+        try {
+            html = (await etherpadClient.getHTMLAsync(params)).html;
+        } catch (err) {
+            if (err && err.message && err.message.indexOf('padID does not exist') > -1) {
+                const recreated = await _ensureTopicPad(topicId);
+                if (recreated) {
+                    html = (await etherpadClient.getHTMLAsync({ padID: topicId })).html;
+                }
+            }
+            if (!html) {
+                throw err;
+            }
+        }
 
         return _inlineToClasses(html);
     };
@@ -354,6 +399,7 @@ module.exports = function (app) {
 
     return {
         createTopic: _createTopic,
+        ensureTopicPad: _ensureTopicPad,
         updateTopic: _updateTopic,
         deleteTopic: _deleteTopic,
         readPadTopic: _readPadTopic,

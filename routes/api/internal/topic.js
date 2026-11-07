@@ -8,6 +8,7 @@ module.exports = function (app) {
     const models = app.get('models');
     const db = models.sequelize;
     const authApiKey = app.get('middleware.authApiKey');
+    const cosEtherpad = app.get('cosEtherpad');
 
     const Topic = models.Topic;
     const TopicMemberUser = models.TopicMemberUser;
@@ -67,6 +68,10 @@ module.exports = function (app) {
                         permissions.level = TopicMemberUser.LEVELS.read;
                     }
 
+                    if (permissions.level !== TopicMemberUser.LEVELS.none && cosEtherpad && cosEtherpad.ensureTopicPad) {
+                        await cosEtherpad.ensureTopicPad(topicId);
+                    }
+
                     return res.ok(permissions);
                 } else {
                     return res.ok({level: TopicMemberUser.LEVELS.none});
@@ -83,6 +88,9 @@ module.exports = function (app) {
 
                 if (count) {
                     level = TopicMemberUser.LEVELS.read;
+                    if (cosEtherpad && cosEtherpad.ensureTopicPad) {
+                        await cosEtherpad.ensureTopicPad(req.params.topicId);
+                    }
                 }
 
                 return res.ok({level: level});

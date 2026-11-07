@@ -1501,7 +1501,15 @@ module.exports = function (app) {
                 vote.dataValues.VoteOptions.push(option.dataValues);
             });
 
-            const rtopic = await cosEtherpad.syncTopicWithPad(resTopic.id, null, null, null, null, t);
+            let rtopic = resTopic;
+            try {
+                const syncedTopic = await cosEtherpad.syncTopicWithPad(resTopic.id, null, null, null, null, t);
+                if (syncedTopic) {
+                    rtopic = syncedTopic;
+                }
+            } catch (err) {
+                logger.warn('Failed to sync topic with Etherpad on vote creation, falling back to DB topic', resTopic.id, err.message);
+            }
             await cosSignature.createVoteFiles(rtopic, vote, voteOptionsCreated, t);
         });
 

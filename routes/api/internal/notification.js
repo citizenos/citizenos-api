@@ -27,7 +27,7 @@ module.exports = function (app) {
         }
 
         padIds.forEach(function (topicId) {
-            pads[padIds].forEach(function (pdata) {
+            pads[topicId].forEach(function (pdata) {
                 promisesToResolve.push(cosEtherpad
                     .syncTopicWithPad(
                         topicId,
