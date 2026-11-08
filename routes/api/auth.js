@@ -63,7 +63,17 @@ module.exports = function (app) {
             const params = Object.fromEntries(filtered);
             if (Object.keys(params).length) {
                 const stateCookieData = jwt.sign(params, config.session.privateKey, { algorithm: config.session.algorithm });
-                res.cookie(cookieName, stateCookieData, Object.assign({ secure: req.secure }, config.session.cookie));
+                const cookieOptions = Object.assign(
+                    {
+                        secure: req.secure,
+                        path: config.session.cookie?.path || '/'
+                    },
+                    config.session.cookie
+                );
+                if (!cookieOptions.path) {
+                    cookieOptions.path = '/';
+                }
+                res.cookie(cookieName, stateCookieData, cookieOptions);
             }
         }
     };
@@ -106,8 +116,8 @@ module.exports = function (app) {
      */
     const clearStateCookie = function (res, cookieName) {
         res.clearCookie(cookieName, {
-            path: config.session.cookie.path,
-            domain: config.session.cookie.domain
+            path: config.session.cookie?.path || '/',
+            domain: config.session.cookie?.domain
         });
     };
 
@@ -960,13 +970,22 @@ module.exports = function (app) {
             res.status(200).send('<!doctype html><html><head><meta http-equiv="refresh" content="0;URL=\'/api/auth/openid/authorize\'" /></head><body></body></html>');
         } else {
             const stateData = getStateCookie(req, COOKIE_NAME_COS_AUTH_STATE);
-            if (stateData && stateData.redirectSuccess) {
+            if (stateData) {
                 clearStateCookie(res, COOKIE_NAME_COS_AUTH_STATE);
-                res.redirect(stateData.redirectSuccess); // TODO: Validate return url? Is it sufficient to check that Origin and callback are to the same domain?
+            }
+            if (stateData && stateData.redirectSuccess) {
+                let redirectUrl = stateData.redirectSuccess;
+                if (!redirectUrl.startsWith('http://') && !redirectUrl.startsWith('https://')) {
+                    if (!redirectUrl.startsWith('/')) {
+                        redirectUrl = '/' + redirectUrl;
+                    }
+                    redirectUrl = urlLib.getFe(redirectUrl);
+                }
+                return res.redirect(redirectUrl);
             } else {
                 // TODO: Not sure if used, check logs and REMOVE when API and FE get separated.
                 logger.info('handleCallbackRedirect', 'fallback used', req.method, req.path, req.headers);
-                res.redirect(urlLib.getFe('/?')); // DIRTY HACK: Avoid digest loop on Angular side - https://trello.com/c/PedvtYp2/125-bug-join-tokenjoin-infinite-digest-loop-when-signing-in-with-google-fb-functionality-works-but-not-beautiful
+                return res.redirect(urlLib.getFe('/?')); // DIRTY HACK: Avoid digest loop on Angular side - https://trello.com/c/PedvtYp2/125-bug-join-tokenjoin-infinite-digest-loop-when-signing-in-with-google-fb-functionality-works-but-not-beautiful
             }
         }
     };
@@ -1230,6 +1249,11 @@ module.exports = function (app) {
         getUserByPersonalId: _getUserByPersonalId,
         getAuthReqStatus: _getAuthReqStatus,
         clearSessionCookies: clearSessionCookies,
-        getIdCardCertStatus: getIdCardCertStatus
-    }
+        getIdCardCertStatus: getIdCardCertStatus,
+        handleCallbackRedirect: handleCallbackRedirect,
+        setStateCookie: setStateCookie,
+        getStateCookie: getStateCookie,
+        clearStateCookie: clearStateCookie,
+        COOKIE_NAME_COS_AUTH_STATE: COOKIE_NAME_COS_AUTH_STATE
+    };
 };

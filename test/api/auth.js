@@ -1154,8 +1154,126 @@ if (_isMainTestFile) suite('Auth', function () {
                 });
 
             });
+
         });
-    });
+
+        suite('Partner / OAuth', function () {
+
+                test('GET /api/auth/google sets cos.authState cookie with redirectSuccess', async function () {
+                    const agent = request.agent(app);
+                    const redirectTarget = 'https://dev.citizenos.com/en/topics/03099901-b668-45bc-b700-117565495c0c';
+                    const res = await agent
+                        .get('/api/auth/google')
+                        .query({ redirectSuccess: redirectTarget })
+                        .expect(302);
+
+                    const cookies = res.headers['set-cookie'] || [];
+                    const authStateCookie = cookies.find(c => c.startsWith('cos.authState='));
+                    assert.isDefined(authStateCookie, 'cos.authState cookie must be set');
+                    assert.include(authStateCookie, 'Path=/api');
+
+                    const token = authStateCookie.split(';')[0].replace('cos.authState=', '');
+                    const stateData = jwt.verify(token, config.session.publicKey, { algorithms: [config.session.algorithm] });
+                    assert.equal(stateData.redirectSuccess, redirectTarget);
+                });
+
+                test('handleCallbackRedirect redirects relative URL to FE domain', function () {
+                    const authRoute = require('../../routes/api/auth')(app);
+                    const req = {
+                        cookies: {},
+                        headers: {},
+                        path: '/api/auth/google/callback'
+                    };
+                    let redirectUrl;
+                    let clearedCookie;
+                    const res = {
+                        redirect: function (url) {
+                            redirectUrl = url;
+                        },
+                        clearCookie: function (name) {
+                            clearedCookie = name;
+                        }
+                    };
+
+                    const stateToken = jwt.sign({ redirectSuccess: '/en/topics/123' }, config.session.privateKey, { algorithm: config.session.algorithm });
+                    req.cookies['cos.authState'] = stateToken;
+
+                    authRoute.handleCallbackRedirect(req, res);
+                    assert.equal(clearedCookie, 'cos.authState');
+                    assert.equal(redirectUrl, urlLib.getFe('/en/topics/123'));
+                });
+
+                test('handleCallbackRedirect redirects relative URL without leading slash to FE domain', function () {
+                    const authRoute = require('../../routes/api/auth')(app);
+                    const req = {
+                        cookies: {},
+                        headers: {},
+                        path: '/api/auth/google/callback'
+                    };
+                    let redirectUrl;
+                    let clearedCookie;
+                    const res = {
+                        redirect: function (url) {
+                            redirectUrl = url;
+                        },
+                        clearCookie: function (name) {
+                            clearedCookie = name;
+                        }
+                    };
+
+                    const stateToken = jwt.sign({ redirectSuccess: 'en/topics/123' }, config.session.privateKey, { algorithm: config.session.algorithm });
+                    req.cookies['cos.authState'] = stateToken;
+
+                    authRoute.handleCallbackRedirect(req, res);
+                    assert.equal(clearedCookie, 'cos.authState');
+                    assert.equal(redirectUrl, urlLib.getFe('/en/topics/123'));
+                });
+
+                test('handleCallbackRedirect redirects absolute URL as-is', function () {
+                    const authRoute = require('../../routes/api/auth')(app);
+                    const target = 'https://dev.citizenos.com/en/topics/123';
+                    const req = {
+                        cookies: {},
+                        headers: {},
+                        path: '/api/auth/google/callback'
+                    };
+                    let redirectUrl;
+                    const res = {
+                        redirect: function (url) {
+                            redirectUrl = url;
+                        },
+                        clearCookie: function () {}
+                    };
+
+                    const stateToken = jwt.sign({ redirectSuccess: target }, config.session.privateKey, { algorithm: config.session.algorithm });
+                    req.cookies['cos.authState'] = stateToken;
+
+                    authRoute.handleCallbackRedirect(req, res);
+                    assert.equal(redirectUrl, target);
+                });
+
+                test('handleCallbackRedirect falls back to FE root when state cookie missing', function () {
+                    const authRoute = require('../../routes/api/auth')(app);
+                    const req = {
+                        cookies: {},
+                        headers: {},
+                        path: '/api/auth/google/callback'
+                    };
+                    let redirectUrl;
+                    const res = {
+                        redirect: function (url) {
+                            redirectUrl = url;
+                        },
+                        clearCookie: function () {}
+                    };
+
+                    authRoute.handleCallbackRedirect(req, res);
+                    assert.equal(redirectUrl, urlLib.getFe('/?'));
+                });
+
+            });
+
+        });
 
     suite('Logout', function () {
 
