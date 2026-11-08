@@ -242,7 +242,12 @@ module.exports = function (app) {
             const result = await etherpadClient.getHTMLAsync(params);
             html = result ? result.html : null;
 
-            if (!html && app.get('env') === 'test') {
+            const isMochaTest = typeof global.it === 'function' ||
+                typeof global.describe === 'function' ||
+                process.argv.some((arg) => arg.includes('mocha')) ||
+                process.env.MOCK_ETHERPAD === 'true';
+
+            if (!html && app.get('env') === 'test' && isMochaTest) {
                 // Fallback for tests if mock returns empty
                 html = '<!DOCTYPE HTML><html><body></body></html>';
             }
@@ -263,16 +268,17 @@ module.exports = function (app) {
         // const title = _getTopicTitleFromPadContent(html);
 
         const updateFn = async function (t) {
-            const topic = await Topic.findOne(
-                {
-                    where: {
-                        id: topicId
-                    }
+            const topic = await Topic.findOne({
+                where: {
+                    id: topicId
                 },
-                {
-                    transaction: t
-                }
-            );
+                transaction: t
+            });
+
+            if (!topic) {
+                logger.warn('Topic not found for pad sync', topicId);
+                return null;
+            }
 
             // topic.title = title;
             topic.description = html;

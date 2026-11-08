@@ -135,7 +135,12 @@ app.use(reqLogger);
 
 const etherpadClient = require('etherpad-lite-client').connect(config.services.etherpad);
 
-if (app.get('env') === 'test') {
+const isMochaTest = typeof global.it === 'function' ||
+    typeof global.describe === 'function' ||
+    process.argv.some((arg) => arg.includes('mocha')) ||
+    process.env.MOCK_ETHERPAD === 'true';
+
+if (app.get('env') === 'test' && isMochaTest) {
     etherpadClient.checkToken = function (args, cb) {
         if (typeof args === 'function') cb = args;
         cb && cb(null, {});

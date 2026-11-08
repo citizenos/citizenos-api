@@ -247,6 +247,91 @@ suite('Internal', function () {
             });
         });
 
+        suite('Pad update', function () {
+            const agent = request.agent(app);
+            const config = app.get('config');
+            const apiKey = config.api.key;
+            let suiteMockedSync;
+
+            suiteSetup(function () {
+                suiteMockedSync = cosEtherpad.syncTopicWithPad;
+                cosEtherpad.syncTopicWithPad = originalSyncTopicWithPad;
+            });
+
+            suiteTeardown(function () {
+                cosEtherpad.syncTopicWithPad = suiteMockedSync;
+            });
+
+            test('Fail - 401 - no API key', async () => {
+                await agent
+                    .post('/api/internal/notifications/pads/update')
+                    .send({ pads: {} })
+                    .expect(401);
+            });
+
+            test('Fail - 401 - invalid API key', async () => {
+                await agent
+                    .post('/api/internal/notifications/pads/update')
+                    .set('X-API-KEY', 'wrong-key')
+                    .send({ pads: {} })
+                    .expect(401);
+            });
+
+            test('Success - empty pads', async () => {
+                await agent
+                    .post('/api/internal/notifications/pads/update')
+                    .set('X-API-KEY', apiKey)
+                    .send({ pads: {} })
+                    .expect(200);
+            });
+
+            test('Success - sync topic with pad', async () => {
+                const User = models.User;
+                const user = await User.create({
+                    email: `test-pad-sync-${Date.now()}@example.com`,
+                    password: 'Password1',
+                    source: User.SOURCES.citizenos
+                });
+                const topic = await Topic.create({
+                    title: 'Test Pad Sync Topic',
+                    status: Topic.STATUSES.inProgress,
+                    description: '<html><body>Initial</body></html>',
+                    visibility: Topic.VISIBILITY.public,
+                    creatorId: user.id,
+                    padUrl: 'https://dev.p.citizenos.com/p/test'
+                });
+
+                const etherpadClient = app.get('etherpadClient');
+                const origGetHTMLAsync = etherpadClient.getHTMLAsync;
+                etherpadClient.getHTMLAsync = async function () {
+                    return { html: '<html><body><p>Updated from Etherpad</p></body></html>' };
+                };
+
+                try {
+                    await agent
+                        .post('/api/internal/notifications/pads/update')
+                        .set('X-API-KEY', apiKey)
+                        .send({
+                            pads: {
+                                [topic.id]: [
+                                    {
+                                        userId: user.id,
+                                        rev: 1,
+                                        ip: '127.0.0.1'
+                                    }
+                                ]
+                            }
+                        })
+                        .expect(200);
+
+                    const updatedTopic = await Topic.findByPk(topic.id);
+                    assert.include(updatedTopic.description, 'Updated from Etherpad');
+                } finally {
+                    etherpadClient.getHTMLAsync = origGetHTMLAsync;
+                }
+            });
+        });
+
     });
 
 });

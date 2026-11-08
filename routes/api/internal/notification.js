@@ -13,18 +13,18 @@ module.exports = function (app) {
      * Callback API for Pad change events
      */
     app.post('/api/internal/notifications/pads/update', authApiKey, function (req, res, next) {
-        const pads = req.body.pads;
-        const promisesToResolve = [];
-
-        // padID === topicId
-        const padIds = Object.keys(pads);
+        const pads = req.body && req.body.pads;
 
         // Sometimes EP calls the hook without Pad IDs, needs to be investigated and fixed, but meanwhile don't throw an error but warn and log body for debugging
-        if (!pads) {
+        if (!pads || typeof pads !== 'object') {
             logger.warn('Etherpad sync called without padIds', req.path, req.body);
 
             return res.ok();
         }
+
+        const promisesToResolve = [];
+        // padID === topicId
+        const padIds = Object.keys(pads);
 
         padIds.forEach(function (topicId) {
             pads[topicId].forEach(function (pdata) {
