@@ -271,9 +271,36 @@ const topicCommentVotesCreate = async function (agent, topicId, discussionId, co
     return _topicCommentVotesCreate(agent, topicId, discussionId, commentId, value, 200);
 };
 
+const _topicCommentVotesCreateUser = async function (agent, userId, topicId, discussionId, commentId, value, expectedHttpCode) {
+    const path = '/api/users/:userId/topics/:topicId/discussions/:discussionId/comments/:commentId/votes'
+        .replace(':userId', userId)
+        .replace(':topicId', topicId)
+        .replace(':discussionId', discussionId)
+        .replace(':commentId', commentId);
+
+    return agent
+        .post(path)
+        .set('Content-Type', 'application/json')
+        .send({ value: value })
+        .expect(expectedHttpCode)
+        .expect('Content-Type', /json/);
+};
+
 const _topicCommentVotesList = async function (agent, userId, topicId, discussionId, commentId, expectedHttpCode) {
     let path = '/api/users/:userId/topics/:topicId/discussions/:discussionId/comments/:commentId/votes'
         .replace(':userId', userId)
+        .replace(':topicId', topicId)
+        .replace(':discussionId', discussionId)
+        .replace(':commentId', commentId);
+
+    return agent
+        .get(path)
+        .expect(expectedHttpCode)
+        .expect('Content-Type', /json/);
+};
+
+const _topicCommentVotesListPublic = async function (agent, topicId, discussionId, commentId, expectedHttpCode) {
+    const path = '/api/topics/:topicId/discussions/:discussionId/comments/:commentId/votes'
         .replace(':topicId', topicId)
         .replace(':discussionId', discussionId)
         .replace(':commentId', commentId);
@@ -1203,6 +1230,26 @@ if (_isMainTestFile) suite('Users', function () {
                         assert.deepEqual(resBody, expected);
                     });
 
+                    test('Success - 20000 - Upvote via user path', async function () {
+                        const resBody = (await _topicCommentVotesCreateUser(creatorAgent, creator.id, topic.id, discussion.id, comment.id, 1, 200)).body;
+                        const expected = {
+                            status: {
+                                code: 20000
+                            },
+                            data: {
+                                up: {
+                                    count: 1,
+                                    selected: true
+                                },
+                                down: {
+                                    count: 0,
+                                    selected: false
+                                }
+                            }
+                        };
+                        assert.deepEqual(resBody, expected);
+                    });
+
 
                     test('Success - 20100 - Downvote', async function () {
                         const resBody = (await topicCommentVotesCreate(creatorAgent, topic.id, discussion.id, comment.id, -1)).body;
@@ -1322,6 +1369,26 @@ if (_isMainTestFile) suite('Users', function () {
                         await topicCommentVotesCreate(creatorAgent, topic.id, discussion.id, comment.id, 1);
                         await topicCommentVotesCreate(creatorAgent2, topic.id, discussion.id, comment.id, 0); //Add cleared vote that should not be returned;
                         const commentVotesList = (await topicCommentVotesList(creatorAgent, creator.id, topic.id, discussion.id, comment.id)).body.data;
+                        const commentVote = commentVotesList.rows[0];
+                        const expected = {
+                            rows: [
+                                {
+                                    imageUrl: null,
+                                    createdAt: commentVote.createdAt,
+                                    updatedAt: commentVote.updatedAt,
+                                    name: creator.name,
+                                    vote: "up"
+                                }
+                            ],
+                            count: 1
+                        };
+
+                        assert.deepEqual(commentVotesList, expected);
+                    });
+
+                    test('Success - List votes via public path', async function () {
+                        await topicCommentVotesCreate(creatorAgent, topic.id, discussion.id, comment.id, 1);
+                        const commentVotesList = (await _topicCommentVotesListPublic(creatorAgent, topic.id, discussion.id, comment.id, 200)).body.data;
                         const commentVote = commentVotesList.rows[0];
                         const expected = {
                             rows: [

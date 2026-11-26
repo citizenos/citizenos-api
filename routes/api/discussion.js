@@ -176,9 +176,9 @@ module.exports = function (app) {
 
     app.post('/api/topics/:topicId/discussions/:discussionId/comments/:commentId/reports/:reportId/moderate', authTokenRestrictedUse, commentsLib.moderateReport);
 
-    app.post('/api/topics/:topicId/discussions/:discussionId/comments/:commentId/votes', loginCheck(['partner']), topicService.hasPermission(TopicMemberUser.LEVELS.read, true), commentsLib.createVote);
+    app.post(['/api/users/:userId/topics/:topicId/discussions/:discussionId/comments/:commentId/votes', '/api/topics/:topicId/discussions/:discussionId/comments/:commentId/votes'], loginCheck(['partner']), topicService.hasPermission(TopicMemberUser.LEVELS.read, true), commentsLib.createVote);
 
-    app.get('/api/users/:userId/topics/:topicId/discussions/:discussionId/comments/:commentId/votes', loginCheck(['partner']), topicService.hasPermission(TopicMemberUser.LEVELS.read, true), commentsLib.listVotes);
+    app.get(['/api/users/:userId/topics/:topicId/discussions/:discussionId/comments/:commentId/votes', '/api/topics/:topicId/discussions/:discussionId/comments/:commentId/votes'], loginCheck(['partner']), topicService.hasPermission(TopicMemberUser.LEVELS.read, true), commentsLib.listVotes);
 
     app.post('/api/users/:userId/topics/:topicId/discussions/:discussionId/comments/:commentId/attachments/upload', loginCheck(['partner']), commentsLib.isCommentCreator(), topicService.hasPermission(TopicMemberUser.LEVELS.admin, false, null, true), commentsLib.uploadCommentAttachment);
 
